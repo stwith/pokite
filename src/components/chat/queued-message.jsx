@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pencil, X, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MessageContent } from "./message-bubble";
 
 export function QueuedMessage({ item, onAction, canEdit }) {
   const [busy, setBusy] = useState(false);
@@ -13,7 +14,7 @@ export function QueuedMessage({ item, onAction, canEdit }) {
     }
   };
   return (
-    <div className="queued-message">
+    <div className="message user-bubble queued-message" data-state={item.state}>
       <div className="queued-message-header">
         <span className="queued-message-status">
           <Clock3 size={13} aria-hidden="true" />
@@ -52,7 +53,7 @@ export function QueuedMessage({ item, onAction, canEdit }) {
           </div>
         )}
       </div>
-      <p>{item.text}</p>
+      <MessageContent text={item.text} />
       {item.error && <small>{item.error}</small>}
     </div>
   );

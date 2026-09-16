@@ -56,6 +56,9 @@ for (const engine of [chromium, webkit]) {
     const remove = page.getByRole("button", { name: "移除排队消息" });
     await remove.waitFor();
     const row = await page.locator(".queued-message").boundingBox();
+    const container = await page.locator(".messages").boundingBox();
+    assert.ok(row.width <= container.width * 0.8 + 1);
+    assert.ok(Math.abs(row.x + row.width - container.x - container.width) < 2);
     const icon = await remove.boundingBox();
     assert.ok(icon.x > row.x + row.width / 2);
     assert.equal(

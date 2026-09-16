@@ -30,25 +30,25 @@ const markdownComponents = {
     </div>
   ),
 };
+export const MessageContent = React.memo(function MessageContent({ text }) {
+  return <div className="markdown-body">
+    <Markdown remarkPlugins={markdownPlugins}
+      rehypePlugins={text.length < 100000 ? highlightPlugins : undefined}
+      components={markdownComponents}>{text}</Markdown>
+  </div>;
+});
+
 export const MessageBubble = React.memo(function MessageBubble({
   role,
   text,
   time,
 }) {
   return (
-    <article className={"message " + role}>
+    <article className={"message " + role + (role === "user" ? " user-bubble" : "")}>
       <div className="message-meta">
         <time>{stamp(time)}</time>
       </div>
-      <div className="markdown-body">
-        <Markdown
-          remarkPlugins={markdownPlugins}
-          rehypePlugins={text.length < 100000 ? highlightPlugins : undefined}
-          components={markdownComponents}
-        >
-          {text}
-        </Markdown>
-      </div>
+      <MessageContent text={text} />
     </article>
   );
 });
