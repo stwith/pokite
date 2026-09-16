@@ -1,0 +1,10 @@
+{
+  "instances": [
+    { "id": "codex", "provider": "codex", "name": "Codex", "home": "~/.codex" },
+    { "id": "work", "provider": "codex", "name": "Codex Work", "home": "~/.codex-work" },
+    { "id": "dsh", "provider": "dsh", "name": "DeepSeek Harness", "url": "http://127.0.0.1:3080" },
+    { "id": "penguin", "provider": "penguin", "name": "PenguinHarness", "home": "~" },
+    { "id": "claude", "provider": "claude", "name": "Claude Code", "home": "~/.claude" },
+    { "id": "claudeDesktop", "provider": "claudeDesktop", "name": "Claude Desktop", "home": "~/Library/Application Support/Claude" }
+  ]
+}

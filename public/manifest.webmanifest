@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "Pokite · 口袋风筝",
+  "short_name": "Pokite",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f8fafc",
+  "icons": [
+    { "src": "/brand/pokite-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/pokite-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
