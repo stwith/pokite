@@ -30,6 +30,14 @@ Hermes Desktop requires a local plugin: run `node scripts/setup-hermes-sharing.m
 (also pass the profile name for a named profile), then reopen Hermes after its tasks finish.
 See [Hermes setup and limitations](integrations/hermes-desktop/README.md).
 
+Claude Desktop Cowork requires `node scripts/setup-claude-keychain.mjs` on macOS.
+This developer setup needs Xcode Command Line Tools and a local code-signing
+identity. On first access, grant **Always Allow** to **Pokite Claude Access**.
+The helper has a fixed installation path and is reused unchanged across service
+restarts; credentials stay in memory. Keychain locking, item recreation, or
+signing changes can require authorization again. A Developer ID signed installer
+for non-developers is not yet distributed.
+
 ## Quick Start
 
 Requirements: macOS, Node.js 22.23.0 or newer with `node:sqlite`, and your agent already installed and authenticated. Verify it works in its original client first.

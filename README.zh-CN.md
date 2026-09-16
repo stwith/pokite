@@ -73,6 +73,14 @@ node scripts/setup-hermes-sharing.mjs main  # 使用 main 配置时另外执行
 
 ## 网络与认证
 
+Claude Desktop Cowork 使用专用的 macOS 钥匙串工具。开发者预览版先运行
+`node scripts/setup-claude-keychain.mjs`，需要 Xcode Command Line Tools 和本机
+代码签名证书。首次访问时确认请求方是 **Pokite Claude Access**，选择“始终允许”。
+工具固定安装在用户的 `Library/Application Support/Pokite/Keychain`；重复安装
+不会替换未变化的已签名二进制。密钥只传入服务内存，不落盘，不新增常驻进程。
+普通服务重启可沿用系统保存的访问许可；钥匙串锁定、条目重建或签名变更仍可能
+要求重新授权。当前未提供面向普通用户的 Developer ID 签名安装包。
+
 - 局域网：`http://<电脑局域网IP>:3230`。
 - Tailscale：两台设备连入同一 tailnet 后，使用电脑的 Tailscale 地址。
 - 保留访问码认证；二维码和连接链接含凭据，不能公开分享。

@@ -8,6 +8,7 @@ import {
   sessionCredential,
 } from "./claude-desktop-credentials.mjs";
 import { macHttpsProxy } from "./desktop-network.mjs";
+import { readClaudeKeychain } from "./claude-keychain.mjs";
 
 const exec = promisify(execFile);
 const safeId = (value) =>
@@ -22,35 +23,7 @@ export class ClaudeDesktopClient {
     this.lifecycle = new AbortController();
     this.readKey =
       options.readKey ||
-      (async () => {
-        try {
-          const { stdout } = await exec(
-            "/usr/bin/security",
-            [
-              "find-generic-password",
-              "-s",
-              "Claude Safe Storage",
-              "-a",
-              "Claude",
-              "-w",
-            ],
-            {
-              timeout: 120000,
-              maxBuffer: 16384,
-              encoding: "buffer",
-              signal: this.lifecycle.signal,
-            },
-          );
-          const end = stdout.at(-1) === 10 ? stdout.length - 1 : stdout.length;
-          const key = Buffer.from(stdout.subarray(0, end));
-          stdout.fill(0);
-          return key;
-        } catch {
-          throw failure(
-            "Claude 本机授权尚未完成，请在 Mac 上允许钥匙串访问后重新连接。",
-          );
-        }
-      });
+      (() => readClaudeKeychain(this.lifecycle.signal));
     this.fetcher = options.fetcher || fetch;
     this.network =
       options.network ||
