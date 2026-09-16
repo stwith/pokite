@@ -103,6 +103,39 @@ test("Cowork network denial cannot request a credential", () =>
     await c.close();
   }));
 
+test("Cowork pending keychain authorization reports promptly and reuses the system request", () =>
+  fixture(async (root, password) => {
+    let allow;
+    let reads = 0;
+    const pending = new Promise(resolve => { allow = resolve; });
+    const client = new ClaudeDesktopClient(root, {
+      keyWaitMs: 5,
+      readKey: () => { reads++; return pending; },
+    });
+    await assert.rejects(client.credentials(), /正在等待.*钥匙串授权/);
+    await assert.rejects(client.credentials(), /正在等待.*钥匙串授权/);
+    assert.equal(reads, 1);
+    allow(password);
+    assert.equal((await client.credentials()).token, "fixture-token");
+    await client.close();
+  }));
+
+test("Cowork network failure preserves delivery status without dereferencing a missing response", () =>
+  fixture(async (root, password) => {
+    const client = new ClaudeDesktopClient(root, {
+      readKey: async () => password,
+      network: async () => ({ close: async () => {} }),
+      fetcher: async (url, options) => {
+        if (!options.headers) return new Response("", { status: 401 });
+        if (url.endsWith("/profile")) return Response.json({ account: { uuid: "account" }, organization: { uuid: "org" } });
+        throw new Error("fixture disconnect");
+      },
+    });
+    await assert.rejects(client.request("/v1/code/sessions/cse_1/events", { method: "POST", body: {} }),
+      e => e.delivery === "unknown" && /网络连接中断/.test(e.message));
+    await client.close();
+  }));
+
 test("Cowork ambiguous submission does not retry or expose upstream bodies", () =>
   fixture(async (root, password) => {
     let posts = 0;

@@ -18,6 +18,7 @@ const failure = (message, status = 503) =>
 export class ClaudeDesktopClient {
   constructor(root, options = {}) {
     this.root = root;
+    this.keyWaitMs = options.keyWaitMs ?? 1500;
     this.lifecycle = new AbortController();
     this.readKey =
       options.readKey ||
@@ -98,7 +99,22 @@ export class ClaudeDesktopClient {
         this.keyFailed = true;
         throw error;
       });
-    const key = await this.keyPromise;
+    // macOS may wait for a human for two minutes. Keep that one request alive,
+    // but tell the browser what is needed instead of blocking every list read.
+    let timer;
+    let key;
+    try {
+      key = await Promise.race([
+        this.keyPromise,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(failure(
+            "正在等待 Mac 上的 Claude Safe Storage 钥匙串授权，请允许访问后重试。",
+          )), this.keyWaitMs);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
     const cache = decryptDesktopCache(
       identity.config["oauth:tokenCacheV2"] ||
         identity.config["oauth:tokenCache"],
@@ -206,7 +222,6 @@ export class ClaudeDesktopClient {
           failure("Claude 网络连接中断，请核对会话后再操作。"),
           {
             delivery: verb === "GET" ? "not-sent" : "unknown",
-            upstreamStatus: response.status,
           },
         );
       }
