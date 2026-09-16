@@ -5,6 +5,12 @@ import { discoverMachine } from "./machine-discovery.mjs";
 
 export const defaultInstances = () => [
   {
+    id: "hermesDesktop",
+    provider: "hermesDesktop",
+    name: "Hermes Desktop",
+    home: path.join(os.homedir(), ".hermes"),
+  },
+  {
     id: "codex",
     provider: "codex",
     name: "Codex",

@@ -330,6 +330,27 @@ export function discoverMachine({
     instances.push(instance);
   }
   const desktopHome = path.join(home, "Library/Application Support/Claude");
+  const hermesHome = expand(
+    env.HERMES_HOME || path.join(home, ".hermes"),
+    home,
+  );
+  if (
+    exists(path.join(hermesHome, "state.db")) &&
+    exists(path.join(home, "Library/Application Support/Hermes"))
+  ) {
+    const instance = {
+      id: "hermesDesktop",
+      provider: "hermesDesktop",
+      name: "Hermes Desktop",
+      home: hermesHome,
+    };
+    instances.push(instance);
+    candidates.push({
+      ...instance,
+      integration: "desktop-shared-backend",
+      status: "desktop-history-found",
+    });
+  }
   if (
     ["claude-code-sessions", "local-agent-mode-sessions"].some((name) =>
       exists(path.join(desktopHome, name)),

@@ -17,6 +17,7 @@ Pokite starts with your existing projects and sessions. Codex Desktop shares its
 | Integration | Read | Reply transport | Limits |
 | --- | --- | --- | --- |
 | Codex Desktop, multiple profiles | Projects, sessions, conversation | Shared Desktop backend with queued follow-ups | Experimental; sharing setup and Desktop restart required; version-sensitive |
+| Hermes Desktop | Desktop sessions grouped by profile and directory | Local plugin submits through the original Desktop connection; Pokite queue | Experimental; open historical sessions in Desktop first; approve tools and switch models in Desktop |
 | DeepSeek Harness | Existing projects and sessions | Native web API | Existing service must be running |
 | PenguinHarness | Existing projects and sessions | Existing local service | Cannot change the model of an existing session |
 | Claude Code CLI | Local CLI history | Agent SDK session resume | Not Desktop sharing; do not write concurrently with an external CLI |
@@ -24,6 +25,10 @@ Pokite starts with your existing projects and sessions. Codex Desktop shares its
 | Claude Desktop Code / Chat | Not exposed | Unsupported | Experimental transports are disabled |
 
 The independent Claude Code integration excludes Desktop-owned sessions. Discovering an installed agent does not mean it is connected or writable.
+
+Hermes Desktop requires a local plugin: run `node scripts/setup-hermes-sharing.mjs`
+(also pass the profile name for a named profile), then reopen Hermes after its tasks finish.
+See [Hermes setup and limitations](integrations/hermes-desktop/README.md).
 
 ## Quick Start
 

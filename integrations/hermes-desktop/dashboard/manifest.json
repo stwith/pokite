@@ -1,0 +1,9 @@
+{
+  "name": "pokite",
+  "label": "Pokite",
+  "version": "0.1.0",
+  "description": "Local Desktop session bridge",
+  "entry": "index.js",
+  "api": "plugin_api.py",
+  "slots": []
+}

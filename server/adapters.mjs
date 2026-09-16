@@ -3,6 +3,7 @@ import { Penguin } from "./penguin.mjs";
 import { Dsh } from "./dsh.mjs";
 import { Claude } from "./claude.mjs";
 import { ClaudeDesktopRemote } from "./claude-desktop-remote.mjs";
+import { HermesDesktop } from "./hermes-desktop.mjs";
 import { loadInstances } from "./instances.mjs";
 
 // Keep the existing import surface for callers while implementations stay isolated.
@@ -16,6 +17,7 @@ export const agentNames = {
   penguin: "PenguinHarness",
   claude: "Claude Code",
   claudeDesktop: "Claude Desktop",
+  hermesDesktop: "Hermes Desktop",
 };
 export function makeAdapters(instances = loadInstances()) {
   return Object.fromEntries(
@@ -28,19 +30,21 @@ export function makeAdapters(instances = loadInstances()) {
             ? new Dsh(instance.url)
             : provider === "penguin"
               ? new Penguin(instance.home)
-              : provider === "claudeDesktop"
-                ? new ClaudeDesktopRemote(instance.home)
-                : new Claude(undefined, {
-                    root: instance.home,
-                    ...(id !== "claude"
-                      ? {
-                          stateFile: new URL(
-                            `../.local/claude-${id}.json`,
-                            import.meta.url,
-                          ),
-                        }
-                      : {}),
-                  });
+              : provider === "hermesDesktop"
+                ? new HermesDesktop(instance.home)
+                : provider === "claudeDesktop"
+                  ? new ClaudeDesktopRemote(instance.home)
+                  : new Claude(undefined, {
+                      root: instance.home,
+                      ...(id !== "claude"
+                        ? {
+                            stateFile: new URL(
+                              `../.local/claude-${id}.json`,
+                              import.meta.url,
+                            ),
+                          }
+                        : {}),
+                    });
       adapter.id = id;
       adapter.provider = provider;
       adapter.name = instance.name;
