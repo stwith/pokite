@@ -217,7 +217,12 @@ export default function App() {
   async function login(credential = token) {
     setAccessToken(credential.trim());
     try {
-      const available = await api("/agents");
+      const order = ["codex", "codex2", "claude", "claudeDesktop", "dsh", "hermesDesktop", "penguin"];
+      const rank = ({ id }) => {
+        const index = order.indexOf(id);
+        return index < 0 ? order.length : index;
+      };
+      const available = (await api("/agents")).sort((a, b) => rank(a) - rank(b));
       setAgents(available);
       if (!available.some((item) => item.id === agent))
         setAgent(available[0]?.id || "");
