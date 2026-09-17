@@ -4,13 +4,64 @@
 
 English | [简体中文](README.zh-CN.md)
 
-**Continue supported Desktop sessions running on your computer, from your phone's browser.**
+**Your computer's running coding agents. The same sessions, on your phone.**
 
 Leave your computer working. Check progress and continue the conversation from your phone or tablet. No Pokite mobile app, screen mirroring, or agent running on your phone.
 
-Pokite starts with your existing projects and sessions. Codex Desktop shares its running backend; other integrations have different boundaries, listed below.
+Pokite is a self-hosted mobile web interface for supported desktop AI coding agents:
+**Codex Desktop, Hermes Desktop, DeepSeek Harness, PenguinHarness, Claude Code CLI,
+and Claude Desktop Cowork**, with different capabilities for each integration.
+Keep working in your desktop client; open Pokite in iPhone Safari, an Android
+browser, or on an iPad to read progress and send follow-up instructions.
+
+Your projects, execution environment and model credentials stay on the computer.
+Connect over your home LAN or Tailscale. Pokite runs on that computer and does not
+operate a hosted relay. Cowork uses Anthropic's remote session API; model calls
+still use each agent's configured provider. See the support table before setup.
 
 > macOS developer preview. There is no signed installer yet. Windows, Linux and multiple Desktop versions have not passed compatibility acceptance.
+
+## From your desk to your phone
+
+Start a task in Desktop. Leave the computer running. Read the result on your
+phone and add a follow-up to the same supported session. Return to Desktop to
+continue. Choose an existing project, open a session, read or reply.
+
+<img src="assets/readme/mobile-session.png" width="340" alt="Pokite mobile web interface: a demo checkout project, agent progress and a follow-up message from a phone in the same conversation" />
+
+*Actual Pokite UI with fictional demo content. No personal conversations,
+credentials or access QR codes. This image illustrates the workflow, not a live
+execution benchmark.*
+
+## How Desktop sharing works
+
+```mermaid
+flowchart LR
+    Phone["Phone / tablet browser"] -->|"LAN or Tailscale · access token"| Pocket["Pokite on your computer"]
+    Desktop["Your original Desktop client"] <--> Backend["Same agent backend and session"]
+    Pocket <-->|"Local adapter"| Backend
+    Backend --> Project["Your existing project files"]
+```
+
+This diagram describes the **Codex Desktop and Hermes Desktop** sharing path.
+Codex uses a local forwarding process; Hermes uses a local plugin. DSH and
+Penguin reuse their services. Claude CLI resumes through the SDK; Cowork has a
+cloud-mediated control path. They are not interchangeable transports.
+
+## Why Pokite?
+
+| What you want | Pokite's approach |
+| --- | --- |
+| Continue a session you started in Desktop | Attach to supported existing Desktop backends; no new workspace required |
+| Read and reply comfortably on a phone | A responsive conversation UI, rather than a streamed desktop screen |
+| Keep using your computer's setup | Execution stays on your computer; configuration and support vary by agent |
+| A lightweight mobile entry point | Browser access, no Pokite mobile app or Pokite account |
+| Reach your machine at home or away | LAN or your own Tailscale network; access-token authentication |
+
+Pokite focuses on **projects → sessions → progress and replies**. It is not a
+terminal emulator, a cloud coding workspace, or a replacement agent runtime.
+Some integrations require explicit setup or a desktop restart; this is not
+universal plug-and-play access to every installed AI app.
 
 ## Supported Agents
 

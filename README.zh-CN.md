@@ -4,13 +4,60 @@
 
 [English](README.md) | 简体中文
 
-**从手机浏览器，继续电脑上正在运行的、受支持的 Desktop 会话。**
+**电脑上的 Agent 继续跑，手机上接着聊同一个会话。**
 
 电脑继续执行任务，你在手机或平板查看进展、补充指令。无需安装 Pokite 手机 App，不是远程桌面投屏，也不是在手机上另跑 Agent。
 
-Pokite 优先复用已有项目和会话。Codex Desktop 共享现有后端；其他接入的能力有所不同，见下表。
+Pokite 是一个自托管的移动端网页入口，让你从手机或平板继续使用电脑上
+受支持的 Desktop Agent 会话。覆盖 **Codex Desktop、Hermes Desktop、
+DeepSeek Harness、PenguinHarness、Claude Code CLI 和 Claude Desktop Cowork**，
+各接入的能力与限制见下表。
+
+你继续在原来的桌面客户端工作，手机打开网页，就能查看进展、阅读结果、补充指令。
+项目、执行环境和模型凭据留在电脑上，通过家庭局域网或 Tailscale 连接。
+Pokite 不运营外部中转服务器；Cowork 使用 Anthropic 远程会话接口，模型推理
+仍使用各 Agent 原先配置的服务。
 
 > macOS 开发者预览版。尚无签名安装包，也未完成 Windows/Linux 和多种 Desktop 版本的兼容验收。
+
+## 离开电脑，也能接着聊
+
+在 Desktop 开始任务，电脑保持运行。拿起手机查看结果，再给同一个受支持的
+会话补充一条指令。回到电脑后，从原会话继续。整个流程只有：选择已有项目 →
+打开会话 → 阅读或回复。
+
+<img src="assets/readme/mobile-session.png" width="340" alt="Pokite 手机网页演示：查看结账页面修改结果，并在同一个会话中从手机补充修改指令" />
+
+*真实 Pokite 界面，使用虚构的演示项目和对话。图片不含个人会话、凭据或访问二维码；
+用于说明交互流程，不代表真实任务执行或性能测试。*
+
+## 手机如何共享 Desktop 会话
+
+```mermaid
+flowchart LR
+    Phone["手机 / 平板浏览器"] -->|"局域网或 Tailscale · 访问码"| Pocket["电脑上的 Pokite"]
+    Desktop["原来的 Desktop 客户端"] <--> Backend["同一个 Agent 后端与会话"]
+    Pocket <-->|"本地适配器"| Backend
+    Backend --> Project["电脑上已有的项目文件"]
+```
+
+上图对应 **Codex Desktop、Hermes Desktop** 的共享方式：Codex 使用本地转发进程，
+Hermes 使用本地插件。DSH 和 Penguin 复用已有服务；Claude CLI 通过 SDK 恢复执行；
+Cowork 的控制链路经过 Anthropic 服务。不同接入不能一概称为纯本地 Desktop 共享。
+
+## Pokite 的取舍
+
+| 你需要什么 | Pokite 怎么做 |
+| --- | --- |
+| 继续电脑里已经开始的会话 | 优先接入原 Desktop 后端，不要求迁移到新的工作区 |
+| 手机上方便地阅读和回复 | 使用适合小屏幕的对话界面，不是桌面投屏 |
+| 保留电脑上已经配置好的环境 | 任务仍在电脑执行，各 Agent 的接入能力单独说明 |
+| 一个轻便的移动入口 | 不需要 Pokite 手机 App，也不需要注册 Pokite 账号 |
+| 在家或外出都能访问 | 使用局域网或自己的 Tailscale 网络，保留访问码认证 |
+
+我们聚焦 **项目 → 会话 → 查看进展与回复**，不做完整终端、云端开发工作区或
+另一套 Agent 运行时。部分接入需要安装插件、启用共享或重启 Desktop；目前不承诺
+所有本机 AI 应用都能即装即用。
 
 ## 支持的 Agent
 
