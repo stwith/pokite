@@ -79,6 +79,14 @@ test("Hermes reports native failure and hides tool messages", async () => {
     ["hello"],
   );
 });
+test("Hermes renders compression progress only during an active turn", async () => {
+  const { adapter } = fixture();
+  let status = "working";
+  adapter.live = async () => [{ session_key: "stored", status, progress: "compacting" }];
+  assert.match((await adapter.detail(id)).executionProgress, /压缩历史上下文/);
+  status = "idle";
+  assert.equal((await adapter.detail(id)).executionProgress, undefined);
+});
 test("Hermes cold history is writable with a connected v2 Desktop plugin", async () => {
   const { adapter, calls } = fixture("missing", true);
   assert.equal((await adapter.detail(id)).readOnly, false);

@@ -119,6 +119,12 @@ export class HermesDesktop {
     }
     return rows;
   }
+  subscribeChanges(notify) {
+    // Native in-memory progress need not change the session database.
+    const timer = setInterval(notify, 2000);
+    timer.unref?.();
+    return () => clearInterval(timer);
+  }
   projectId(row) {
     return encode([row.profile, row.cwd || ""]);
   }
@@ -257,7 +263,13 @@ export class HermesDesktop {
           text: turn.assistant,
         });
     }
-    return { ...this.row(row, live), ...history, pending: [] };
+    const progress = active?.progress;
+    const executionProgress = ["working", "starting"].includes(active?.status)
+      ? progress === "compacting" ? "正在压缩历史上下文，完成后继续回复"
+        : progress === "starting" || active.status === "starting" ? "正在恢复会话并准备模型"
+          : turn?.assistant ? "正在生成回复" : "正在等待模型响应"
+      : undefined;
+    return { ...this.row(row, live), ...history, executionProgress, pending: [] };
   }
   async history(id, cursor) {
     if (!/^\d+$/.test(cursor) || Number(cursor) > 1000000)

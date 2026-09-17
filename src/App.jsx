@@ -1097,7 +1097,7 @@ export default function App() {
               {detail?.status === "running" && !detail.executionIssue && (
                 <p className="working">
                   <span />
-                  运行中
+                  {detail.executionProgress || "运行中"}
                 </p>
               )}
               {detail?.liveExternal && <p className="muted">电脑端正在执行</p>}

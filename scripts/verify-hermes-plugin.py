@@ -14,6 +14,12 @@ spec.loader.exec_module(plugin)
 
 
 class OwnerTests(unittest.TestCase):
+    def test_progress_is_live_only(self):
+        agent = types.SimpleNamespace(context_compressor=types.SimpleNamespace(
+            _active_compression_telemetry={"phase": "summary"}))
+        self.assertEqual(plugin.progress({"running": True, "agent": agent}), "compacting")
+        self.assertIsNone(plugin.progress({"running": False, "agent": agent}))
+        self.assertEqual(plugin.progress({"running": True}), "starting")
     def setUp(self):
         self.owner = object()
         self.detached = object()

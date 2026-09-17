@@ -52,9 +52,22 @@ def sessions():
         items = list(server._sessions.items())
     return {"version": 2, "can_resume": desktop_owner() is not None, "sessions": [
         {**server._session_live_item(sid, session),
-         "inflight": server._inflight_snapshot(session)}
+         "inflight": server._inflight_snapshot(session),
+         "progress": progress(session)}
         for sid, session in items if not session.get("_finalized")
     ]}
+
+
+def progress(session):
+    if not session.get("running"):
+        return None
+    agent = session.get("agent")
+    compressor = getattr(agent, "context_compressor", None)
+    if getattr(compressor, "_active_compression_telemetry", None):
+        return "compacting"
+    if agent is None:
+        return "starting"
+    return "running"
 
 
 @router.post("/send")
