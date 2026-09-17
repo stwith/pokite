@@ -1,5 +1,6 @@
 import os from "node:os";
 import { timingSafeEqual, createHash } from "node:crypto";
+import { tailscaleHttpsLink } from "./network-links.mjs";
 
 export function installHttpProtection(app, { token, getPort }) {
   const localIPs = () =>
@@ -12,15 +13,23 @@ export function installHttpProtection(app, { token, getPort }) {
         .filter((i) => i.family === "IPv4")
         .map((i) => i.address),
     ]);
-  app.use((req, res, next) => {
+  app.use(async (req, res, next) => {
     let host;
     try {
       host = new URL("http://" + req.headers.host);
     } catch {
       return res.sendStatus(400);
     }
-    if (!localIPs().has(host.hostname) || Number(host.port) !== getPort())
-      return res.sendStatus(403);
+    const direct = localIPs().has(host.hostname) && Number(host.port) === getPort();
+    const peer = req.socket.remoteAddress?.replace(/^::ffff:/, "");
+    let expectedOrigin = "http://" + req.headers.host;
+    if (!direct) {
+      if (!["127.0.0.1", "::1"].includes(peer)) return res.sendStatus(403);
+      const serve = await tailscaleHttpsLink(getPort());
+      if (!serve || new URL(serve.url).host !== req.headers.host) return res.sendStatus(403);
+      expectedOrigin = new URL(serve.url).origin;
+    }
+    req.pokiteOrigin = expectedOrigin;
     res.set({
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "no-referrer",
@@ -40,7 +49,7 @@ export function installHttpProtection(app, { token, getPort }) {
       return res.status(401).json({ error: "请输入访问码" });
     if (
       req.headers.origin &&
-      req.headers.origin !== "http://" + req.headers.host
+      req.headers.origin !== req.pokiteOrigin
     )
       return res.status(403).json({ error: "Cross-origin request rejected" });
     next();
