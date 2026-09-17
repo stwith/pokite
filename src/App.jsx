@@ -1,5 +1,6 @@
 import { browserStorage as storage } from "./lib/browser-storage";
 import { notificationRoute } from "./lib/notification-route";
+import { clearNotifications } from "./lib/clear-notifications";
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {
   PanelLeftClose,
@@ -79,10 +80,24 @@ export default function App() {
     [showLatest, setShowLatest] = useState(false),
     [answers, setAnswers] = useState({});
   useSessionSync(authed && !!agent, agent);
+  useEffect(() => {
+    if (!authed) return;
+    const clear = () => { void clearNotifications(navigator, document); };
+    clear();
+    document.addEventListener("visibilitychange", clear);
+    window.addEventListener("pageshow", clear);
+    window.addEventListener("focus", clear);
+    return () => {
+      document.removeEventListener("visibilitychange", clear);
+      window.removeEventListener("pageshow", clear);
+      window.removeEventListener("focus", clear);
+    };
+  }, [authed]);
   const [notificationRequest, setNotificationRequest] = useState(null);
   useEffect(() => {
     const receive = event => {
       if (event.data?.type !== "pokite-open-session") return;
+      if (authed) void clearNotifications(navigator, document);
       const target = notificationRoute(event.data.url, location.origin);
       if (!target) return;
       notificationTarget.current = target;
@@ -91,7 +106,7 @@ export default function App() {
     };
     navigator.serviceWorker?.addEventListener("message", receive);
     return () => navigator.serviceWorker?.removeEventListener("message", receive);
-  }, [agent, projects, busy]);
+  }, [agent, projects, busy, authed]);
   useEffect(() => {
     if (!notificationRequest || busy || !authed) return;
     if (notificationRequest.agent !== agent) { setAgent(notificationRequest.agent); return; }
