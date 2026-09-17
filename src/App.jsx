@@ -1184,12 +1184,6 @@ export default function App() {
               }}
             />
             <div className="composer-bottom">
-              <div className="composer-left">
-                <span className="composer-project">
-                  <Folder size={14} />
-                  <span>{project?.name || "未选择项目"}</span>
-                </span>
-              </div>
               <div className="composer-actions">
                 <div className="model-picker">
                   <CompactSelect

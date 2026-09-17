@@ -571,25 +571,6 @@ svg {
   justify-content: flex-end;
   min-width: 0;
 }
-.composer-project {
-  max-width: 120px;
-  flex-shrink: 1;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: #888;
-}
-.composer-left {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  min-width: 0;
-}
-.composer-project > svg {
-  flex-shrink: 0;
-}
 .sidebar-select {
   width: 100%;
   height: 44px;
@@ -621,11 +602,6 @@ svg {
 .composer-actions .send { flex-shrink: 0; margin-left: 6px; }
 .compact-select-item > span:first-child {
   overflow-wrap: anywhere;
-}
-.composer-project > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
 .model-picker {
   min-width: 0;
@@ -1057,9 +1033,6 @@ html[data-keyboard="open"] .composer-wrap {
   font-size: 13px;
 }
 @media (max-width: 600px) {
-  .composer-project > span {
-    display: none !important;
-  }
   .composer-actions {
     flex: 1;
     gap: 2px;
