@@ -6,7 +6,10 @@ English | [简体中文](README.zh-CN.md)
 
 **Your computer's running coding agents. The same sessions, on your phone.**
 
-Leave your computer working. Check progress and continue the conversation from your phone or tablet. No Pokite mobile app, screen mirroring, or agent running on your phone.
+Pokite gives your computer's agent sessions a mobile entry point. Continue using
+multiple supported agents in one web interface: check progress, read results and
+send follow-ups. No mobile app required. Connect over LAN or Tailscale, with
+Pokite self-hosted on your computer.
 
 Pokite is a self-hosted mobile web interface for supported desktop AI coding agents:
 **Codex Desktop, Hermes Desktop, DeepSeek Harness, PenguinHarness, Claude Code CLI,
@@ -20,6 +23,24 @@ operate a hosted relay. Cowork uses Anthropic's remote session API; model calls
 still use each agent's configured provider. See the support table before setup.
 
 > macOS developer preview. There is no signed installer yet. Windows, Linux and multiple Desktop versions have not passed compatibility acceptance.
+
+## Six core features
+
+### Keep your work moving
+
+- **Continue the original session away from your desk.** Read progress and send follow-ups from your phone, then continue in Desktop. Same-session sharing depends on the integration below.
+- **Multiple agents, one mobile entry point.** Switch between supported agents and multiple instances to access their projects and conversations.
+- **Keep your existing workflow.** Use your familiar Desktop clients, projects and execution environments.
+
+### Connect on your terms
+
+- **No mobile app required.** Open a browser on your phone or tablet. No Pokite account needed.
+- **LAN or Tailscale.** Connect over your local network at home, or your own Tailscale network when away.
+- **Self-hosted on your computer.** You run Pokite alongside your agents; no Pokite-hosted relay is required.
+
+Agent model calls still use their configured providers. Cowork's control path
+uses Anthropic services; Tailscale may use encrypted relays when direct
+connections are unavailable. Self-hosting does not mean every integration is offline.
 
 ## From your desk to your phone
 

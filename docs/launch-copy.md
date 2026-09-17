@@ -6,9 +6,13 @@ These are reusable publication drafts, not posts already sent to a platform.
 
 **Title:** Pokite — Continue your desktop agent sessions from your phone
 
-**Short description:** A self-hosted mobile web interface for existing desktop
-coding-agent sessions. Keep your computer running; read progress and send
-follow-ups from your phone over LAN or Tailscale.
+**Short description:** Continue your computer's supported agent sessions from
+your phone. Multiple agents, one web interface. No mobile app required; connect
+over LAN or Tailscale with Pokite self-hosted on your computer.
+
+**Six features:** Continue original sessions away from your desk · Multiple
+agents in one entry point · Keep your existing workflow · No mobile app · LAN
+or Tailscale · Self-hosted on your computer.
 
 **Launch draft:**
 
@@ -32,8 +36,12 @@ https://github.com/stwith/pokite
 
 **标题：** Pokite · 口袋风筝：电脑上的 Agent 继续跑，手机上接着聊
 
-**简介：** 给电脑上已有的 Desktop Agent 会话加一个轻量手机网页入口。
-通过局域网或 Tailscale 查看进展、阅读结果、继续回复，任务仍在电脑上执行。
+**简介：** Pokite 给电脑上的 Agent 会话加一个手机入口。离开电脑后，在同一个
+网页里继续使用多个受支持的 Agent，查看进展、阅读结果、补充指令。无需手机
+App，通过局域网或 Tailscale 连接，自托管在你的电脑上。
+
+**六个特点：** 离开电脑，继续原会话 · 多个 Agent，一个入口 · 保留原来的
+工作方式 · 无需手机 App · 局域网 / Tailscale · 自托管在你的电脑上。
 
 **发布草稿：**
 
