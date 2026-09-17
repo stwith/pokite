@@ -15,7 +15,7 @@ Final result: passed (local browser verification).
   reduced-motion handling, image descriptions and declared language included.
 - No live agent data, access credentials, third-party trackers, external fonts,
   notification claims or copied reference-site images.
-- PWA push explicitly described as not shipped. macOS preview and per-provider
+- FAQ focuses on shipped capabilities without advertising push. macOS preview and per-provider
   differences remain visible. Phone screenshot is marked as fictional content.
 
 Browser checks do not substitute for user acceptance on physical phones.

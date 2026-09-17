@@ -159,7 +159,7 @@ export function ConnectionDialog() {
       <DialogContent>
         <DialogTitle className="connection-title">连接手机或平板</DialogTitle>
         <DialogDescription className="connection-description">
-          {mode === "lan" ? "手机与电脑连接同一局域网，然后扫码连接。" : mode === "tailscale" ? "开启 Tailscale 后扫码连接，无需使用 Tailscale DNS。HTTP 不支持后台推送。" : "需开启 Tailscale 并使用 Tailscale DNS。HTTPS 支持后台推送，Pokite 通知功能尚未上线。"}
+          {mode === "lan" ? "手机与电脑连接同一局域网，然后扫码连接。" : mode === "tailscale" ? "开启 Tailscale 后扫码连接，无需使用 Tailscale DNS。" : "通过 HTTPS 加密访问。请开启 Tailscale，并启用“使用 Tailscale DNS”。"}
         </DialogDescription>
         <Tabs.Root value={mode} onValueChange={setMode}>
           <Tabs.List className="connection-tabs" aria-label="连接网络">

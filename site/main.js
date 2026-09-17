@@ -18,9 +18,9 @@ const english = {
   privacy: "Model calls use your configured providers. Cowork relies on Anthropic services. Tailscale may use encrypted relays when direct connections aren’t available.",
   faqTitle: "A few things to know.", q1: "Does the agent run on my phone?", a1: "Tasks still execute on your computer. Pokite provides a mobile browser entry point to supported sessions. Your computer, agent and Pokite service need to stay running.",
   q2: "How do I get started?", a2: "Follow the GitHub README to install Pokite on your Mac and connect your agents. Then scan the QR code from the connection dialog. Some integrations require a plugin, sharing setup or system authorization.",
-  q3: "Does it support every Desktop agent?", a3: "Not yet. Codex and Hermes Desktop share their backends; DSH and Penguin reuse local services. Claude CLI and Cowork have different boundaries. Claude Desktop Code and Chat are not supported. Check the repository’s support table.",
+  q3: "Which agents can I connect?", a3: "Connect Codex Desktop, Hermes Desktop, DeepSeek Harness, PenguinHarness, Claude Code CLI and Claude Desktop Cowork. Switch projects and conversations in one web interface. See the documentation for each integration’s setup and capabilities.",
   q4: "Can I use it away from home?", a4: "Yes, through your own Tailscale network. LAN HTTP, Tailscale HTTP and optional HTTPS entry points are available. The Tailscale HTTPS domain requires working Tailscale DNS on your device.",
-  q5: "Will I get task completion notifications?", a5: "Not yet. Background push is planned. HTTPS is a prerequisite, not a guarantee that notifications have been implemented.",
+  q5: "Do I need a mobile app?", a5: "Open a browser on your phone or tablet. No Pokite account is required. You can also add the website to your Home Screen and open your conversations in a standalone window.",
   closing: "Your computer keeps going.<br>So can you.", start: "Get started on GitHub", preview: "MIT licensed · macOS developer preview", feedback: "Feedback", footer: "A little more freedom."
 };
 const originals = new Map();
