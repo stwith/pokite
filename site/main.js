@@ -1,11 +1,11 @@
 const english = {
   skip: "Skip to content", navHow: "How it works", navFaq: "FAQ", eyebrow: "A little freedom for your desktop agents.",
-  hero: "Step away.<br>Stay in the <span class='accent'>conversation.</span>", intro: "Your computer keeps working.<br>Your phone keeps you in the loop.",
+  hero: "Your desk can stay.<br>Your ideas can <span class='accent'>wander.</span>", intro: "Your computer’s agents keep working.<br>Pick up the conversation from your phone.",
   cta: "Take Pokite with you", see: "See how it works ↓", heroNote: "Open source · Self-hosted · No mobile app",
-  artAlt: "A desk computer and a handheld phone connected by a green kite string", artNote: "same session. a little more freedom.",
+  artAlt: "A person relaxing while looking at their phone", artNote: "same session. a little more freedom.",
   agentsLead: "Your familiar agents. One pocket-sized entry point.", boundaries: "Capabilities vary by agent. See the integration guide ↗",
   screenAlt: "Actual Pokite mobile interface with a fictional conversation about a checkout page", phoneNote: "Let your computer work.<br>Take a little walk.", demoNote: "Actual interface · Fictional demo content",
-  oneSession: "The same session", storyTitle: "Right where<br>you left off.", storyBody: "No copying context or explaining the task all over again. Open your phone’s browser, find the conversation you started on your computer, and add a thought.",
+  oneSession: "Something familiar, in your pocket", storyTitle: "Right where<br>you left off.", storyBody: "No copying context or explaining the task all over again. Open your phone’s browser, find the conversation you started on your computer, and add a thought.",
   bubble1: "The mobile layout is ready for a look.", bubble2: "I’m out. Change the button to ‘Confirm order’, too.", bubble3: "On it. Continuing in this session.",
   scope: "Codex and Hermes Desktop share their original backends. See docs for other integrations.", light: "Just enough", featuresTitle: "One more way in.<br>A little less friction.",
   f1t: "Keep the original conversation", f1b: "Read progress and add a follow-up on your phone. Pick it up again in Desktop.",
@@ -21,6 +21,8 @@ const english = {
   q3: "Which agents can I connect?", a3: "Connect Codex Desktop, Hermes Desktop, DeepSeek Harness, PenguinHarness, Claude Code CLI and Claude Desktop Cowork. Switch projects and conversations in one web interface. See the documentation for each integration’s setup and capabilities.",
   q4: "Can I use it away from home?", a4: "Yes, through your own Tailscale network. LAN HTTP, Tailscale HTTP and optional HTTPS entry points are available. The Tailscale HTTPS domain requires working Tailscale DNS on your device.",
   q5: "Do I need a mobile app?", a5: "Open a browser on your phone or tablet. No Pokite account is required. You can also add the website to your Home Screen and open your conversations in a standalone window.",
+  coffeeCaption: "A little time away from the screen", coffeeTitle: "Get a coffee.<br>Leave the waiting behind.", coffeeIntro: "Your computer handles the task. You can check in whenever.", coffeeReply: "The page is ready. Take a look on your phone.", coffeeUser: "Looks good. Shorten the headline a little?", coffeeDone: "Sure. Continuing in the same session.",
+  walkCaption: "A thought along the way", walkTitle: "Ideas don’t wait<br>for you to get home.", walkIntro: "No need to explain it all again. The conversation is still there.", walkUser: "One more thought: add a hint to the empty state.", walkReply: "Got it. I’ll include it with the changes.", sceneDemo: "Illustrative conversation · Same session, somewhere else", credits: "Illustrations",
   closing: "Your computer keeps going.<br>So can you.", start: "Get started on GitHub", preview: "MIT licensed · macOS developer preview", feedback: "Feedback", footer: "A little more freedom."
 };
 const originals = new Map();
@@ -48,7 +50,7 @@ const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 let revealObserver;
 function setupMotion() {
   revealObserver?.disconnect();
-  const targets = document.querySelectorAll(".agents, .phone-scene, .story-copy, .section-heading, .feature-list article, .connection-inner, .faq, .closing");
+  const targets = document.querySelectorAll(".agents, .vignette, .phone-scene, .story-copy, .section-heading, .feature-list article, .connection-inner, .faq, .closing");
   if (reducedMotion.matches || !("IntersectionObserver" in window)) {
     targets.forEach(el => el.classList.remove("reveal-pending"));
     return;

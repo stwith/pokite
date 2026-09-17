@@ -13,6 +13,7 @@
   <link rel="icon" href="./assets/pokite.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
   <link rel="stylesheet" href="./motion.css">
+  <link rel="stylesheet" href="./editorial.css">
 </head>
 <body>
   <a class="skip" href="#main" data-i18n="skip">跳至正文</a>
@@ -24,23 +25,31 @@
     <section class="hero wrap">
       <div class="hero-copy">
         <p class="eyebrow"><span class="dot"></span><span data-i18n="eyebrow">给桌面上的 Agent，一点自由。</span></p>
-        <h1 data-i18n="hero">离开电脑，<br>也不必离开<span class="accent">会话。</span></h1>
-        <p class="lede" data-i18n="intro">电脑上的 Agent 继续跑。<br>你拿起手机，看进展、读结果、接着聊。</p>
+        <h1 data-i18n="hero">电脑留在桌上。<br>会话<span class="accent">带在身边。</span></h1>
+        <p class="lede" data-i18n="intro">电脑上的 Agent 继续工作。<br>你去生活，想起什么，手机上接着说。</p>
         <div class="hero-actions"><a class="button" href="https://github.com/stwith/pokite#quick-start"><span data-i18n="cta">把 Pokite 带走</span><span aria-hidden="true">↗</span></a><a class="text-link" href="#how" data-i18n="see">看看它怎么工作 ↓</a></div>
         <p class="fine" data-i18n="heroNote">开源 · 自托管 · 无需手机 App</p>
       </div>
-      <div class="hero-art"><img src="./assets/away.svg" alt="桌上的电脑与手中的手机，由一根绿色风筝线连接" data-alt="artAlt" width="590" height="470"><span class="art-note" data-i18n="artNote">same session. a little more freedom.</span></div>
+      <div class="hero-art"><img class="floating-kite" src="./assets/pokite.svg" alt="" width="62" height="62"><img src="./assets/laying.svg" alt="放松躺着的人正在看手机" data-alt="artAlt" width="590" height="470"><span class="art-note" data-i18n="artNote">same session. a little more freedom.</span></div>
     </section>
     <section class="agents wrap" aria-label="Supported agents">
       <p data-i18n="agentsLead">你熟悉的 Agent，一个随身入口。</p>
       <div class="agent-names"><span>Codex Desktop</span><span>Hermes Desktop</span><span>DeepSeek Harness</span><span>PenguinHarness</span><span>Claude Code</span><span>Claude Cowork</span></div>
       <a class="fine" href="https://github.com/stwith/pokite#supported-agents" data-i18n="boundaries">各 Agent 支持能力不同，查看接入说明 ↗</a>
     </section>
-    <section class="story wrap" id="how">
-      <div class="phone-scene"><div class="phone"><div class="phone-camera"></div><img src="./assets/mobile-session.png" alt="Pokite 手机界面：阅读结果并在同一会话中补充指令，内容为虚构演示" data-alt="screenAlt" width="780" height="1688" loading="lazy"></div><span class="side-note" data-i18n="phoneNote">电脑继续忙，<br>你可以走走。</span><p class="fine" data-i18n="demoNote">真实界面 · 虚构演示数据</p></div>
-      <div class="story-copy"><span class="section-index">01 / <span data-i18n="oneSession">同一个会话</span></span><h2 data-i18n="storyTitle">刚才聊到哪，<br>现在就接着聊。</h2><p data-i18n="storyBody">不用复制上下文，不必重新描述任务。打开手机浏览器，找到电脑上已经开始的会话，补充一句就好。</p><div class="conversation"><div class="bubble assistant" data-i18n="bubble1">移动端布局已经修好了，等你看看。</div><div class="bubble user" data-i18n="bubble2">我在外面。再把按钮改成「确认订单」。</div><div class="bubble assistant" data-i18n="bubble3">好，接着在这个会话里改。</div></div><p class="fine" data-i18n="scope">Codex / Hermes Desktop 共享原后端。其他接入方式见文档。</p></div>
+    <section class="vignette coffee-scene wrap" id="how">
+      <div class="scene-art"><img src="./assets/coffee.svg" alt="抱着咖啡杯休息的人" width="1024" height="768" loading="lazy"></div>
+      <div class="scene-copy"><p class="scene-caption" data-i18n="coffeeCaption">离开屏幕的一小会儿</p><h2 data-i18n="coffeeTitle">去喝杯咖啡。<br>不用一直等在桌前。</h2><p class="scene-intro" data-i18n="coffeeIntro">任务交给电脑，进展随手可见。</p><div class="conversation"><div class="bubble assistant" data-i18n="coffeeReply">页面改好了，手机上也可以看结果。</div><div class="bubble user" data-i18n="coffeeUser">看到了。再把标题缩短一点。</div><div class="bubble assistant" data-i18n="coffeeDone">好，在原会话里接着改。</div></div></div>
     </section>
-    <section class="features wrap" id="features"><div class="section-heading"><span class="section-index">02 / <span data-i18n="light">轻一点，刚刚好</span></span><h2 data-i18n="featuresTitle">多一个入口。<br>少一点牵挂。</h2></div><div class="feature-list">
+    <section class="vignette walk-scene wrap">
+      <div class="scene-copy"><p class="scene-caption" data-i18n="walkCaption">走着走着，想到一点</p><h2 data-i18n="walkTitle">灵感不必<br>等你回到桌前。</h2><p class="scene-intro" data-i18n="walkIntro">不用重讲来龙去脉。你们刚才聊到的，都还在。</p><div class="conversation"><div class="bubble user" data-i18n="walkUser">想到了，空状态也加一句引导吧。</div><div class="bubble assistant" data-i18n="walkReply">收到，和刚才的修改一起处理。</div></div><p class="fine" data-i18n="sceneDemo">演示对话 · 同一会话，换个地方继续</p></div>
+      <div class="scene-art"><img src="./assets/strolling.svg" alt="轻松散步的人" width="1024" height="768" loading="lazy"></div>
+    </section>
+    <section class="story wrap" id="interface">
+      <div class="phone-scene"><div class="phone"><div class="phone-camera"></div><img src="./assets/mobile-session.png" alt="Pokite 手机界面：阅读结果并在同一会话中补充指令，内容为虚构演示" data-alt="screenAlt" width="780" height="1688" loading="lazy"></div><span class="side-note" data-i18n="phoneNote">电脑继续忙，<br>你可以走走。</span><p class="fine" data-i18n="demoNote">真实界面 · 虚构演示数据</p></div>
+      <div class="story-copy"><span class="section-index"><span data-i18n="oneSession">口袋里的，是熟悉的会话</span></span><h2 data-i18n="storyTitle">刚才聊到哪，<br>现在就接着聊。</h2><p data-i18n="storyBody">不用复制上下文，不必重新描述任务。打开手机浏览器，找到电脑上已经开始的会话，补充一句就好。</p><div class="conversation"><div class="bubble assistant" data-i18n="bubble1">移动端布局已经修好了，等你看看。</div><div class="bubble user" data-i18n="bubble2">我在外面。再把按钮改成「确认订单」。</div><div class="bubble assistant" data-i18n="bubble3">好，接着在这个会话里改。</div></div><p class="fine" data-i18n="scope">Codex / Hermes Desktop 共享原后端。其他接入方式见文档。</p></div>
+    </section>
+    <section class="features wrap" id="features"><div class="section-heading"><span class="section-index"><span data-i18n="light">轻一点，刚刚好</span></span><h2 data-i18n="featuresTitle">多一个入口。<br>少一点牵挂。</h2></div><div class="feature-list">
       <article><span class="feature-number">01</span><div><h3 data-i18n="f1t">离开电脑，继续原会话</h3><p data-i18n="f1b">在手机上看进展、补充指令，回到 Desktop 接着聊。</p></div></article>
       <article><span class="feature-number">02</span><div><h3 data-i18n="f2t">多个 Agent，一个入口</h3><p data-i18n="f2b">不同 Agent、多个实例的项目与会话，放在同一个网页里。</p></div></article>
       <article><span class="feature-number">03</span><div><h3 data-i18n="f3t">保留你的工作方式</h3><p data-i18n="f3b">熟悉的客户端、项目和环境都在电脑上，手机只是多一个入口。</p></div></article>
@@ -49,7 +58,7 @@
       <article><span class="feature-number">06</span><div><h3 data-i18n="f6t">自托管，留在你的电脑上</h3><p data-i18n="f6b">你运行自己的 Pokite 服务，不依赖 Pokite 托管中转。</p></div></article>
     </div></section>
     <section class="connection wrap"><div class="connection-inner"><span class="tiny-kite"><img src="./assets/pokite.svg" width="45" height="45" alt=""></span><h2 data-i18n="localTitle">一根线，连回自己的电脑。</h2><div class="diagram" aria-label="连接示意"><div><span class="diagram-icon">⌘</span><strong data-i18n="computer">电脑上的 Desktop</strong><small data-i18n="keepsRunning">原后端 · 原会话</small></div><span class="wire" aria-hidden="true"></span><div><img src="./assets/pokite.svg" width="35" height="35" alt=""><strong>Pokite</strong><small data-i18n="yourMac">运行在你的电脑上</small></div><span class="wire" aria-hidden="true"></span><div><span class="device-icon" aria-hidden="true"></span><strong data-i18n="phone">手机浏览器</strong><small>LAN / Tailscale</small></div></div><p class="fine" data-i18n="privacy">模型调用仍使用原有服务；Cowork 控制链路依赖 Anthropic。Tailscale 无法直连时可能使用加密中继。</p></div></section>
-    <section class="faq wrap" id="faq"><span class="section-index">03 / FAQ</span><h2 data-i18n="faqTitle">你可能还想问。</h2>
+    <section class="faq wrap" id="faq"><span class="section-index">一些小问题 / FAQ</span><h2 data-i18n="faqTitle">你可能还想问。</h2>
       <details><summary data-i18n="q1">Agent 是在手机上运行吗？</summary><p data-i18n="a1">任务仍在电脑上执行。Pokite 给受支持的电脑端会话加一个手机网页入口，电脑需要保持开机，相关 Agent 和 Pokite 服务需要运行。</p></details>
       <details><summary data-i18n="q2">怎么开始？</summary><p data-i18n="a2">在 Mac 上按 GitHub README 安装 Pokite，完成 Agent 接入，然后从电脑网页的连接弹窗扫码。不同 Agent 可能需要插件、共享配置或系统授权。</p></details>
       <details><summary data-i18n="q3">可以连接哪些 Agent？</summary><p data-i18n="a3">支持 Codex Desktop、Hermes Desktop、DeepSeek Harness、PenguinHarness、Claude Code CLI 和 Claude Desktop Cowork。你可以在同一个网页里切换项目与会话，各 Agent 的具体接入方式见使用文档。</p></details>
@@ -58,7 +67,7 @@
     </section>
     <section class="closing wrap"><img src="./assets/pokite.svg" width="66" height="66" alt=""><h2 data-i18n="closing">电脑继续跑。<br>你，轻松一点。</h2><a class="button" href="https://github.com/stwith/pokite#quick-start"><span data-i18n="start">在 GitHub 开始使用</span><span aria-hidden="true">↗</span></a><p class="fine" data-i18n="preview">MIT 开源 · macOS 开发者预览版</p></section>
   </main>
-  <footer class="wrap"><span>© 2026 Pokite · <span data-i18n="footer">口袋风筝</span></span><div><a href="https://github.com/stwith/pokite">GitHub ↗</a><a href="https://github.com/stwith/pokite/issues" data-i18n="feedback">反馈</a><a href="https://github.com/stwith/pokite/blob/main/LICENSE">MIT</a></div></footer>
+  <footer class="wrap"><span>© 2026 Pokite · <span data-i18n="footer">口袋风筝</span></span><div><a href="https://github.com/stwith/pokite">GitHub ↗</a><a href="https://github.com/stwith/pokite/issues" data-i18n="feedback">反馈</a><a href="https://github.com/stwith/pokite/blob/main/LICENSE">MIT</a><a href="https://www.opendoodles.com/" data-i18n="credits">线稿致谢</a></div></footer>
   <script src="./main.js" defer></script>
 </body>
 </html>

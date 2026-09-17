@@ -20,6 +20,21 @@ Final result: passed (local browser verification).
 
 Browser checks do not substitute for user acceptance on physical phones.
 
+## Scene-led editorial version — September 17
+
+- Replaced the hero with a relaxing phone-user illustration and introduced
+  coffee and walking scenes, with small illustrative conversations.
+- Open Doodles art by Pablo Stanley is locally hosted, recolored and credited
+  in assets/ILLUSTRATION-CREDITS.md. The following historical notes describe
+  earlier original illustration iterations, not the current third-party assets.
+- Removed numbered feature-list presentation; retained all six product benefits.
+- Introduced compact floating navigation, soft stipple backdrops and broader
+  scene spacing while preserving the real UI demonstration and clear setup CTA.
+- Fixed actual tablet/mobile illustration overflow rather than clipping content.
+- Chromium and WebKit: both languages at 320/390/768/1440px pass overflow checks;
+  scrolling reveals content, FAQ opens, reduced motion leaves all content visible.
+- Reviewed full-page screenshots after lazy images loaded. No JavaScript errors.
+
 ## Illustration and motion refinement
 
 - Replaced the initial device diagram with an original editorial scene: a seated
