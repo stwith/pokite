@@ -1,4 +1,5 @@
 import { browserStorage as storage } from "./lib/browser-storage";
+import { notificationRoute } from "./lib/notification-route";
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {
   PanelLeftClose,
@@ -47,17 +48,19 @@ import {
 } from "./lib/drafts";
 import { Navigation } from "./components/navigation";
 import { ConnectionDialog } from "./components/connection-dialog";
+import { NotificationSettings } from "./components/notification-settings";
 import { DisconnectDialog } from "./components/disconnect-dialog";
 import { HomeScreenGuide } from "./components/home-screen-guide";
 import { PairingScanner } from "./components/pairing-scanner";
 import { QueuedMessage } from "./components/chat/queued-message";
 
 export default function App() {
+  const notificationTarget = useRef(notificationRoute(location.href, location.origin));
   useVisualViewport();
   const [token, setToken] = useState(getAccessToken),
     [authed, setAuthed] = useState(false),
     [agents, setAgents] = useState([]),
-    [agent, setAgent] = useState(storage.getItem("agent") || "codex2"),
+    [agent, setAgent] = useState(notificationTarget.current?.agent || storage.getItem("agent") || "codex2"),
     [projects, setProjects] = useState([]),
     [project, setProject] = useState(null),
     [sessions, setSessions] = useState([]),
@@ -76,6 +79,28 @@ export default function App() {
     [showLatest, setShowLatest] = useState(false),
     [answers, setAnswers] = useState({});
   useSessionSync(authed && !!agent, agent);
+  const [notificationRequest, setNotificationRequest] = useState(null);
+  useEffect(() => {
+    const receive = event => {
+      if (event.data?.type !== "pokite-open-session") return;
+      const target = notificationRoute(event.data.url, location.origin);
+      if (!target) return;
+      notificationTarget.current = target;
+      history.replaceState(null, "", event.data.url);
+      setNotificationRequest(target);
+    };
+    navigator.serviceWorker?.addEventListener("message", receive);
+    return () => navigator.serviceWorker?.removeEventListener("message", receive);
+  }, [agent, projects, busy]);
+  useEffect(() => {
+    if (!notificationRequest || busy || !authed) return;
+    if (notificationRequest.agent !== agent) { setAgent(notificationRequest.agent); return; }
+    const next = projects.find(p => p.id === notificationRequest.project);
+    if (next) {
+      setProject(next); selectSession(notificationRequest.session);
+      notificationTarget.current = null; setNotificationRequest(null);
+    }
+  }, [notificationRequest, busy, authed, agent, projects]);
   const [syncErrors, setSyncErrors] = useState({});
   const [storageUnavailable, setStorageUnavailable] = useState(() =>
     storage.hasUnsaved(),
@@ -258,10 +283,18 @@ export default function App() {
           if (gen !== generation.current) return;
           setProjects(rows);
           setProject(
+            rows.find((p) => p.id === notificationTarget.current?.project && notificationTarget.current.agent === agent) ||
             rows.find((p) => p.id === storage.getItem("project:" + agent)) ||
               rows[0] ||
               null,
           );
+          if (notificationTarget.current?.agent === agent && rows.some(p => p.id === notificationTarget.current.project)) {
+            const target = notificationTarget.current;
+            setSid(target.session);
+            setDraft(readDraft("draft:" + agent + ":" + target.session) || "");
+            setNav(false);
+            notificationTarget.current = null;
+          }
           setOnline(true);
           loaded = true;
           syncRecovered("项目");
@@ -916,6 +949,7 @@ export default function App() {
           {online && !Object.keys(syncErrors).length ? "已连接" : "正在重连"}
           <span className="host">Mac mini</span>
           <ConnectionDialog />
+          <NotificationSettings agent={agent} project={project} />
           <DisconnectDialog disabled={busy} />
         </footer>
       </Navigation>

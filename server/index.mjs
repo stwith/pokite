@@ -14,6 +14,7 @@ import { shutdownServer } from "./shutdown.mjs";
 import os from "node:os";
 import { execFile } from "node:child_process";
 import { DesktopErrorMonitor } from "./desktop-error-monitor.mjs";
+import { PushService } from "./push.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const local = path.resolve(
@@ -106,7 +107,9 @@ try {
       });
     return writeQueue;
   }
+  const push = new PushService(local, adapters);
   app = createApp({
+    push,
     adapters,
     agentNames,
     token,
@@ -117,6 +120,7 @@ try {
     dist: path.join(root, "dist"),
     getPort: () => port,
   });
+  push.start();
   const queueTimer = setInterval(
     () =>
       messages.tick().catch((error) => console.error("Queue:", error.message)),
@@ -158,6 +162,7 @@ try {
     (stopping ||= (async () => {
       clearInterval(queueTimer);
       clearInterval(monitorTimer);
+      await push.close();
       await shutdownServer({
         app,
         server,

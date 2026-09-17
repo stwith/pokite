@@ -2,7 +2,7 @@ import { browserStorage as storage } from "./browser-storage";
 const initial = new URLSearchParams(location.hash.slice(1)).get("token");
 if (initial) {
   storage.setItem("access-token", initial);
-  history.replaceState(null, "", location.pathname);
+  history.replaceState(null, "", location.pathname + location.search);
 }
 let access = storage.getItem("access-token") || "";
 const responses = new Map();

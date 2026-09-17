@@ -152,7 +152,23 @@ Wait for Desktop tasks to finish, then quit and reopen the relevant Desktop app.
 
 After connecting, use Safari's Share > Add to Home Screen; keep Open as Web App enabled where available. Other browsers offer their own shortcut/install menu.
 
-HTTP installation and standalone behavior depend on the OS/browser. Pokite supplies a manifest and icons, but no Service Worker, offline execution or background resubmission. A standalone window may require pairing again because its storage is separate. Live in-page camera scanning requires HTTPS; HTTP pairing uses a captured or selected QR image.
+HTTP installation and standalone behavior depend on the OS/browser. A standalone window may require pairing again because its storage is separate. Live camera scanning and background push require HTTPS. The notification service worker does not cache private conversations, execute tasks offline, or resubmit instructions.
+
+## Task notifications
+
+Use HTTPS; on iPhone/iPad, add Pokite to your Home Screen and launch it there.
+Select a project, open the sidebar bell, and enable notifications for that project.
+Completed and failed tasks are monitored on the Mac even while the browser is
+closed, including tasks started in Desktop. Tap a notification to open its
+agent/project/session. Follow other projects separately.
+
+Notifications omit conversation content and project titles. Browser vendor push
+services deliver them; no Pokite cloud relay or inbound public port is needed.
+Your Mac and Pokite must stay running with internet access. Opening the session
+still requires access to the Mac via LAN/Tailscale. Test, unfollow or disable
+notifications from the bell dialog. Delivery is best effort; provider acceptance
+does not prove display on a device. Polling requires evidence of a completed
+turn; transient native events lost while disconnected may not be recoverable.
 
 Disconnect in the sidebar clears this browser's access code and returns to the first screen. It does not stop Desktop tasks or revoke other devices. Keep the host awake and Pokite running.
 
