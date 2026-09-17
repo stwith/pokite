@@ -138,7 +138,7 @@ svg {
   min-height: 0;
   margin: 0 -4px 10px;
   padding: 0 4px;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   scrollbar-color: #d6d6d6 transparent;
 }
 .sidebar .session {
@@ -244,7 +244,7 @@ svg {
 .connection-description { margin: 6px 0 18px; font-size: 13px; color: #777; }
 .connection-close { position: absolute; right: 12px; top: 12px; }
 .connection-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; background: #f1f1f2; padding: 3px; border-radius: 6px; }
-.connection-tabs button { min-height: 38px; border: 0; background: transparent; border-radius: 4px; font-size: 13px; color: #666; }
+.connection-tabs button { min-height: 38px; border: 0; background: transparent; border-radius: 4px; font-size: 12px; color: #666; }
 .connection-tabs button[data-state="active"] { background: white; color: #222; box-shadow: 0 1px 3px #0001; }
 .connection-code { min-height: 280px; display: grid; place-items: center; font-size: 13px; color: #666; }
 .connection-code canvas { display: block; width: 264px; max-width: 100%; height: auto; aspect-ratio: 1; }
@@ -346,7 +346,7 @@ svg {
   overflow: auto;
   overscroll-behavior: contain;
   padding: 30px 32px 14px;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   scrollbar-color: #ddd transparent;
 }
 .messages {
@@ -586,7 +586,7 @@ svg {
   border: 1px solid #ddd;
   background: white;
   padding: 0 12px;
-  font-size: 14px;
+  font-size: 13px;
 }
 .composer-actions .compact-select-trigger {
   border: 0;
@@ -594,7 +594,7 @@ svg {
   background: transparent;
   height: 36px;
   box-shadow: none;
-  font-size: 13px;
+  font-size: 12px;
   padding-inline: 6px;
   gap: 4px;
   justify-content: flex-end;
@@ -965,6 +965,7 @@ html[data-keyboard="open"] .composer-wrap {
   flex-shrink: 0;
 }
 .compact-select-content {
+  scrollbar-width: none;
   z-index: 100;
   min-width: var(--radix-select-trigger-width);
   max-width: calc(100vw - 16px);
@@ -984,13 +985,26 @@ html[data-keyboard="open"] .composer-wrap {
   min-height: 40px;
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 12px;
   outline: none;
   cursor: default;
 }
 .compact-select-item[data-highlighted] {
   background: #f1f1f1;
 }
+.compact-select-content [data-radix-select-viewport] {
+  scrollbar-width: none;
+}
+.compact-select-content::-webkit-scrollbar,
+.compact-select-content [data-radix-select-viewport]::-webkit-scrollbar,
+.conversation::-webkit-scrollbar,
+.sidebar nav::-webkit-scrollbar,
+[data-slot="dialog-content"]::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+[data-slot="dialog-content"] { scrollbar-width: none; }
 .select-label select[data-slot="native-select"] {
   height: 44px;
   min-height: 44px;
