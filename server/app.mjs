@@ -10,7 +10,7 @@ import {
 import { serveEventStream } from "./event-stream.mjs";
 import { selectModelSettings } from "./model-settings.mjs";
 import { installWriteLifecycle } from "./write-lifecycle.mjs";
-import { networkLinks } from "./network-links.mjs";
+import { networkLinks, tailscaleHttpsLink } from "./network-links.mjs";
 import { capabilities } from "./instances.mjs";
 
 // Runtime resources are injected; importing routes never starts agents or listeners.
@@ -97,13 +97,13 @@ export function createApp({
       })),
     ),
   );
-  app.get("/api/connection-links", (req, res) =>
+  app.get("/api/connection-links", async (req, res) =>
     res.json(
-      networkLinks(
+      { ...networkLinks(
         getPort(),
         undefined,
         req.socket.localAddress?.replace(/^::ffff:/, ""),
-      ),
+      ), tailscale: await tailscaleHttpsLink(getPort()) },
     ),
   );
   app.get("/api/:agent/projects", async (req, res) =>

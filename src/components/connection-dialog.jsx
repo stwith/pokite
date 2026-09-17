@@ -142,7 +142,7 @@ export function ConnectionDialog() {
   const url = address
     ? address + "#token=" + encodeURIComponent(getAccessToken())
     : "";
-  const label = mode === "lan" ? "本地局域网" : "Tailscale";
+  const label = mode === "lan" ? "局域网 HTTP" : "Tailscale HTTPS";
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -162,8 +162,8 @@ export function ConnectionDialog() {
         </DialogDescription>
         <Tabs.Root value={mode} onValueChange={setMode}>
           <Tabs.List className="connection-tabs" aria-label="连接网络">
-            <Tabs.Trigger value="lan">本地局域网</Tabs.Trigger>
-            <Tabs.Trigger value="tailscale">Tailscale</Tabs.Trigger>
+            <Tabs.Trigger value="lan">局域网 HTTP</Tabs.Trigger>
+            <Tabs.Trigger value="tailscale">Tailscale HTTPS</Tabs.Trigger>
           </Tabs.List>
           <div className="connection-code">
             {error ? (
