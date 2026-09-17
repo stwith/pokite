@@ -19,3 +19,15 @@ Final result: passed (local browser verification).
   differences remain visible. Phone screenshot is marked as fictional content.
 
 Browser checks do not substitute for user acceptance on physical phones.
+
+## Illustration and motion refinement
+
+- Replaced the initial device diagram with an original editorial scene: a seated
+  person checking a phone beside a working laptop, with a plant and coffee cup.
+- Separate vector layers animate the kite, steam and screen indicator.
+- Added progressive scroll reveals, staggered conversation bubbles, subtle mouse
+  response on the hero illustration, and FAQ/button interaction feedback.
+- Content is visible without JavaScript. Reduced-motion preferences remove
+  animation and reveal hiding; primary page animations pause when hidden.
+- Chromium and WebKit verification covers scrolling, language switching,
+  reduced motion and horizontal overflow at 320, 390, 768 and 1440px.

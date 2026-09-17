@@ -41,3 +41,52 @@ function setLanguage(next) {
 }
 button.addEventListener("click", () => setLanguage(language === "zh" ? "en" : "zh"));
 try { if (localStorage.getItem("pokite-site-language") === "en") setLanguage("en"); } catch {}
+
+// Progressive enhancement: all content remains visible if JavaScript or motion
+// APIs are unavailable. Reveal once, then release the observer.
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+let revealObserver;
+function setupMotion() {
+  revealObserver?.disconnect();
+  const targets = document.querySelectorAll(".agents, .phone-scene, .story-copy, .section-heading, .feature-list article, .connection-inner, .faq, .closing");
+  if (reducedMotion.matches || !("IntersectionObserver" in window)) {
+    targets.forEach(el => el.classList.remove("reveal-pending"));
+    return;
+  }
+  revealObserver = new IntersectionObserver(entries => {
+    for (const entry of entries) if (entry.isIntersecting) {
+      entry.target.classList.remove("reveal-pending");
+      entry.target.classList.add("revealed");
+      revealObserver.unobserve(entry.target);
+    }
+  }, { threshold: 0.12 });
+  targets.forEach(el => {
+    if (!el.classList.contains("revealed")) {
+      el.classList.add("reveal-pending");
+      revealObserver.observe(el);
+    }
+  });
+}
+setupMotion();
+reducedMotion.addEventListener("change", setupMotion);
+document.addEventListener("visibilitychange", () => {
+  document.documentElement.classList.toggle("page-hidden", document.hidden);
+});
+
+// Pointer response is confined to the illustration, with one frame at a time.
+const artwork = document.querySelector(".hero-art");
+let frame;
+artwork.addEventListener("pointermove", event => {
+  if (reducedMotion.matches || event.pointerType !== "mouse") return;
+  cancelAnimationFrame(frame);
+  frame = requestAnimationFrame(() => {
+    const rect = artwork.getBoundingClientRect();
+    artwork.style.setProperty("--tilt-x", `${(event.clientY - rect.top - rect.height / 2) / rect.height * -3}deg`);
+    artwork.style.setProperty("--tilt-y", `${(event.clientX - rect.left - rect.width / 2) / rect.width * 4}deg`);
+  });
+});
+artwork.addEventListener("pointerleave", () => {
+  cancelAnimationFrame(frame);
+  artwork.style.setProperty("--tilt-x", "0deg");
+  artwork.style.setProperty("--tilt-y", "0deg");
+});
