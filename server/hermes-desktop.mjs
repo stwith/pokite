@@ -104,6 +104,7 @@ export class HermesDesktop {
   async live() {
     const clients = await this.connections();
     const rows = [];
+    this.resumeClients = new Map();
     for (const client of clients) {
       let result;
       try {
@@ -112,7 +113,8 @@ export class HermesDesktop {
         if (error.status === 404) continue;
         throw error;
       }
-      if (result.version !== 1) throw new Error("Hermes 本地插件版本不兼容");
+      if (![1, 2].includes(result.version)) throw new Error("Hermes 本地插件版本不兼容");
+      if (result.version === 2 && result.can_resume) this.resumeClients.set(client.endpoint.profile, client);
       for (const session of result.sessions) rows.push({ ...session, client });
     }
     return rows;
@@ -120,9 +122,13 @@ export class HermesDesktop {
   projectId(row) {
     return encode([row.profile, row.cwd || ""]);
   }
+  resumeClient(profile) {
+    return this.resumeClients?.get(profile) || this.resumeClients?.get("default");
+  }
   row(row, live) {
     const active = live.find((s) => s.session_key === row.id);
     const failure = active?.inflight?.error;
+    const writable = !!active || !!this.resumeClient(row.profile);
     return {
       id: encode([row.profile, row.id]),
       projectId: this.projectId(row),
@@ -140,12 +146,12 @@ export class HermesDesktop {
       ).toISOString(),
       revision:
         String(row.message_count) + ":" + (row.last_active || row.started_at),
-      canReply: !!active,
-      readOnly: !active,
-      ...(!active
+      canReply: writable,
+      readOnly: !writable,
+      ...(!writable
         ? {
             readOnlyReason:
-              "请先在 Hermes Desktop 打开这条会话，再从手机继续回复。",
+              "请打开 Hermes Desktop 并确认本地共享插件已更新。",
           }
         : {}),
       ...(failure
@@ -270,16 +276,18 @@ export class HermesDesktop {
     const active = (await this.live()).find((s) => s.session_key === row.id);
     // The plugin dispatches using the original Desktop transport. Direct RPC
     // prompt.submit also steals ownership, even without session.resume.
-    if (!active)
+    const client = active?.client || this.resumeClient(row.profile);
+    if (!client)
       throw Object.assign(new Error("请先在 Hermes Desktop 打开此会话。"), {
         delivery: "not-sent",
       });
-    if (["working", "starting", "waiting"].includes(active.status))
+    if (["working", "starting", "waiting"].includes(active?.status))
       throw Object.assign(new Error("等待 Hermes 当前任务结束"), {
         retrySafe: true,
       });
-    const result = await active.client.post("/api/plugins/pokite/send", {
-      session_id: active.id,
+    const result = await client.post("/api/plugins/pokite/send", {
+      session_id: active?.id || row.id,
+      ...(!active ? { stored_session_id: row.id, profile: row.profile } : {}),
       text: message,
     });
     this.onChange?.();

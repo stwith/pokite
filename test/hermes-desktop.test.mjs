@@ -13,7 +13,7 @@ const stored = {
 const id = Buffer.from(JSON.stringify(["default", "stored"])).toString(
   "base64url",
 );
-function fixture(status = "idle") {
+function fixture(status = "idle", canResume = false) {
   const calls = [];
   const adapter = new HermesDesktop("/fixture");
   adapter.rows = () => [stored];
@@ -23,7 +23,8 @@ function fixture(status = "idle") {
       calls.push(route);
       if (route === "/api/plugins/pokite/sessions")
         return {
-          version: 1,
+          version: canResume ? 2 : 1,
+          can_resume: canResume,
           sessions:
             status === "missing"
               ? []
@@ -77,6 +78,14 @@ test("Hermes reports native failure and hides tool messages", async () => {
     detail.messages.map((m) => m.text),
     ["hello"],
   );
+});
+test("Hermes cold history is writable with a connected v2 Desktop plugin", async () => {
+  const { adapter, calls } = fixture("missing", true);
+  assert.equal((await adapter.detail(id)).readOnly, false);
+  await adapter.send(id, "phone");
+  assert.deepEqual(calls.at(-1), ["/api/plugins/pokite/send", {
+    session_id: "stored", stored_session_id: "stored", profile: "default", text: "phone",
+  }]);
 });
 test("Hermes identifies inactive history as read-only and validates history cursors", async () => {
   const { adapter } = fixture("missing");

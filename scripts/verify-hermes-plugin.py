@@ -23,6 +23,9 @@ class OwnerTests(unittest.TestCase):
         self.server = types.SimpleNamespace(
             _sessions={"native": self.session},
             _sessions_lock=threading.Lock(),
+            _live_transports_lock=threading.Lock(),
+            _live_transports={self.owner},
+            _find_live_session_by_key=lambda key: None,
             _detached_ws_transport=self.detached,
             _session_live_status=lambda sid, session: "idle",
             bind_transport=self.bind,
@@ -75,6 +78,27 @@ class OwnerTests(unittest.TestCase):
             plugin.send(plugin.Prompt(session_id="native", text="hello"))
         self.assertIsNone(self.bound)
         self.assertIs(self.session["transport"], self.owner)
+
+    def test_cold_resume_uses_desktop_owner_and_original_stored_id(self):
+        def handle(request):
+            self.assertIs(self.bound, self.owner)
+            self.calls.append(request)
+            if request["method"] == "session.resume":
+                self.assertEqual(request["params"]["session_id"], "stored")
+                self.server._sessions["restored"] = {"transport": self.owner}
+                return {"result": {"session_id": "restored"}}
+            self.assertEqual(request["params"]["session_id"], "restored")
+            return {"result": {"status": "streaming"}}
+        self.server.handle_request = handle
+        plugin.send(plugin.Prompt(session_id="stored", stored_session_id="stored", text="phone"))
+        self.assertEqual([r["method"] for r in self.calls], ["session.resume", "prompt.submit"])
+        self.assertIsNone(self.bound)
+
+    def test_cold_resume_without_desktop_fails_before_execution(self):
+        self.server._live_transports.clear()
+        with self.assertRaises(plugin.HTTPException):
+            plugin.send(plugin.Prompt(session_id="stored", stored_session_id="stored", text="phone"))
+        self.assertEqual(self.calls, [])
 
 
 if __name__ == "__main__":

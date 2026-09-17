@@ -21,7 +21,9 @@ the session event transport to the sender. The plugin binds the original owner
 before invoking the native prompt handler. Read-only snapshots include running,
 waiting and retained error state without changing session ownership.
 
-Historical sessions must first be opened in Desktop. New sessions require an
+Protocol v2 restores historical sessions on send through an existing Desktop
+transport, retaining the stored conversation ID. Reading history never resumes
+execution. Desktop must be running and connected. New sessions require an
 existing Desktop connection and an existing project. Native approvals and model
 selection remain in Desktop. Pokite's queue handles busy sessions; it does not
 replay uncertain submissions. Polling exposes snapshots rather than a second

@@ -17,7 +17,7 @@ Pokite 优先复用已有项目和会话。Codex Desktop 共享现有后端；�
 | 接入 | 查看 | 发送与执行方式 | 边界 |
 | --- | --- | --- | --- |
 | Codex Desktop，多实例 | 项目、会话、对话 | 共享 Desktop 原有后端，支持排队 | 实验性；需启用共享并重启对应 Desktop，版本敏感 |
-| Hermes Desktop | 按配置与目录分组的 Desktop 会话 | 本地插件使用原 Desktop 连接提交，支持 Pokite 排队 | 实验性；历史会话须先在 Desktop 打开；审批和模型切换在 Desktop 完成 |
+| Hermes Desktop | 按配置与目录分组的 Desktop 会话 | 本地插件恢复历史会话并使用原后端提交，支持 Pokite 排队 | 实验性；Desktop 保持连接；审批和模型切换在 Desktop 完成 |
 | DeepSeek Harness | 已有项目与会话 | 复用原生 Web API | 原服务需运行 |
 | PenguinHarness | 已有项目与会话 | 复用本地服务 | 已有会话不支持切换模型 |
 | Claude Code CLI | 本地 CLI 会话 | Agent SDK 恢复执行 | 不共享 Desktop；不要与外部 CLI 同时写同一会话 |
@@ -67,7 +67,7 @@ node scripts/setup-hermes-sharing.mjs main  # 使用 main 配置时另外执行
 
 插件安装在 Hermes 的 `plugins/pokite`，只提供本机会话快照、新建和发送接口，
 沿用 Hermes 后端认证。不会修改 Hermes 应用包，不申请覆盖内置工具，也不启动
-第二个 Agent 后端。暂未打开的历史会话只读，避免夺取 Desktop 的连接。模型调用
+第二个 Agent 后端。历史会话在发送时由本地插件恢复，无需先在桌面点开。模型调用
 失败仍由原模型服务处理，Pokite 显示原生错误。停用可运行 `hermes plugins disable pokite`
 （命名配置加 `--profile main`），然后重启 Hermes；不删除会话。
 
