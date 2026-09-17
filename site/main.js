@@ -4,7 +4,7 @@ const english = {
   cta: "Take Pokite with you", see: "See how it works ↓", heroNote: "Open source · Self-hosted · No mobile app",
   artAlt: "A person relaxing while looking at their phone", artNote: "same session. a little more freedom.",
   agentsLead: "Your familiar agents. One pocket-sized entry point.", boundaries: "Capabilities vary by agent. See the integration guide ↗",
-  screenAlt: "Actual Pokite mobile interface with a fictional conversation about a checkout page", phoneNote: "Let your computer work.<br>Take a little walk.", demoNote: "Actual interface · Fictional demo content",
+  screenAlt: "Actual Pokite mobile interface with a fictional conversation about a checkout page", phoneNote: "Let your computer work. Take a little walk.", demoNote: "Actual interface · Fictional demo content",
   oneSession: "Something familiar, in your pocket", storyTitle: "Right where<br>you left off.", storyBody: "No copying context or explaining the task all over again. Open your phone’s browser, find the conversation you started on your computer, and add a thought.",
   bubble1: "The mobile layout is ready for a look.", bubble2: "I’m out. Change the button to ‘Confirm order’, too.", bubble3: "On it. Continuing in this session.",
   scope: "Codex and Hermes Desktop share their original backends. See docs for other integrations.", light: "Just enough", featuresTitle: "One more way in.<br>A little less friction.",
