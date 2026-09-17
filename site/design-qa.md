@@ -1,0 +1,21 @@
+# Website QA
+
+Final result: passed (local browser verification).
+
+- Inspected Rene desktop/mobile references for whitespace, serif hierarchy and
+  illustration-led storytelling; created original Pokite illustration and copy.
+- Inspected desktop full-page and mobile screenshots. Fixed Chinese hero line
+  wrapping so the final word is not split on a 390px viewport.
+- Chromium: page renders without JavaScript errors; language toggle and FAQ work.
+- WebKit: Chinese and English checked at 320, 390, 768 and 1440px, no horizontal
+  overflow. Screenshot reviewed at 390x844.
+- CTA links point to the real GitHub setup documentation. Image and CSS paths
+  are relative for deployment at /pokite/.
+- Semantic headings, native details/summary, focus-visible styles, skip link,
+  reduced-motion handling, image descriptions and declared language included.
+- No live agent data, access credentials, third-party trackers, external fonts,
+  notification claims or copied reference-site images.
+- PWA push explicitly described as not shipped. macOS preview and per-provider
+  differences remain visible. Phone screenshot is marked as fictional content.
+
+Browser checks do not substitute for user acceptance on physical phones.

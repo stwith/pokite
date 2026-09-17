@@ -4,6 +4,8 @@
 
 [English](README.md) | 简体中文
 
+[产品介绍网站](https://stwith.github.io/pokite/)
+
 **电脑上的 Agent 继续跑，手机上接着聊同一个会话。**
 
 Pokite 给电脑上的 Agent 会话加一个手机入口。离开电脑后，在同一个网页里
