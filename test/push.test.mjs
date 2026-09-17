@@ -5,10 +5,18 @@ import os from "node:os";
 import path from "node:path";
 import {
   PushService,
+  notificationBody,
   completion,
   validateSubscription,
 } from "../server/push.mjs";
 import { notificationRoute } from "../src/lib/notification-route.js";
+
+test("notification includes title and project path with bounded metadata only", () => {
+  assert.equal(notificationBody({title:"修复布局",messages:[{text:"private"}]}, {}, {projectPath:"/demo/shop"}), "修复布局\n/demo/shop");
+  assert.equal(notificationBody({}, {title:"任务"}, {projectName:"远程项目"}), "任务\n远程项目");
+  assert.equal(notificationBody({}, {}, {}), "未命名会话");
+  assert.ok(Array.from(notificationBody({title:"长".repeat(500)}, {}, {projectPath:"路".repeat(500)})).length <= 281);
+});
 
 const subscription = {
   endpoint: "https://web.push.apple.com/fixture",

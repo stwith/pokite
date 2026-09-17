@@ -163,7 +163,7 @@ closed, including tasks started in Desktop. Tap a notification to open its
 agent/project/session. All connected agents' projects are monitored globally;
 new projects are discovered automatically, without replaying old completions.
 
-Notifications omit conversation content and project titles. Browser vendor push
+Notifications show the agent, outcome, session title and project path, without conversation content. Browser vendor push
 services deliver them; no Pokite cloud relay or inbound public port is needed.
 Your Mac and Pokite must stay running with internet access. Opening the session
 still requires access to the Mac via LAN/Tailscale. Enable or disable

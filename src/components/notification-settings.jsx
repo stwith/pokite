@@ -128,7 +128,7 @@ export function NotificationSettings() {
               </Switch.Root>
             </div>
             <p className="notification-hint">
-              仅控制这台设备。通知不显示对话正文，电脑需保持运行并联网。
+              仅控制这台设备。通知显示会话标题和项目路径，不含对话正文。电脑需保持运行并联网。
             </p>
           </>
         )}

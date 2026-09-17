@@ -45,6 +45,17 @@ const ms = (value) =>
     : Date.parse(value) || 0;
 const keyOf = (value) => createHash("sha256").update(value).digest("hex");
 
+export function notificationBody(detail, row, group) {
+  const clean = (value, limit) => {
+    const text = typeof value === "string" ? value.replace(/[\x00-\x1f\x7f]/g, " ").trim() : "";
+    const chars = Array.from(text);
+    return chars.length > limit ? chars.slice(0, limit - 1).join("") + "…" : text;
+  };
+  const title = clean(detail.title || row.title, 100) || "未命名会话";
+  const location = clean(group.projectPath || group.projectName, 180);
+  return location ? title + "\n" + location : title;
+}
+
 export function completion(detail, since) {
   if (detail.executionIssue?.retrying) return null;
   if (
@@ -150,13 +161,19 @@ export class PushService {
         const projects = await adapter.projects();
         for (const project of projects) {
           const key = keyOf(JSON.stringify([agent, project.id]));
-          if (this.state.groups[key]) continue;
+          if (this.state.groups[key]) {
+            this.state.groups[key].projectPath = project.path || "";
+            this.state.groups[key].projectName = project.name || "";
+            continue;
+          }
           try {
             const rows = await adapter.sessions(project.id, { limit: 100 });
             const since = Date.now();
             this.state.groups[key] = {
               agent,
               projectId: project.id,
+              projectPath: project.path || "",
+              projectName: project.name || "",
               since,
               rows: Object.fromEntries(
                 rows.slice(0, 500).map((s) => [
@@ -264,7 +281,7 @@ export class PushService {
                   attempts: 0,
                   payload: {
                     title: `${adapter.name || group.agent} · ${result === "failed" ? "任务失败" : "任务完成"}`,
-                    body: "点击查看对应会话",
+                    body: notificationBody(detail, row, group),
                     tag: "pokite-" + keyOf(group.agent + row.id).slice(0, 24),
                     url: d.origin + "/?" + query,
                   },
