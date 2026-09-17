@@ -157,15 +157,16 @@ HTTP installation and standalone behavior depend on the OS/browser. A standalone
 ## Task notifications
 
 Use HTTPS; on iPhone/iPad, add Pokite to your Home Screen and launch it there.
-Select a project, open the sidebar bell, and enable notifications for that project.
+Open the sidebar bell and enable notifications for this device.
 Completed and failed tasks are monitored on the Mac even while the browser is
 closed, including tasks started in Desktop. Tap a notification to open its
-agent/project/session. Follow other projects separately.
+agent/project/session. All connected agents' projects are monitored globally;
+new projects are discovered automatically, without replaying old completions.
 
 Notifications omit conversation content and project titles. Browser vendor push
 services deliver them; no Pokite cloud relay or inbound public port is needed.
 Your Mac and Pokite must stay running with internet access. Opening the session
-still requires access to the Mac via LAN/Tailscale. Test, unfollow or disable
+still requires access to the Mac via LAN/Tailscale. Enable or disable
 notifications from the bell dialog. Delivery is best effort; provider acceptance
 does not prove display on a device. Polling requires evidence of a completed
 turn; transient native events lost while disconnected may not be recoverable.

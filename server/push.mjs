@@ -91,6 +91,10 @@ export class PushService {
           groups: {},
           outbox: [],
         };
+    for (const device of Object.values(this.state.devices)) {
+      device.scope = "all";
+      delete device.projects;
+    }
     this.save();
   }
   save() {
@@ -109,87 +113,75 @@ export class PushService {
     const d = this.device({ endpoint });
     return {
       enabled: !!d,
-      projects: d?.projects || [],
+      scope: "all",
       lastAttempt: d?.lastAttempt || null,
     };
   }
-  async subscribe(subscription, origin, agent, projectId) {
+  async subscribe(subscription, origin) {
     const clean = validateSubscription(subscription);
     if (!origin.startsWith("https://")) throw bad("请通过 HTTPS 开启通知");
-    const adapter = this.adapters[agent];
-    if (!adapter || !(await adapter.projects()).some((p) => p.id === projectId))
-      throw bad("请先选择已有项目");
     const id = keyOf(clean.endpoint);
     if (!this.state.devices[id] && Object.keys(this.state.devices).length >= 20)
       throw bad("通知设备已达上限");
     const old = this.state.devices[id];
     if (old && old.origin !== origin) throw bad("通知订阅来源不一致");
-    const projects = [...(old?.projects || [])];
-    if (!projects.some((p) => p.agent === agent && p.projectId === projectId)) {
-      if (projects.length >= 20) throw bad("每台设备最多关注 20 个项目");
-      projects.push({ agent, projectId });
-    }
-    // Baseline is established before enabling delivery; existing finished tasks
-    // are never interpreted as new completions.
-    const groupKey = keyOf(JSON.stringify([agent, projectId]));
-    if (!this.state.groups[groupKey]) {
-      const rows = await adapter.sessions(projectId, { limit: 100 });
-      this.state.groups[groupKey] = {
-        agent,
-        projectId,
-        since: Date.now(),
-        rows: Object.fromEntries(
-          rows
-            .slice(0, 500)
-            .map((s) => [
-              s.id,
-              {
-                revision: s.revision,
-                checkedAt: Date.now(),
-                running: s.status === "running",
-              },
-            ]),
-        ),
-      };
-    }
-    this.state.devices[id] = { ...old, subscription: clean, origin, projects };
+    this.state.devices[id] = {
+      ...old,
+      subscription: clean,
+      origin,
+      scope: "all",
+    };
+    this.discoveryAt = 0;
     this.save();
     return this.status(clean.endpoint);
   }
-  remove(endpoint, project) {
-    const id = keyOf(endpoint || "");
-    const d = this.state.devices[id];
-    if (d && project)
-      d.projects = d.projects.filter(
-        (p) => p.agent !== project.agent || p.projectId !== project.projectId,
-      );
-    else delete this.state.devices[id];
-    for (const [key, group] of Object.entries(this.state.groups))
-      if (
-        !Object.values(this.state.devices).some((d) =>
-          d.projects.some(
-            (p) => p.agent === group.agent && p.projectId === group.projectId,
-          ),
-        )
-      )
-        delete this.state.groups[key];
+  remove(endpoint) {
+    delete this.state.devices[keyOf(endpoint || "")];
+    if (!Object.keys(this.state.devices).length) this.state.groups = {};
     this.save();
     return { ok: true };
   }
-  async test(endpoint) {
-    const device = this.device({ endpoint });
-    if (!device) throw bad("请先开启本设备通知");
-    if (Date.now() - (device.testAt || 0) < 10000)
-      throw bad("请稍候再发送测试通知");
-    device.testAt = Date.now();
+  async discoverProjects() {
+    if (!Object.keys(this.state.devices).length) return;
+    if (Date.now() < (this.discoveryAt || 0)) return;
+    this.discoveryAt = Date.now() + 60000;
+    for (const [agent, adapter] of Object.entries(this.adapters)) {
+      try {
+        const projects = await adapter.projects();
+        for (const project of projects) {
+          const key = keyOf(JSON.stringify([agent, project.id]));
+          if (this.state.groups[key]) continue;
+          try {
+            const rows = await adapter.sessions(project.id, { limit: 100 });
+            const since = Date.now();
+            this.state.groups[key] = {
+              agent,
+              projectId: project.id,
+              since,
+              rows: Object.fromEntries(
+                rows.slice(0, 500).map((s) => [
+                  s.id,
+                  {
+                    revision: s.revision,
+                    checkedAt: since,
+                    running: ["running", "waiting"].includes(s.status),
+                  },
+                ]),
+              ),
+            };
+          } catch {
+            /* Retry unavailable projects on the next discovery. */
+          }
+        }
+        const ids = new Set(projects.map((p) => p.id));
+        for (const [key, group] of Object.entries(this.state.groups))
+          if (group.agent === agent && !ids.has(group.projectId))
+            delete this.state.groups[key];
+      } catch {
+        /* An offline agent cannot prevent discovery of the others. */
+      }
+    }
     this.save();
-    await this.deliver(device, {
-      title: "Pokite 通知已连接",
-      body: "点击返回 Pokite。任务完成后会在这里提醒你。",
-      tag: "pokite-test",
-      url: device.origin + "/",
-    });
-    return { ok: true, message: "推送服务已接收，请检查手机通知。" };
   }
   async deliver(device, payload) {
     try {
@@ -222,6 +214,7 @@ export class PushService {
     return this.work;
   }
   async run() {
+    await this.discoverProjects();
     for (const group of Object.values(this.state.groups)) {
       const adapter = this.adapters[group.agent];
       if (!adapter) continue;
@@ -249,14 +242,6 @@ export class PushService {
               now - old.checkedAt < 600000;
             if (result) {
               for (const [deviceId, d] of Object.entries(this.state.devices)) {
-                if (
-                  !d.projects.some(
-                    (p) =>
-                      p.agent === group.agent &&
-                      p.projectId === group.projectId,
-                  )
-                )
-                  continue;
                 const eventId = keyOf(
                   JSON.stringify([
                     deviceId,

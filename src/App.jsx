@@ -949,7 +949,7 @@ export default function App() {
           {online && !Object.keys(syncErrors).length ? "已连接" : "正在重连"}
           <span className="host">Mac mini</span>
           <ConnectionDialog />
-          <NotificationSettings agent={agent} project={project} />
+          <NotificationSettings />
           <DisconnectDialog disabled={busy} />
         </footer>
       </Navigation>

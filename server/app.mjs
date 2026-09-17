@@ -50,10 +50,9 @@ export function createApp({
     app.get("/api/notifications/config", (req, res) => res.json(push.config()));
     post("/api/notifications/status", (req, res) => res.json(push.status(req.body.endpoint)));
     post("/api/notifications/subscribe", async (req, res) => {
-      res.json(await push.subscribe(req.body.subscription, req.pokiteOrigin, req.body.agent, req.body.projectId));
+      res.json(await push.subscribe(req.body.subscription, req.pokiteOrigin));
     });
-    post("/api/notifications/remove", (req, res) => res.json(push.remove(req.body.endpoint, req.body.project)));
-    post("/api/notifications/test", async (req, res) => res.json(await push.test(req.body.endpoint)));
+    post("/api/notifications/remove", (req, res) => res.json(push.remove(req.body.endpoint)));
   }
   app.get("/api/:agent/events", (req, res) =>
     serveEventStream(req, res, events),

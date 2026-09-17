@@ -1,3 +1,15 @@
+.notification-setting { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px 0; border-block:1px solid #e8e8e8; }
+.notification-setting label { font-size:14px; font-weight:500; cursor:pointer; }
+.notification-setting p { font-size:12px; line-height:1.7; color:#777; margin:5px 0 0; }
+.notification-switch { flex-shrink:0; width:44px; height:26px; padding:3px; border:0; border-radius:999px; background:#d4d4d4; cursor:pointer; position:relative; transition:background .15s; }
+.notification-switch::before { content:""; position:absolute; inset:-9px 0; }
+.notification-switch[data-state="checked"] { background:#187b61; }
+.notification-switch:disabled { opacity:.55; cursor:wait; }
+.notification-switch:focus-visible { outline:2px solid #187b61; outline-offset:4px; }
+.notification-switch-thumb { display:block; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px #0002; transition:transform .15s; }
+.notification-switch-thumb[data-state="checked"] { transform:translateX(18px); }
+.notification-hint { font-size:12px; color:#777; line-height:1.8; margin:14px 0 0; }
+.notification-error { font-size:12px; color:#b42318; line-height:1.8; margin-top:12px; }
 html,
 body,
 #root {

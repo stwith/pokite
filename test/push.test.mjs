@@ -131,5 +131,54 @@ test("notification deep links are same-origin and contain all routing identifier
 });
 
 test("automatic retries do not trigger failure notifications", () => {
-  assert.equal(completion({status:"failed",executionIssue:{message:"retrying",retrying:true}}, 0), null);
+  assert.equal(
+    completion(
+      {
+        status: "failed",
+        executionIssue: { message: "retrying", retrying: true },
+      },
+      0,
+    ),
+    null,
+  );
+});
+
+test("global subscription discovers every available agent and new projects without replaying history", async () => {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), "pokite-global-push-"),
+  );
+  let projects = [{ id: "p1" }];
+  const adapters = {
+    one: {
+      projects: async () => projects,
+      sessions: async () => [{ id: "old", status: "idle", revision: "1" }],
+    },
+    offline: {
+      projects: async () => {
+        throw Error("offline");
+      },
+    },
+    two: { projects: async () => [{ id: "p2" }], sessions: async () => [] },
+  };
+  try {
+    const service = new PushService(directory, adapters, {
+      send: async () => {
+        throw Error("Old history must not send");
+      },
+    });
+    await service.subscribe(subscription, "https://fixture.ts.net");
+    await service.tick();
+    assert.equal(service.status(subscription.endpoint).scope, "all");
+    assert.equal(Object.keys(service.state.groups).length, 2);
+    projects.push({ id: "new" });
+    service.discoveryAt = 0;
+    await service.tick();
+    assert.equal(Object.keys(service.state.groups).length, 3);
+    assert.equal(service.state.outbox.length, 0);
+    service.remove(subscription.endpoint);
+    await service.tick();
+    assert.equal(Object.keys(service.state.groups).length, 0);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });
