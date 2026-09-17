@@ -103,7 +103,7 @@ export function createApp({
         getPort(),
         undefined,
         req.socket.localAddress?.replace(/^::ffff:/, ""),
-      ), tailscale: await tailscaleHttpsLink(getPort()) },
+      ), tailscaleHttps: await tailscaleHttpsLink(getPort()) },
     ),
   );
   app.get("/api/:agent/projects", async (req, res) =>

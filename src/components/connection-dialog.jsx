@@ -116,6 +116,7 @@ export function ConnectionDialog() {
     [mode, setMode] = useState(() => {
       const host = location.hostname;
       const parts = host.split(".").map(Number);
+      if (location.protocol === "https:" && host.endsWith(".ts.net")) return "tailscaleHttps";
       return host.endsWith(".ts.net") ||
         (parts.length === 4 && parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127)
         ? "tailscale" : "lan";
@@ -142,7 +143,7 @@ export function ConnectionDialog() {
   const url = address
     ? address + "#token=" + encodeURIComponent(getAccessToken())
     : "";
-  const label = mode === "lan" ? "局域网 HTTP" : "Tailscale HTTPS";
+  const label = mode === "lan" ? "局域网 HTTP" : mode === "tailscale" ? "Tailscale HTTP" : "Tailscale HTTPS";
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -158,12 +159,13 @@ export function ConnectionDialog() {
       <DialogContent>
         <DialogTitle className="connection-title">连接手机或平板</DialogTitle>
         <DialogDescription className="connection-description">
-          {mode === "lan" ? "手机与电脑连接同一局域网，然后扫码连接。" : "手机与电脑连接同一 Tailscale 网络，然后扫码连接。"}
+          {mode === "lan" ? "手机与电脑连接同一局域网，然后扫码连接。" : mode === "tailscale" ? "开启 Tailscale 后扫码连接，无需使用 Tailscale DNS。HTTP 不支持后台推送。" : "需开启 Tailscale 并使用 Tailscale DNS。HTTPS 支持后台推送，Pokite 通知功能尚未上线。"}
         </DialogDescription>
         <Tabs.Root value={mode} onValueChange={setMode}>
           <Tabs.List className="connection-tabs" aria-label="连接网络">
             <Tabs.Trigger value="lan">局域网 HTTP</Tabs.Trigger>
-            <Tabs.Trigger value="tailscale">Tailscale HTTPS</Tabs.Trigger>
+            <Tabs.Trigger value="tailscale">Tailscale HTTP</Tabs.Trigger>
+            <Tabs.Trigger value="tailscaleHttps">Tailscale HTTPS</Tabs.Trigger>
           </Tabs.List>
           <div className="connection-code">
             {error ? (

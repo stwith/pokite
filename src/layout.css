@@ -243,7 +243,7 @@ svg {
 .connection-title { margin: 0; font-size: 17px; font-weight: 600; padding-right: 28px; }
 .connection-description { margin: 6px 0 18px; font-size: 13px; color: #777; }
 .connection-close { position: absolute; right: 12px; top: 12px; }
-.connection-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: #f1f1f2; padding: 3px; border-radius: 6px; }
+.connection-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; background: #f1f1f2; padding: 3px; border-radius: 6px; }
 .connection-tabs button { min-height: 38px; border: 0; background: transparent; border-radius: 4px; font-size: 13px; color: #666; }
 .connection-tabs button[data-state="active"] { background: white; color: #222; box-shadow: 0 1px 3px #0001; }
 .connection-code { min-height: 280px; display: grid; place-items: center; font-size: 13px; color: #666; }
