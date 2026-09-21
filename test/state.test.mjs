@@ -148,3 +148,15 @@ test("hide system messages, reasoning and tool payloads", () => {
     "visible",
   );
 });
+test("Codex auxiliary roots cannot absorb unrelated sessions and ambiguous roots stay unassigned", () => {
+  const c = Object.create(Codex.prototype);
+  c.projectCache = { state: {}, data: [
+    {id:"beaver",path:"/repo/beaver",roots:["/repo/beaver","/users/demo"]},
+    {id:"other",path:"/repo/other",roots:["/repo/other","/users/demo"]},
+  ]};
+  assert.equal(c.projectFor({id:"old",cwd:"/users/demo"}),"__unassigned");
+  assert.equal(c.projectFor({id:"real",cwd:"/repo/beaver"}),"beaver");
+  assert.equal(c.projectFor({id:"explicit",cwd:"/users/demo",projectId:"beaver"}),"beaver");
+  c.projectCache.data.push({id:"duplicate",path:"/repo/beaver"});
+  assert.equal(c.projectFor({id:"ambiguous",cwd:"/repo/beaver"}),"__unassigned");
+});

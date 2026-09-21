@@ -237,7 +237,10 @@ export class Codex {
     if (native && data.some((p) => p.id === native)) return native;
     if ((s["projectless-thread-ids"] || []).includes(t.id))
       return "__unassigned";
-    return data.find((p) => p.roots?.includes(t.cwd))?.id || "__unassigned";
+    // Additional roots describe accessible context, not session membership.
+    // A shared root such as the user's home must not absorb unrelated history.
+    const candidates = data.filter((p) => p.path === t.cwd && p.id !== "__unassigned");
+    return candidates.length === 1 ? candidates[0].id : "__unassigned";
   }
   async listRaw() {
     if (this.listCache && Date.now() - this.listCache.time < 4000)
