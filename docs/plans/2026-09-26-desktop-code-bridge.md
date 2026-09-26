@@ -15,3 +15,10 @@ Validation: local account/organization ownership, unrelated CLI rejection, origi
 - One no-tool message through the native bridge produced one user echo, matching receipt and assistant reply. The reply was independently found in the original local CLI transcript associated with that Desktop session.
 - 166 Node tests and native broker self-tests passed; cloud mobile UI regressions passed in Chromium/WebKit.
 - One-time native UI setup was used to retry the exited idle backend and start a harmless original-session turn. Pokite's runtime transport does not automate the UI. The other running Code backend was not stopped.
+
+## Deployed acceptance
+
+- The mobile web composer submitted one message through Pokite's normal queue to the original Desktop Code session. Exactly one user echo and the assistant reply appeared. Native Desktop accessibility inspection also confirmed the remote verification text is visible in its own UI.
+- The second original Code session later became idle. Its backend was then reinitialized separately; it also reached ready/connected. No active task was terminated.
+- Both original sessions now have native bridge associations and appear under their Code workspace. Existing cloud Chat/Cowork and independent CLI entry remain separate.
+- The global settings backup is private local state. Only the nonessential-traffic flag was removed; gateway/account settings and Pokite's access code were preserved.
