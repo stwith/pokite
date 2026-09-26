@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { ClaudeDesktop } from "../server/claude-desktop.mjs";
 import { Codex } from "../server/adapters.mjs";
 test("Codex log invalidates same-size edits and replacement, and obeys cache budget", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "pocket-log-cache-"));
@@ -75,61 +74,6 @@ test("lifecycle before the tail window still determines the current state", asyn
       }) + "\n",
     );
     assert.equal((await c.log({ path: file })).status, "completed");
-  } finally {
-    await fs.rm(root, { recursive: true });
-  }
-});
-test("desktop Cowork history comes from local audit and excludes tool payloads", async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pocket-desktop-"));
-  try {
-    const dir = path.join(root, "local-agent-mode-sessions/account/org");
-    await fs.writeFile(
-      path.join(root, "config.json"),
-      JSON.stringify({ lastKnownAccountUuid: "account" }),
-    );
-    await fs.mkdir(path.join(dir, "local_test"), { recursive: true });
-    await fs.writeFile(
-      path.join(dir, "local_test.json"),
-      JSON.stringify({
-        sessionId: "local_test",
-        title: "Desktop task",
-        createdAt: 1,
-      }),
-    );
-    await fs.writeFile(
-      path.join(dir, "local_test/audit.jsonl"),
-      [
-        {
-          type: "user",
-          uuid: "u",
-          message: { content: [{ type: "text", text: "hello" }] },
-        },
-        {
-          type: "assistant",
-          uuid: "a",
-          message: {
-            content: [
-              { type: "thinking", thinking: "private" },
-              { type: "text", text: "world" },
-            ],
-          },
-        },
-        { type: "result", is_error: false },
-      ]
-        .map(JSON.stringify)
-        .join("\n"),
-    );
-    const a = new ClaudeDesktop(root),
-      p = await a.projects(),
-      rows = await a.sessions(p[0].id),
-      d = await a.detail(rows[0].id);
-    assert.equal(rows[0].messages, undefined);
-    assert.equal(d.readOnly, true);
-    assert.equal(d.status, "completed");
-    assert.deepEqual(
-      d.messages.map((x) => x.text),
-      ["hello", "world"],
-    );
   } finally {
     await fs.rm(root, { recursive: true });
   }

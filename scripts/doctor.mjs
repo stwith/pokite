@@ -61,12 +61,8 @@ for (const instance of loadInstances()) {
       note = "Existing local service reachable; no process started";
     } else {
       await fs.access(instance.home);
-      status =
-        instance.provider === "claudeDesktop" ? "read-only" : "configured";
-      note =
-        instance.provider === "claudeDesktop"
-          ? "Local history only"
-          : "Local configuration exists; provider login not exercised";
+      status = "configured";
+      note = "Local configuration exists; provider login not exercised";
     }
   } catch (error) {
     status = "unavailable";

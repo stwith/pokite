@@ -17,7 +17,7 @@ import { execFile } from "node:child_process";
 import { DesktopErrorMonitor } from "./desktop-error-monitor.mjs";
 import { PushService } from "./push.mjs";
 import { DeviceAuth } from "./device-auth.mjs";
-import { listenAddresses, localTailnetIPs } from "./listen-addresses.mjs";
+import { NetworkListeners } from "./network-listeners.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const local = stateDirectory();
@@ -67,7 +67,7 @@ const server = http.createServer((req, res) => {
     res.end("Service starting");
   }
 });
-const extraServers = [];
+let networkListeners;
 // Bind before constructing anything that may write queues or native state.
 await new Promise((resolve, reject) => {
   server.once("error", reject);
@@ -75,20 +75,13 @@ await new Promise((resolve, reject) => {
 });
 port = server.address().port;
 try {
-  for (const address of listenAddresses(
+  networkListeners = new NetworkListeners({
+    port,
     allowLan,
-    undefined,
-    allowLan ? [] : await localTailnetIPs(),
-  ).slice(1)) {
-    const listener = http.createServer((req, res) =>
-      app ? app(req, res) : res.writeHead(503).end(),
-    );
-    await new Promise((resolve, reject) => {
-      listener.once("error", reject);
-      listener.listen(port, address, resolve);
-    });
-    extraServers.push(listener);
-  }
+    handler: (req, res) => (app ? app(req, res) : res.writeHead(503).end()),
+  });
+  await networkListeners.refresh();
+  networkListeners.start();
   await fs.chmod(local, 0o700);
   const tokenFile = path.join(local, "access-token");
   let token;
@@ -135,6 +128,15 @@ try {
   }
   const push = new PushService(local, adapters);
   const devices = new DeviceAuth(path.join(local, "devices.json"), token);
+  if (devices.legacyRegistry)
+    console.warn(
+      "Security upgrade: stop Pokite and run npm run rotate-token once to invalidate old shared access links, then restart and re-pair devices.",
+    );
+  // Rotation invalidates subscriptions as well as API credentials. Remove
+  // unowned legacy subscriptions; never let them survive device revocation.
+  for (const d of Object.values(push.state.devices))
+    if (!d.owner || !devices.devices[d.owner])
+      push.remove(d.subscription.endpoint);
   app = createApp({
     push,
     devices,
@@ -148,6 +150,8 @@ try {
     saveReads,
     dist: path.join(root, "dist"),
     getPort: () => port,
+    getListeningAddresses: () => networkListeners.listening(),
+    getTailnetAddresses: () => networkListeners.tailnet,
   });
   push.start();
   const retentionTimer = setInterval(() => {
@@ -210,7 +214,7 @@ try {
     : null;
   shutdown = () =>
     (stopping ||= (async () => {
-      for (const listener of extraServers) listener.close();
+      networkListeners.close(false);
       clearInterval(queueTimer);
       clearInterval(retentionTimer);
       clearInterval(monitorTimer);
@@ -226,7 +230,8 @@ try {
         },
       });
       await monitor?.close();
-      for (const listener of extraServers) listener.closeAllConnections();
+      networkListeners.close();
+
       process.exit(0);
     })().catch((error) => {
       console.error("Shutdown failed:", error.message);
@@ -246,10 +251,7 @@ try {
       if (process.connected) process.disconnect();
     });
 } catch (error) {
-  for (const listener of extraServers) {
-    listener.close();
-    listener.closeAllConnections();
-  }
+  networkListeners?.close();
   server.close();
   server.closeAllConnections();
   throw error;

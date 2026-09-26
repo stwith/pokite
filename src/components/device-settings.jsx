@@ -37,6 +37,8 @@ export function DeviceSettings() {
       setBusy(false);
     }
   }
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(location.hostname))
+    return null;
   return (
     <Dialog
       open={open}

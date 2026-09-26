@@ -15,6 +15,10 @@ import {
   resolveCodexDesktopBinary,
 } from "../server/machine-discovery.mjs";
 
+// Import/link the complete dependency graph without touching accounts, config or
+// execution. The shell launcher can still exec the native backend on failure.
+if (process.argv.length === 3 && process.argv[2] === "--pokite-preflight") process.exit(0);
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const configFile = sharingConfigFile();

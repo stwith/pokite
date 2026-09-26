@@ -3,7 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { discoverMachine } from "./machine-discovery.mjs";
+import { discoverMachineAsync } from "./discovery-async.mjs";
+import { requireLocalAdmin } from "./local-admin.mjs";
 import { validateInstances } from "./instances.mjs";
 import { instanceConfigFile } from "./state-paths.mjs";
 const exec = promisify(execFile);
@@ -11,12 +12,11 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 
 export function installSetupRoutes(app, post) {
   let work;
-  app.get("/api/setup/discovery", (req, res) => {
-    const report = discoverMachine();
+  app.use("/api/setup", requireLocalAdmin);
+  app.get("/api/setup/discovery", async (req, res) => {
+    const report = await discoverMachineAsync();
     res.json({
-      candidates: report.candidates.filter(
-        (c) => c.provider !== "claudeDesktop",
-      ),
+      candidates: report.candidates,
       instances: report.instances,
     });
   });
@@ -29,7 +29,7 @@ export function installSetupRoutes(app, post) {
     if (!["save", "codex", "hermes"].includes(action))
       throw Object.assign(Error("Invalid setup action"), { status: 400 });
     work = (async () => {
-      const report = discoverMachine();
+      const report = await discoverMachineAsync();
       const file = instanceConfigFile();
       const current = await fs
         .readFile(file, "utf8")
@@ -65,7 +65,8 @@ export function installSetupRoutes(app, post) {
     })();
     try {
       res.json(await work);
-    } catch {
+    } catch (error) {
+      console.error("Agent setup failed:", error.stack || error.message);
       throw Object.assign(Error("配置未完成，请查看电脑上的 Pokite 日志。"), {
         status: 503,
       });

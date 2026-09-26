@@ -40,10 +40,12 @@ retention, with replay fingerprints preserved separately.
 
 ## Remaining product work, not claimed complete
 
-- Consumer distribution signing/notarization, menu bar app/Homebrew packaging,
-  first-run web wizard and opt-in service autostart need separate product work.
-- A full App.jsx decomposition and frontend/backend localization are broader
-  maintenance changes; new device UI and state/auth services are separate modules.
+- Updated distribution scope: ship a local-service installation package with a
+  browser/PWA interface, not a native app. The package is not released yet; clean
+  installation, updates, removal and opt-in service autostart need acceptance.
+  See [distribution scope](macos-distribution.md).
+- Follow-up work delivered the first-run web setup dialog, focused App views and
+  frontend/backend localization; see [validation](2026-09-26-distribution-validation.md).
 - Old POCKET_* environment names and installed LaunchAgent labels remain aliases
   for migration. New public path settings use POKITE_*.
 - Upstream protocol compatibility and each provider's same-session behavior still
@@ -51,3 +53,59 @@ retention, with replay fingerprints preserved separately.
   Codex/Claude applications was used for this review.
 - This review does not migrate integrations to vendor Remote Control services or
   endorse the pasted competitor claims; that would alter the agreed product.
+
+## Follow-up review: pairing, local administration and runtime recovery
+
+The native app/DMG route has been retired. The product remains a local service
+installation with a browser/PWA interface. This round addresses the follow-up
+findings as follows:
+
+| Finding | Resolution |
+| --- | --- |
+| Paired phones could mint replacement credentials | Pairing-code generation requires authenticated direct localhost access. Remote connection links contain no pairing or device token. Device administration is local-only too. |
+| Native launcher repeatedly paired and exposed the master in a URL | Native launcher/build workflow removed. `npm run open` exchanges the master over loopback for a single-use ticket. Browser startup keeps its saved credential; it uses the new ticket only if the saved credential is rejected. |
+| Old master links remained usable | Master authentication is local-only. `npm run rotate-token` atomically replaces it while holding the service lock; stored devices are bound to the master's hash, so old device credentials cannot survive a restart. Startup drops subscriptions without a valid device owner. Upgrade instructions require a one-time reset. |
+| App-installed Tailscale had no PATH CLI; listeners went stale | Shared command runner tries PATH and `/Applications/Tailscale.app/Contents/MacOS/Tailscale`. Listener reconciliation runs every 10 seconds. HTTP links require a confirmed tailnet IP and a successfully bound listener (or explicit LAN wildcard listener). Losing a listener closes its connections, without stopping loopback. |
+| Owned Node copy never updated; fallback missed import errors | Compare content hashes, validate changed runtime and proxy imports, then atomically replace. Launcher runs a side-effect-free proxy preflight before handing over; syntax or dependency failures fall back to native Codex with original arguments. |
+| Phones could change launch integration; discovery blocked requests | Discovery/configuration require authenticated direct localhost. Loopback proxy traffic is not trusted as local administration. Discovery runs in a worker with a timeout and coalesces concurrent scans. |
+| Concurrent pairing could reuse a ticket | `pair()` revalidates expiry and consumes the ticket synchronously before creating a device. A persistence failure does not restore a potentially exposed ticket. |
+| Setup failures were invisible in logs | Log the setup exception server-side; return a generic localized error to the browser. |
+| Disabled Cowork transport/diagnostics remained callable | Remove Desktop remote/client/credential/event/history modules, Safe Storage probe scripts and their obsolete tests; remove the integration factory/default and UI ordering entry. CLI ownership filtering remains. |
+| Native package versions/Intel matrix disagreed | Remove the native app packaging targets and workflow. Shared RPC client metadata reads the package version. No Intel or clean-machine installer acceptance is claimed. |
+
+### Verification
+
+- Automated regressions cover authenticated localhost vs forwarded requests,
+  remote master rejection, pairing-code competition/expiry/persistence failure,
+  credential rotation and refusal while a service lock exists, app-binary
+  Tailscale fallback, listener reconnect/removal/bind failure, URL filtering,
+  native launcher fallback on syntax/import failures, runtime replacement and
+  asynchronous discovery responsiveness.
+- `scripts/verify-device-login.mjs` exercises real Chromium and WebKit against
+  an isolated service: initial pairing, repeated open without another device,
+  and re-pair after revocation. Only synthetic credentials are used.
+- Removed tests covered the retired native/Claude Desktop integrations, not the
+  supported Claude Code CLI or Codex execution paths.
+- A clean Mac with the App Store Tailscale build is still a separate release
+  acceptance step; a simulated missing PATH command is not that device test.
+
+### Deployment boundary
+
+Only Pokite needs a restart to activate HTTP/auth/network changes. Existing Codex
+processes are not restarted. Updating the on-disk launcher/preflight affects the
+next normal Desktop launch. Credential reset signs out phones and removes their
+notification subscriptions; pair and enable notifications again. It does not
+change model accounts, sessions, shared-backend tokens or task queues.
+
+### Executed on this Mac
+
+- 135 tests passed; production build passed without the oversized-chunk warning.
+- Chromium and WebKit login regressions passed, including same-document
+  `#token` navigation when reopening a revoked browser.
+- Updated the owned launcher and restarted only Pokite. Rotated the master once.
+- LAN HTTP, Tailscale HTTP and Tailscale HTTPS each returned 200 for the temporary
+  paired device, rejected the new master remotely with 403, and did not issue
+  remote pairing tokens. The old master returned 401 on localhost.
+- Both Codex instances' project endpoints returned 200. No test messages were
+  sent to real agents. The temporary verification device was revoked afterward.
+- Phones must pair again and re-enable notifications following the reset.

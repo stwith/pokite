@@ -35,12 +35,6 @@ export const defaultInstances = () => [
     name: "Claude Code",
     home: process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"),
   },
-  {
-    id: "claudeDesktop",
-    provider: "claudeDesktop",
-    name: "Claude Desktop",
-    home: path.join(os.homedir(), "Library/Application Support/Claude"),
-  },
 ];
 export function validateInstances(value) {
   if (!Array.isArray(value) || value.length > 20)

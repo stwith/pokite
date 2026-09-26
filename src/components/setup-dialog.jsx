@@ -35,7 +35,7 @@ export function SetupDialog() {
       await api("/setup/configure", { action });
       setMessage(
         t(
-          "配置已保存。请从菜单栏重启 Pokite 服务；共享启用后，等待任务结束再重新打开对应 Desktop。",
+          "配置已保存。请在电脑上重启 Pokite 服务；共享启用后，等待任务结束再重新打开对应 Desktop。",
         ),
       );
     } catch (e) {
@@ -44,6 +44,8 @@ export function SetupDialog() {
       setBusy(false);
     }
   }
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(location.hostname))
+    return null;
   return (
     <Dialog
       open={open}

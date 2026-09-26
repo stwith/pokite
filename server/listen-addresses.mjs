@@ -1,13 +1,8 @@
 import os from "node:os";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-const exec = promisify(execFile);
+import { tailscaleCommand } from "./tailscale-command.mjs";
 export async function localTailnetIPs() {
   try {
-    const { stdout } = await exec("tailscale", ["status", "--json"], {
-      timeout: 3000,
-      maxBuffer: 1024 * 1024,
-    });
+    const { stdout } = await tailscaleCommand(["status", "--json"]);
     const status = JSON.parse(stdout);
     return status.BackendState === "Running"
       ? status.Self?.TailscaleIPs || []

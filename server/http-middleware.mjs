@@ -1,14 +1,16 @@
+import { isLocalAdminRequest, requireLocalAdmin } from "./local-admin.mjs";
 import os from "node:os";
 import { timingSafeEqual, createHash } from "node:crypto";
 import { tailscaleHttpsLink } from "./network-links.mjs";
 import { normalizeLocale, localizeResponse } from "../shared/i18n.mjs";
 
 export function installHttpProtection(app, { token, getPort, devices }) {
-  app.use((req,res,next)=>{
-    req.locale=normalizeLocale(req.headers['accept-language']);
-    res.set('Content-Language',req.locale);res.vary('Accept-Language');
-    const original=res.json.bind(res);
-    res.json=value=>original(localizeResponse(value,req.locale));
+  app.use((req, res, next) => {
+    req.locale = normalizeLocale(req.headers["accept-language"]);
+    res.set("Content-Language", req.locale);
+    res.vary("Accept-Language");
+    const original = res.json.bind(res);
+    res.json = (value) => original(localizeResponse(value, req.locale));
     next();
   });
   const localIPs = () =>
@@ -62,6 +64,22 @@ export function installHttpProtection(app, { token, getPort, devices }) {
         : got.length !== want.length || !timingSafeEqual(got, want)
     )
       return res.status(401).json({ error: "请输入访问码" });
+    if (
+      req.auth?.id === "bootstrap" &&
+      !req.auth.pairing &&
+      !isLocalAdminRequest(req)
+    )
+      return res
+        .status(403)
+        .json({ error: "主访问码仅限电脑本机使用，请扫码配对此设备" });
+    if (
+      (req.path.startsWith("/setup/") ||
+        req.path === "/auth/devices" ||
+        req.path === "/auth/revoke" ||
+        req.path === "/auth/pairing-code") &&
+      !isLocalAdminRequest(req)
+    )
+      return requireLocalAdmin(req, res, next);
     if (
       req.auth?.pairing &&
       !(

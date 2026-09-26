@@ -1,5 +1,8 @@
 # Distribution and i18n validation
 
+> Scope update (2026-09-26): the agreed deliverable is a local-service installation package with a browser/PWA interface, not a native app. Native menu-bar and DMG work below is historical prototype evidence, not the current release plan or a release prerequisite. See [distribution scope](macos-distribution.md).
+
+
 ## Completed locally
 
 - Login, sidebar, conversation and composer extracted into independent views.
@@ -33,7 +36,7 @@
 - Native menu-bar executable started its bundled service with isolated state;
   existing Desktop processes and the production service were not touched.
 
-## External gates
+## Historical native-prototype gates (outside current release scope)
 
 This machine has Apple Development identities but no Developer ID Application
 identity. The generated DMG is development-signed, **not notarized** and not a

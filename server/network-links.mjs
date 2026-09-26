@@ -1,7 +1,5 @@
 import os from "node:os";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-const exec = promisify(execFile);
+import { tailscaleCommand } from "./tailscale-command.mjs";
 let serveCache;
 let servePending;
 export async function tailscaleHttpsLink(port) {
@@ -10,25 +8,38 @@ export async function tailscaleHttpsLink(port) {
   servePending = (async () => {
     let link = null;
     try {
-      const { stdout } = await exec("tailscale", ["serve", "status", "--json"], { timeout: 3000, maxBuffer: 65536 });
+      const { stdout } = await tailscaleCommand(["serve", "status", "--json"]);
       const config = JSON.parse(stdout);
       for (const [host, web] of Object.entries(config.Web || {})) {
-        if (!config.TCP?.[host.split(":").at(-1)]?.HTTPS || config.AllowFunnel?.[host]) continue;
+        if (
+          !config.TCP?.[host.split(":").at(-1)]?.HTTPS ||
+          config.AllowFunnel?.[host]
+        )
+          continue;
         if (web.Handlers?.["/"]?.Proxy !== `http://127.0.0.1:${port}`) continue;
         if (!/^[a-zA-Z0-9.-]+\.ts\.net:\d+$/.test(host)) continue;
-        link = { url: `https://${host.replace(/:443$/, "")}/`, address: host.split(":")[0] };
+        link = {
+          url: `https://${host.replace(/:443$/, "")}/`,
+          address: host.split(":")[0],
+        };
         break;
       }
-    } catch { /* Serve unavailable: keep the LAN entry usable. */ }
+    } catch {
+      /* Serve unavailable: keep the LAN entry usable. */
+    }
     serveCache = { time: Date.now(), link };
     return link;
-  })().finally(() => { servePending = null; });
+  })().finally(() => {
+    servePending = null;
+  });
   return servePending;
 }
 export function networkLinks(
   port,
   interfaces = os.networkInterfaces(),
   preferred,
+  listeningAddresses,
+  tailnetAddresses,
 ) {
   const addresses = Object.entries(interfaces).flatMap(([name, rows]) =>
     (rows || [])
@@ -54,11 +65,26 @@ export function networkLinks(
         : 2;
   const choose = (predicate) =>
     addresses
-      .filter((row) => predicate(row.address))
+      .filter(
+        (row) =>
+          predicate(row.address) &&
+          (!listeningAddresses ||
+            listeningAddresses.includes("0.0.0.0") ||
+            listeningAddresses.includes(row.address)),
+      )
       .sort((a, b) => score(a) - score(b) || a.name.localeCompare(b.name))[0];
   const link = (row) =>
     row
       ? { url: `http://${row.address}:${port}/`, address: row.address }
       : null;
-  return { lan: link(choose(privateLan)), tailscale: link(choose(tailscale)) };
+  return {
+    lan: link(choose(privateLan)),
+    tailscale: link(
+      choose(
+        (address) =>
+          tailscale(address) &&
+          (!tailnetAddresses || tailnetAddresses.includes(address)),
+      ),
+    ),
+  };
 }

@@ -336,7 +336,6 @@ export function discoverMachine({
     });
     instances.push(instance);
   }
-  const desktopHome = path.join(home, "Library/Application Support/Claude");
   const hermesHome = expand(
     env.HERMES_HOME || path.join(home, ".hermes"),
     home,
@@ -356,23 +355,6 @@ export function discoverMachine({
       ...instance,
       integration: "desktop-shared-backend",
       status: "desktop-history-found",
-    });
-  }
-  if (
-    ["claude-code-sessions", "local-agent-mode-sessions"].some((name) =>
-      exists(path.join(desktopHome, name)),
-    )
-  ) {
-    const instance = {
-      id: "claudeDesktop",
-      provider: "claudeDesktop",
-      name: "Claude Desktop",
-      home: desktopHome,
-    };
-    candidates.push({
-      ...instance,
-      integration: "desktop-history-only",
-      status: "disabled-credential-bridge-retired",
     });
   }
   return {

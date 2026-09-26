@@ -16,25 +16,32 @@ export const agentNames = {
   dsh: "DeepSeek Harness",
   penguin: "PenguinHarness",
   claude: "Claude Code",
-  claudeDesktop: "Claude Desktop",
   hermesDesktop: "Hermes Desktop",
 };
 const factories = {
-  codex: ({id, home}) => new Codex(id, home),
-  dsh: ({url}) => new Dsh(url),
-  penguin: ({home}) => new Penguin(home),
-  hermesDesktop: ({home}) => new HermesDesktop(home),
-  claude: ({id, home}) => new Claude(undefined, {
-    root: home,
-    ...(id !== "claude" ? {stateFile: stateFile(`claude-${id}.json`)} : {}),
-  }),
+  codex: ({ id, home }) => new Codex(id, home),
+  dsh: ({ url }) => new Dsh(url),
+  penguin: ({ home }) => new Penguin(home),
+  hermesDesktop: ({ home }) => new HermesDesktop(home),
+  claude: ({ id, home }) =>
+    new Claude(undefined, {
+      root: home,
+      ...(id !== "claude" ? { stateFile: stateFile(`claude-${id}.json`) } : {}),
+    }),
 };
 export function makeAdapters(instances = loadInstances()) {
-  return Object.fromEntries(instances.filter(x => x.provider !== "claudeDesktop").map(instance => {
-    const factory = factories[instance.provider];
-    if (!Object.hasOwn(factories, instance.provider)) throw Error("Unsupported provider: " + instance.provider);
-    const adapter = factory(instance);
-    Object.assign(adapter, {id:instance.id, provider:instance.provider, name:instance.name});
-    return [instance.id, adapter];
-  }));
+  return Object.fromEntries(
+    instances.map((instance) => {
+      const factory = factories[instance.provider];
+      if (!Object.hasOwn(factories, instance.provider))
+        throw Error("Unsupported provider: " + instance.provider);
+      const adapter = factory(instance);
+      Object.assign(adapter, {
+        id: instance.id,
+        provider: instance.provider,
+        name: instance.name,
+      });
+      return [instance.id, adapter];
+    }),
+  );
 }

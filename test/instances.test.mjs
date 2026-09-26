@@ -25,7 +25,7 @@ test("unsupported native schema fails with a diagnostic instead of unsafe fallba
   }
 });
 test("instance validation preserves IDs and isolates provider type from instance", () => {
-  assert.equal(validateInstances(defaultInstances()).length, 6);
+  assert.equal(validateInstances(defaultInstances()).length, 5);
   const instances = validateInstances([
     { id: "work", provider: "codex", name: "Work", home: "/tmp/work" },
     {
@@ -54,7 +54,7 @@ test("instance validation preserves IDs and isolates provider type from instance
 });
 test("read-only capability wins over method availability and PID reuse fails closed", () => {
   const c = capabilities({
-    provider: "claudeDesktop",
+    provider: "fixture",
     readOnly: true,
     send() {},
     create() {},

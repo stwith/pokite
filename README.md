@@ -22,7 +22,7 @@ Your projects, execution environment and model credentials stay on the computer.
 Connect over your home LAN or Tailscale. Pokite runs on that computer and does not
 operate a hosted relay. Model calls still use each agent's configured provider. See the support table before setup.
 
-> macOS developer preview. A native menu-bar app with bundled Node can be built locally. Developer ID signing and Apple notarization are required before public binary distribution. Windows/Linux and multiple Desktop versions have not passed compatibility acceptance.
+> macOS developer preview. Pokite runs as a local service on your computer, accessed through a browser or PWA on your phone. No native app is required. Source installation is available today; a local-service installation package is the intended distribution format. Windows/Linux and multiple Desktop versions have not passed compatibility acceptance.
 
 ## Six core features
 
@@ -104,9 +104,11 @@ the Desktop keychain secret has been retired; Claude Code CLI remains supported.
 
 ## Quick Start
 
-Prefer a menu-bar app? See [macOS packaging and setup](docs/macos-distribution.md).
-It includes service controls, optional start at login, a browser setup dialog,
-and an uninstall action. The development-signed DMG is not a notarized public release.
+**Install the service on your computer; open the website on your phone.** The intended
+installation package deploys the runtime, local service and integration scripts.
+Setup and everyday use stay in the browser; no native Pokite desktop or mobile app
+is required. This package is not released yet; use the source installation below.
+See [installation and distribution scope](docs/macos-distribution.md).
 The web interface supports English and 简体中文; use its language selector.
 
 Requirements: macOS, Node.js 22.23.0 or newer with `node:sqlite`, and your agent already installed and authenticated. Verify it works in its original client first.
@@ -123,7 +125,7 @@ npm start
 ```
 
 1. Open `http://127.0.0.1:3230` on the computer.
-2. Enter the access code generated in `~/Library/Application Support/Pokite/state/access-token`. This is a Pokite credential, not a model API key.
+2. Run `npm run open` on the computer to open the browser with a single-use pairing ticket. Existing browser credentials are reused. The master access code stays on the computer and is never placed in the URL.
 3. Choose an agent and project. The sidebar QR button offers LAN and Tailscale connection links.
 4. Connect your phone to the selected network and scan the QR. The login page also accepts a QR image; decoding stays in your browser.
 
@@ -146,10 +148,21 @@ untrusted networks. Enabling Serve requires your tailnet administrator's approva
 
 QR codes contain single-use, ten-minute pairing codes. Pairing creates an
 independent browser/device credential, stored as a hash on the server. Use
-**Connected devices** in the sidebar to revoke one device without signing out
+**Connected devices** in the sidebar on the computer at `http://127.0.0.1:3230` to revoke one device without signing out
 the others. Revocation closes its event streams and rejects subsequent requests;
 it does not undo already accepted work. The local `access-token` file is a
-bootstrap/recovery secret: anyone retaining it can pair again, so keep it private.
+local-only bootstrap/recovery secret; it is rejected over LAN and Tailscale. Only direct, authenticated localhost requests can generate pairing codes or change integration settings. Phone connection links never copy an existing device credential.
+
+**Upgrade from shared-token versions:** reset access once. Stop Pokite (`npm run stop`),
+run `npm run rotate-token`, then restart (`npm start`, or `node scripts/start.mjs`
+for background operation) and run `npm run open`. Pair your phones and enable
+notifications again. Rotation invalidates all previous master/device credentials
+and notification subscriptions; agent accounts, sessions and accepted tasks are
+preserved. The reset command refuses to run while the service is active.
+
+Tailscale detection supports both the PATH command and the macOS app executable.
+Listeners refresh every ten seconds; links are shown only for confirmed active
+Tailscale addresses that the service actually listens on.
 
 - LAN: `http://<computer-LAN-IP>:3230`.
 - Tailscale: connect both devices to the same tailnet and use the computer's Tailscale address.

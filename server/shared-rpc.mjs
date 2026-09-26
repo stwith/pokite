@@ -1,3 +1,4 @@
+import packageInfo from "../package.json" with { type: "json" };
 import WebSocket from "ws";
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
@@ -112,7 +113,7 @@ export class SharedRpc extends EventEmitter {
     });
     try {
       await this.request("initialize", {
-        clientInfo: { name: "agent_pocket", version: "0.2.0" },
+        clientInfo: { name: "pokite", version: packageInfo.version },
         capabilities: { experimentalApi: true },
       });
     } catch (error) {

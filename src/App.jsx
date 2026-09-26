@@ -1,3 +1,4 @@
+import { takeInitialPairingToken, capturePairingToken } from "./lib/api";
 import { useModelSettings } from "./hooks/use-model-settings";
 import { ConversationView } from "./components/views/ConversationView";
 import { t } from "./lib/i18n.js";
@@ -160,7 +161,7 @@ export default function App() {
   useEffect(() => {
     setShowLatest(false);
   }, [agent, sid]);
-  async function login(credential = token) {
+  async function login(credential = token, retryInitial = true) {
     setAccessToken(credential.trim());
     try {
       const paired = await api("/auth/pair", {
@@ -179,7 +180,6 @@ export default function App() {
         "codex",
         "codex2",
         "claude",
-        "claudeDesktop",
         "dsh",
         "hermesDesktop",
         "penguin",
@@ -195,14 +195,26 @@ export default function App() {
       if (!available.some((item) => item.id === agent))
         setAgent(available[0]?.id || "");
       persistAccessToken();
+      takeInitialPairingToken();
       setAuthed(true);
       setError("");
     } catch (e) {
+      const ticket =
+        retryInitial && [401, 403].includes(e.status)
+          ? takeInitialPairingToken()
+          : null;
+      if (ticket && ticket !== credential.trim()) return login(ticket, false);
       setError(e.message);
     }
   }
   useEffect(() => {
     if (getAccessToken()) login();
+    // Opening another ticket may reuse this tab as a same-document navigation.
+    const pairedLink = () => {
+      if (capturePairingToken()) void login(getAccessToken());
+    };
+    window.addEventListener("hashchange", pairedLink);
+    return () => window.removeEventListener("hashchange", pairedLink);
   }, []);
   useEffect(() => {
     if (!authed || !agent) return;

@@ -92,7 +92,9 @@ export function renderDesktopLauncher(node, proxy, config, fallback = "") {
         quote(path.resolve(path.dirname(proxy), "../node_modules/ws")) +
         " ] || ! " +
         quote(node) +
-        " --version >/dev/null 2>&1; then\n  unset CODEX_CLI_PATH\n  exec " +
+        " " +
+        quote(proxy) +
+        " --pokite-preflight >/dev/null 2>&1; then\n  unset CODEX_CLI_PATH\n  exec " +
         quote(fallback) +
         ' "$@"\nfi\n'
       : "\n") +

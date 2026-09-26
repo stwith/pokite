@@ -22,7 +22,7 @@ DeepSeek Harness、PenguinHarness 和 Claude Code CLI**，
 Pokite 不运营外部中转服务器；模型推理
 仍使用各 Agent 原先配置的服务。
 
-> macOS 开发者预览版。已提供内置 Node 的菜单栏 App 构建方式；对外分发仍需 Developer ID 签名和 Apple 公证。Windows/Linux 和多种 Desktop 版本尚未完成兼容验收。
+> macOS 开发者预览版。Pokite 是安装在电脑上的本地服务，手机通过网页或 PWA 使用，不需要原生应用。当前提供源码安装；面向用户的本地服务安装包是后续交付目标。Windows/Linux 和多种 Desktop 版本尚未完成兼容验收。
 
 ## 六个核心特点
 
@@ -95,9 +95,10 @@ Hermes 使用本地插件。DSH 和 Penguin 复用已有服务；Claude CLI 通�
 
 ## 开始使用
 
-也可以使用原生菜单栏入口，见 [macOS 打包与设置说明](docs/macos-distribution.md)。
-它包含服务启停、可选登录自启、网页接入设置和卸载操作。开发签名 DMG 尚不等于
-经过公证的公开发行版。网页界面支持中文和 English，可在语言选择框中切换。
+**电脑安装服务，手机打开网页。** 安装包负责部署运行环境、本地服务及必要的接入脚本；
+配置和使用界面放在浏览器中，无需安装 Pokite 原生桌面或手机应用。
+安装包尚未发布，目前请按下方步骤从源码安装。详见 [安装与发布定位](docs/macos-distribution.md)。
+网页界面支持中文和 English，可在语言选择框中切换。
 
 要求：macOS、Node.js 22.23.0 或更高版本（支持 `node:sqlite`），以及已安装、登录的 Agent。推荐先确认它在原客户端能正常工作。
 
@@ -113,7 +114,7 @@ npm start
 ```
 
 1. 在电脑打开 `http://127.0.0.1:3230`。
-2. 首次启动会生成 `~/Library/Application Support/Pokite/state/access-token`，输入其中的访问码连接。这不是模型 API Key。
+2. 在电脑上运行 `npm run open`，通过一次性配对码打开网页；已有浏览器凭据会被复用。主访问码留在电脑上，不会放入网址。
 3. 在侧栏选择 Agent 和项目。底部二维码按钮提供局域网和 Tailscale 两种连接地址。
 4. 手机连接对应网络后扫码，或在 Pokite 首屏选择二维码图片。识别在浏览器本地进行，不上传照片。
 
@@ -150,9 +151,18 @@ Tailscale Serve HTTPS：`tailscale serve --bg http://127.0.0.1:3230`。
 目录的 `network.json` 写入 `{"allowLan":true}`。公共网络应使用 HTTPS。
 
 二维码含有效期十分钟的一次性配对码。配对后，每台浏览器设备获得独立令牌，
-服务端只保存其哈希。侧栏“已连接设备”可以单独撤销设备，断开事件流并拒绝
+服务端只保存其哈希。在电脑本机 `http://127.0.0.1:3230` 的侧栏“已连接设备”可以单独撤销设备，断开事件流并拒绝
 后续请求，不撤回已经接受的任务。本机 `access-token` 是初始配对/恢复凭据，
-持有它仍可重新配对，因此不要分享或公开它。
+仅限本机使用，不能从局域网或 Tailscale 直接访问。配对码生成和接入配置修改
+仅允许已认证的 localhost 直连请求；手机端链接不会复制已有设备的凭据。
+
+**从旧版共享访问码升级后，请重置一次访问：** 先 `npm run stop`，再运行
+`npm run rotate-token`，然后启动服务（`npm start`，或用 `node scripts/start.mjs` 后台启动），
+运行 `npm run open`。手机需要重新配对并开启通知。旧主码、所有设备凭据和通知订阅
+全部失效，Agent 账号、会话和已接受的任务保留。服务仍在运行时，重置命令会拒绝执行。
+
+Tailscale 检测同时支持 PATH 命令和 macOS App 内的可执行文件，每十秒刷新监听，
+只展示已确认、且服务实际监听的 Tailscale 地址。
 
 Claude Desktop Cowork 凭据桥接已暂停，旧的钥匙串主密钥导出工具已撤除。独立 Claude Code CLI 仍受支持。
 

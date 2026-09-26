@@ -1,11 +1,20 @@
 import { t, locale } from "./i18n.js";
 import { browserStorage as storage } from "./browser-storage.js";
-const initial = new URLSearchParams(location.hash.slice(1)).get("token");
-if (initial) {
-  storage.setItem("access-token", initial);
+let initial;
+export function capturePairingToken() {
+  const ticket = new URLSearchParams(location.hash.slice(1)).get("token");
+  if (!ticket) return false;
+  initial = ticket;
   history.replaceState(null, "", location.pathname + location.search);
+  return true;
 }
-let access = storage.getItem("access-token") || "";
+capturePairingToken();
+let access = storage.getItem("access-token") || initial || "";
+export function takeInitialPairingToken() {
+  const value = initial;
+  initial = null;
+  return value;
+}
 const responses = new Map();
 let responseBytes = 0;
 export async function api(url, body) {

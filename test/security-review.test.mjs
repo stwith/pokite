@@ -9,7 +9,6 @@ import { Operations } from "../server/operations.mjs";
 import { MessageQueue } from "../server/message-queue.mjs";
 import { renderDesktopLauncher } from "../server/sharing-setup.mjs";
 import { listenAddresses } from "../server/listen-addresses.mjs";
-import { ClaudeDesktopClient } from "../server/claude-desktop-client.mjs";
 import express from "express";
 import http from "node:http";
 import { installHttpProtection } from "../server/http-middleware.mjs";
@@ -144,7 +143,7 @@ test("launcher falls back to native binary when runtime or repository disappears
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
-test("default listeners exclude LAN and Cowork cannot read exported master keys", async () => {
+test("default listeners exclude LAN", async () => {
   const interfaces = {
     en0: [{ family: "IPv4", address: "192.168.1.6" }],
     utun: [{ family: "IPv4", address: "100.100.1.2" }],
@@ -155,7 +154,4 @@ test("default listeners exclude LAN and Cowork cannot read exported master keys"
   ]);
   assert.deepEqual(listenAddresses(true, interfaces), ["0.0.0.0"]);
   assert.deepEqual(listenAddresses(false, interfaces), ["127.0.0.1"]);
-  const c = new ClaudeDesktopClient("/missing");
-  await assert.rejects(c.connect(), /已暂停/);
-  await c.close();
 });

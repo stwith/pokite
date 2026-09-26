@@ -1,3 +1,4 @@
+import { updateOwnedRuntime } from "../server/owned-runtime.mjs";
 import { stateDirectory, sharingConfigFile } from "../server/state-paths.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -136,19 +137,7 @@ if (values["dry-run"]) {
       "An unrelated CODEX_CLI_PATH is set; disable/review that integration before changing it",
     );
   await fs.mkdir(local, { recursive: true, mode: 0o700 });
-  // An application-owned copy survives removal/upgrades of Hermes, nvm or brew.
-  await fs.mkdir(path.dirname(nodeRuntime), { recursive: true, mode: 0o700 });
-  if (
-    !(await fs.access(nodeRuntime).then(
-      () => true,
-      () => false,
-    ))
-  ) {
-    await fs.copyFile(process.execPath, nodeRuntime + ".tmp");
-    await fs.chmod(nodeRuntime + ".tmp", 0o700);
-    execFileSync(nodeRuntime + ".tmp", ["--version"], { timeout: 5000 });
-    await fs.rename(nodeRuntime + ".tmp", nodeRuntime);
-  }
+  await updateOwnedRuntime(process.execPath, nodeRuntime, proxy);
   await fs.mkdir(path.dirname(configFile), { recursive: true, mode: 0o700 });
   await withSetupLock(configFile, previous, async () => {
     const backup = path.join(

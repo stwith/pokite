@@ -11,14 +11,26 @@ export class DeviceAuth {
     this.file = file;
     this.master = digest(master);
     this.pairings = new Map();
-    this.devices = fs.existsSync(file)
+    const saved = fs.existsSync(file)
       ? JSON.parse(fs.readFileSync(file, "utf8"))
       : {};
+    this.legacyRegistry = fs.existsSync(file) && !saved.masterHash;
+    this.resetRequired = !!saved.masterHash && saved.masterHash !== this.master;
+    this.devices = saved.masterHash
+      ? this.resetRequired
+        ? {}
+        : saved.devices
+      : saved;
+    this.save();
   }
   save() {
-    fs.writeFileSync(this.file + ".tmp", JSON.stringify(this.devices), {
-      mode: 0o600,
-    });
+    fs.writeFileSync(
+      this.file + ".tmp",
+      JSON.stringify({ masterHash: this.master, devices: this.devices }),
+      {
+        mode: 0o600,
+      },
+    );
     fs.renameSync(this.file + ".tmp", this.file);
   }
   verify(token) {
@@ -33,7 +45,20 @@ export class DeviceAuth {
     return entry ? { id: entry[0] } : null;
   }
   pair(auth, name) {
-    if (auth.id !== "bootstrap") return { existing: true };
+    if (!auth) throw Object.assign(Error("请输入访问码"), { status: 401 });
+    if (auth.id !== "bootstrap") {
+      if (!this.devices[auth.id])
+        throw Object.assign(Error("请输入访问码"), { status: 401 });
+      return { existing: true };
+    }
+    // Authentication precedes asynchronous body parsing. Recheck and consume here,
+    // in the same synchronous operation that issues the credential.
+    if (auth.pairing) {
+      const until = this.pairings.get(auth.pairing);
+      if (!until || until <= Date.now())
+        throw Object.assign(Error("配对码已使用或已过期"), { status: 401 });
+      this.pairings.delete(auth.pairing);
+    }
     if (Object.keys(this.devices).length >= 50)
       throw Object.assign(Error("设备数量已达上限，请撤销旧设备后重试"), {
         status: 409,

@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
-import { api, getAccessToken } from "../lib/api";
+import { api } from "../lib/api";
 import { HomeScreenGuide } from "./home-screen-guide";
 function CopyLink({ url, label = t("复制链接") }) {
   const [copied, setCopied] = useState(false),
@@ -151,9 +151,10 @@ export function ConnectionDialog() {
     };
   }, [open]);
   const address = links?.[mode]?.url;
-  const pairingToken = links?.pairingToken || getAccessToken();
+  const pairingToken = links?.pairingToken;
   const url = address
-    ? address + "#token=" + encodeURIComponent(pairingToken)
+    ? address +
+      (pairingToken ? "#token=" + encodeURIComponent(pairingToken) : "")
     : "";
   const label =
     mode === "lan"
@@ -197,8 +198,12 @@ export function ConnectionDialog() {
               <p role="alert">{error}</p>
             ) : !links ? (
               <p role="status">{t("正在读取网络地址…")}</p>
-            ) : url ? (
+            ) : url && pairingToken ? (
               <Code key={url} url={url} label={label + t("连接二维码")} />
+            ) : url ? (
+              <p role="status">
+                {t("请在电脑上通过 localhost 打开 Pokite 生成配对二维码")}
+              </p>
             ) : (
               <p role="status">
                 {t("未检测到")}
@@ -222,18 +227,22 @@ export function ConnectionDialog() {
               </a>
               <CopyLink key={url} url={url} />
             </div>
-            <div className="connection-row">
-              <span className="connection-label">{t("配对码")}</span>
-              <code className="connection-secret">{pairingToken}</code>
-              <CopyLink url={pairingToken} label={t("复制访问码")} />
-            </div>
+            {pairingToken && (
+              <div className="connection-row">
+                <span className="connection-label">{t("配对码")}</span>
+                <code className="connection-secret">{pairingToken}</code>
+                <CopyLink url={pairingToken} label={t("复制访问码")} />
+              </div>
+            )}
           </div>
         )}
-        <p className="muted">
-          {t(
-            "配对码 10 分钟内有效，仅可使用一次。连接后每台设备使用独立凭据。",
-          )}
-        </p>
+        {pairingToken && (
+          <p className="muted">
+            {t(
+              "配对码 10 分钟内有效，仅可使用一次。连接后每台设备使用独立凭据。",
+            )}
+          </p>
+        )}
         <HomeScreenGuide />
       </DialogContent>
     </Dialog>

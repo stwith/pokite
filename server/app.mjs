@@ -1,3 +1,4 @@
+import { isLocalAdminRequest } from "./local-admin.mjs";
 import express from "express";
 import fs from "node:fs/promises";
 import { presentSession } from "./read-state.mjs";
@@ -28,6 +29,8 @@ export function createApp({
   push,
   devices,
   allowLan = true,
+  getListeningAddresses = () => [],
+  getTailnetAddresses = () => [],
   events = new SessionEvents(adapters),
 }) {
   const locks = new Map();
@@ -51,6 +54,9 @@ export function createApp({
   installResponseHandling(app, events);
   installSetupRoutes(app, post);
   if (devices) {
+    post("/api/auth/pairing-code", (req, res) =>
+      res.json({ pairingToken: devices.pairingToken() }),
+    );
     post("/api/auth/pair", (req, res) =>
       res.json(devices.pair(req.auth, req.body.name)),
     );
@@ -71,7 +77,10 @@ export function createApp({
     app.get("/api/notifications/config", (req, res) => res.json(push.config()));
     post("/api/notifications/status", (req, res) => {
       const device = push.device({ endpoint: req.body.endpoint });
-      if(device && device.locale !== req.locale){device.locale=req.locale;push.save();}
+      if (device && device.locale !== req.locale) {
+        device.locale = req.locale;
+        push.save();
+      }
       if (
         device &&
         req.auth?.id &&
@@ -155,10 +164,14 @@ export function createApp({
         getPort(),
         undefined,
         req.socket.localAddress?.replace(/^::ffff:/, ""),
+        getListeningAddresses(),
+        getTailnetAddresses(),
       ),
       ...(!allowLan ? { lan: null } : {}),
       tailscaleHttps: await tailscaleHttpsLink(getPort()),
-      ...(devices ? { pairingToken: devices.pairingToken() } : {}),
+      ...(devices && isLocalAdminRequest(req)
+        ? { pairingToken: devices.pairingToken() }
+        : {}),
     }),
   );
   app.get("/api/:agent/projects", async (req, res) =>

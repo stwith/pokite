@@ -1,10 +1,14 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  "请在电脑上通过 localhost 打开 Pokite 执行此操作": "Open Pokite through localhost on your computer to perform this action",
+  "请在电脑上通过 localhost 打开 Pokite 生成配对二维码": "Open Pokite through localhost on your computer to create a pairing QR code",
+  "主访问码仅限电脑本机使用，请扫码配对此设备": "The master code is local-only. Scan a pairing code to connect this device",
+  "配对码已使用或已过期": "This pairing code has already been used or expired",
   "配置操作正在进行，请稍后重试": "Setup is in progress. Try again shortly.",
   "配置未完成，请查看电脑上的 Pokite 日志。":
     "Setup did not complete. Check the Pokite log on your computer.",
-  "配置已保存。请从菜单栏重启 Pokite 服务；共享启用后，等待任务结束再重新打开对应 Desktop。":
-    "Settings saved. Restart the Pokite service from its menu bar. After enabling sharing, wait for tasks to finish before reopening the relevant Desktop.",
+  "配置已保存。请在电脑上重启 Pokite 服务；共享启用后，等待任务结束再重新打开对应 Desktop。":
+    "Settings saved. Restart the Pokite service on your computer. After enabling sharing, wait for tasks to finish before reopening the relevant Desktop.",
   接入设置: "Agent setup",
   "接入你的 Agent": "Connect your agents",
   "先发现电脑上已有的项目和会话，再按需要启用共享。不会自动重启 Desktop。":
