@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 const project = {
   id: "cowork-fixture",
-  name: "Cowork · Demo",
+  name: "Cloud Demo",
   path: "",
   canCreate: false,
   virtual: true,
@@ -15,7 +15,7 @@ const project = {
 const session = {
   id: "remote:fixture:org:cse_demo",
   projectId: project.id,
-  title: "Cowork verification",
+  title: "Cloud session verification",
   status: "idle",
   revision: "fixture",
   updatedAt: Date.now(),
@@ -26,7 +26,7 @@ app.get("/api/agents", (_, res) =>
   res.json([
     {
       id: "claudeDesktop",
-      name: "Claude Desktop · Cowork",
+      name: "Claude Desktop",
       capabilities: { read: true, reply: true, create: false },
     },
   ]),

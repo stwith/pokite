@@ -105,7 +105,9 @@ export function createApp({
     }
   }
   async function project(adapter, id) {
-    const found = (await adapter.projects()).find((p) => p.id === id);
+    const found = (await adapter.projects()).find(
+      (p) => p.id === id || p.aliases?.includes(id),
+    );
     if (!found)
       throw Object.assign(Error("只能选择此 Agent 的已有项目"), {
         status: 404,

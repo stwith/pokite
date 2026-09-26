@@ -363,11 +363,14 @@ export function discoverMachine({
     });
   }
   const coworkHome = path.join(home, "Library/Application Support/Claude");
-  if (exists(path.join(coworkHome, "local-agent-mode-sessions"))) {
+  if (
+    exists(path.join(coworkHome, "config.json")) &&
+    exists(path.join(coworkHome, "Cookies"))
+  ) {
     const instance = {
       id: "claudeDesktop",
       provider: "claudeDesktop",
-      name: "Claude Desktop · Cowork",
+      name: "Claude Desktop",
       home: coworkHome,
     };
     const brokerInstalled = [
@@ -384,7 +387,7 @@ export function discoverMachine({
           exists(path.join(base, name)) &&
           JSON.parse(
             fs.readFileSync(path.join(base, "installation.json"), "utf8"),
-          ).protocol === "cowork-broker-v1"
+          ).protocol === "claude-cloud-broker-v2"
         );
       } catch {
         return false;

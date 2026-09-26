@@ -91,18 +91,18 @@ universal plug-and-play access to every installed AI app.
 | DeepSeek Harness | Existing projects and sessions | Native web API | Existing service must be running |
 | PenguinHarness | Existing projects and sessions | Existing local service | Cannot change the model of an existing session |
 | Claude Code CLI | Local CLI history | Agent SDK session resume | Not Desktop sharing; do not write concurrently with an external CLI |
-| Claude Desktop · Cowork | Projects and sessions in the local association index | Replies to the original session via a native request broker | Experimental; first Mac authorization may be required; uses Anthropic session APIs; no new sessions |
+| Claude Desktop — Chat / Cowork | Cloud projects and unified conversations | Replies to the original cloud session via a native request broker | Experimental; may require first Mac authorization; existing CSE sessions |
 | Claude Desktop Code | Not exposed | Unsupported | Experimental transports are disabled |
 
 The independent **Claude Code CLI** integration excludes Desktop-owned sessions.
-The Desktop adapter currently covers locally indexed sessions only; cloud-only projects and the complete unified Chat/Cowork catalog are not yet discovered. Discovering an installed agent does not mean it is connected or writable.
+The Desktop adapter discovers the current account’s cloud projects and unified Chat/Cowork sessions. Desktop Code remains separate and is not attached. Discovering an installed agent does not mean it is connected or writable.
 
 Hermes Desktop requires a local plugin: run `node scripts/setup-hermes-sharing.mjs`
 (also pass the profile name for a named profile), then reopen Hermes after its tasks finish.
 See [Hermes setup and limitations](integrations/hermes-desktop/README.md).
 
-Claude Desktop Cowork uses a local request broker: Desktop keys and OAuth tokens
-stay inside that native process. Run `npm run setup:cowork`, then enable Cowork
+Claude Desktop Chat/Cowork uses a local request broker: Desktop keys, cookies and OAuth tokens
+stay inside that native process. Run `npm run setup:cowork`, then enable Claude Desktop
 in Agent connections. See [Cowork setup and boundaries](docs/cowork.md).
 
 ## Quick Start

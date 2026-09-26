@@ -1,4 +1,3 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { CoworkBroker } from "./cowork-broker.mjs";
@@ -9,36 +8,27 @@ export class ClaudeDesktopClient {
     this.root = root;
     this.broker = broker;
   }
-  async identity() {
-    const config = JSON.parse(
-      await fs.readFile(path.join(this.root, "config.json"), "utf8"),
-    );
-    const account = config.lastKnownAccountUuid;
-    if (!safe(account))
-      throw Object.assign(Error("请先登录 Claude Desktop。"), { status: 401 });
-    const orgs = (
-      await fs
-        .readdir(path.join(this.root, "local-agent-mode-sessions", account), {
-          withFileTypes: true,
-        })
-        .catch(() => [])
-    ).filter((row) => row.isDirectory() && safe(row.name));
-    if (orgs.length !== 1)
-      throw Object.assign(Error("无法唯一确认 Claude Desktop 当前组织。"), {
-        status: 409,
-      });
-    return { account, organization: orgs[0].name };
-  }
-  async request(route, options = {}) {
-    // Native broker is deliberately bound to the real user's Desktop store.
+  assertRoot() {
     if (
       path.resolve(this.root) !==
       path.join(os.homedir(), "Library/Application Support/Claude")
     )
-      throw Object.assign(Error("Cowork 仅支持当前用户的 Claude Desktop"), {
+      throw Object.assign(Error("仅支持当前用户的 Claude Desktop"), {
         status: 403,
         delivery: "not-sent",
       });
+  }
+  async identity() {
+    this.assertRoot();
+    const result = await this.broker.request("/api/oauth/profile");
+    if (!safe(result.account) || !safe(result.organization))
+      throw Object.assign(Error("Claude Desktop 账号信息不完整"), {
+        status: 503,
+      });
+    return { account: result.account, organization: result.organization };
+  }
+  async request(route, options = {}) {
+    this.assertRoot();
     const identity = await this.identity();
     const scope = identity.account + ":" + identity.organization;
     if (options.scope && options.scope !== scope)
@@ -49,7 +39,10 @@ export class ClaudeDesktopClient {
     return this.broker.request(route, { ...options, scope });
   }
   connect() {
-    return this.request("/api/oauth/profile", { retryAuthorization: true });
+    this.assertRoot();
+    return this.broker.request("/api/oauth/profile", {
+      retryAuthorization: true,
+    });
   }
   close() {
     return this.broker.close();

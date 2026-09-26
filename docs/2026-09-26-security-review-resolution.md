@@ -1,8 +1,7 @@
 # Review verification and remediation — 2026-09-26
 
-> Cowork update: the key-export helper remains retired. Cowork has been restored
-> using a signed, request-only native broker, verified against the original
-> account/session. See [implementation and live validation](cowork.md). Earlier
+> Cowork update: the key-export helper remains retired. Unified Chat/Cowork now uses cloud catalog discovery through a signed,
+> request-only native broker, verified against the original account/session. See [implementation and live validation](cowork.md). Earlier
 > statements below about Cowork being disabled describe the remediation stage.
 
 

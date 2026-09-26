@@ -16,21 +16,53 @@ import { MessageQueue } from "../server/message-queue.mjs";
 test("Cowork adapter never exposes or sends Desktop Code sessions", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-only-"));
   try {
-    await fs.writeFile(path.join(root, "config.json"), JSON.stringify({ lastKnownAccountUuid: "account" }));
+    await fs.writeFile(
+      path.join(root, "config.json"),
+      JSON.stringify({ lastKnownAccountUuid: "account" }),
+    );
     const dir = path.join(root, "claude-code-sessions/account/org");
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(path.join(dir, "local_one.json"), JSON.stringify({sessionId:"local_one",cliSessionId:"cli",title:"Code",originCwd:"/work",bridgeSessionIds:["session_bridge"]}));
-    const adapter = new ClaudeDesktopRemote(root, { client: {
-      identity: async () => ({account:"account",organization:"org"}),
-      request: async () => { throw Error("Code must not contact remote APIs"); },
-      close: async () => {},
-    } });
+    await fs.writeFile(
+      path.join(dir, "local_one.json"),
+      JSON.stringify({
+        sessionId: "local_one",
+        cliSessionId: "cli",
+        title: "Code",
+        originCwd: "/work",
+        bridgeSessionIds: ["session_bridge"],
+      }),
+    );
+    const adapter = new ClaudeDesktopRemote(root, {
+      client: {
+        identity: async () => ({ account: "account", organization: "org" }),
+        request: async (route) => {
+          if (route.includes("projects_v2"))
+            return { data: [], pagination: { has_more: false } };
+          if (route.includes("/sessions?"))
+            return {
+              data: [
+                {
+                  id: "cse_code",
+                  environment_kind: "bridge",
+                  tags: ["product:claude-code"],
+                },
+              ],
+            };
+          throw Error("Code history must not be requested");
+        },
+        close: async () => {},
+      },
+    });
     assert.equal((await adapter.projects()).length, 0);
     const id = "code:account:org:local_one";
-    await assert.rejects(adapter.detail(id), {status:404});
-    await assert.rejects(adapter.send(id,"hello","request"), {delivery:"not-sent"});
+    await assert.rejects(adapter.detail(id), { status: 404 });
+    await assert.rejects(adapter.send(id, "hello", "request"), {
+      delivery: "not-sent",
+    });
     await adapter.close();
-  } finally { await fs.rm(root,{recursive:true,force:true}); }
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
 });
 
 test("Cowork web request IDs reconcile from native UUID echoes after restart", async () => {
@@ -129,6 +161,27 @@ test("Cowork adapter discovers metadata only, pages history, sends to same sessi
         calls.push({ route, options });
         assert.equal(options.scope, "account:org");
         if (options.method === "POST") return { accepted: true };
+        if (route.includes("projects_v2"))
+          return {
+            data: [
+              { uuid: "00000000-0000-0000-0000-000000000001", name: "Project" },
+            ],
+            pagination: { has_more: false },
+          };
+        if (route.includes("/sessions?"))
+          return {
+            data: [
+              {
+                id: "cse_Ab1",
+                title: "Same session",
+                worker_status: waiting ? "requires_action" : "idle",
+                status: "active",
+                environment_kind: "anthropic_cloud",
+                tags: ["cowork-remote"],
+                chat_project_id: "00000000-0000-0000-0000-000000000001",
+              },
+            ],
+          };
         if (route.includes("/events"))
           return {
             data: [
@@ -157,9 +210,9 @@ test("Cowork adapter discovers metadata only, pages history, sends to same sessi
     };
     const a = new ClaudeDesktopRemote(root, { client });
     const projects = await a.projects();
-    assert.equal(calls.length, 0);
+    assert.equal(calls.length, 2);
     const sessions = await a.sessions(projects[0].id);
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, 2);
     assert.equal(sessions[0].offline, false);
     const detail = await a.detail(sessions[0].id);
     assert.deepEqual(

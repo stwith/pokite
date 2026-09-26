@@ -1,6 +1,4 @@
-import fs from "node:fs/promises";
 import path from "node:path";
-import { ClaudeDesktop } from "./claude-desktop.mjs";
 import { ClaudeDesktopClient } from "./claude-desktop-client.mjs";
 import { canonicalDesktopSessionId } from "./cowork-session-id.mjs";
 import {
@@ -9,11 +7,16 @@ import {
   userEvent,
   nativeRequestId,
 } from "./claude-desktop-events.mjs";
+import { ClaudeCloudCatalog } from "./claude-cloud-catalog.mjs";
 import { WeightedCache } from "./weighted-cache.mjs";
 
-export class ClaudeDesktopRemote extends ClaudeDesktop {
+export class ClaudeDesktopRemote {
   constructor(root, options = {}) {
-    super(root, options);
+    this.root = root;
+    this.watchPaths = [
+      { path: path.join(root, "config.json") },
+      { path: path.join(root, "Cookies") },
+    ];
     this.now = options.now || Date.now;
     this.client = options.client || new ClaudeDesktopClient(this.root);
     this.readOnly = false;
@@ -30,7 +33,10 @@ export class ClaudeDesktopRemote extends ClaudeDesktop {
       weigh: () => 10240,
     });
     this.metadataPending = new Map();
-    this.emptyState = "当前账号暂无可读取的 Cowork 会话。";
+    this.catalog = new ClaudeCloudCatalog(this.root, this.client, {
+      now: this.now,
+    });
+    this.emptyState = "当前账号暂无可读取的云端会话。";
   }
   async connect() {
     return this.client.connect();
@@ -40,7 +46,6 @@ export class ClaudeDesktopRemote extends ClaudeDesktop {
   }
   async sessions(projectId, options = {}) {
     return (await this.raw({ projectId, limit: options.limit || 40 }))
-      .filter((s) => s.projectId === projectId)
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .map(
         ({
@@ -83,143 +88,70 @@ export class ClaudeDesktopRemote extends ClaudeDesktop {
     }
     return work;
   }
+  row(metadata, source) {
+    if (canonicalDesktopSessionId(metadata.id) !== source.remoteId)
+      throw Error("Claude 会话身份不一致。");
+    return {
+      ...source,
+      native: undefined,
+      title: metadata.title || "未命名会话",
+      status: remoteSessionStatus(metadata),
+      updatedAt: Date.parse(metadata.updated_at || metadata.created_at) || 0,
+      revision: [
+        metadata.last_event_at,
+        metadata.updated_at,
+        metadata.worker_status,
+        metadata.status,
+      ].join(":"),
+      nativeUnread:
+        typeof metadata.unread === "boolean" ? metadata.unread : undefined,
+      model: metadata.config?.model,
+      readOnly: metadata.status === "archived",
+      canReply: metadata.status !== "archived",
+      readOnlyReason:
+        metadata.status === "archived" ? "此会话已在 Claude 归档。" : undefined,
+      offline:
+        metadata.environment_kind === "bridge" &&
+        metadata.connection_status !== "connected",
+      pending: [],
+    };
+  }
   async raw(selection = {}) {
-    const local = (await super.raw()).filter((s) => !s.codeLocalId);
-    const { account, organization } = this.cache;
-    if (!organization) return local;
-    const scope = account + ":" + organization;
-    if (
-      selection.id?.startsWith("code:") ||
-      selection.projectId?.startsWith("claude-code-sessions:")
-    )
-      return [];
-    const file = path.join(
-      this.root,
-      "local-agent-mode-sessions",
-      account,
-      organization,
-      "remote-session-spaces.json",
+    const catalog = await this.catalog.get({
+      fresh: selection.refreshCatalog === true,
+      stale: !!(selection.projectId || selection.id),
+    });
+    const project = catalog.projects.find(
+      (p) =>
+        p.id === selection.projectId || p.aliases.includes(selection.projectId),
     );
-    const refs = await fs
-      .readFile(file, "utf8")
-      .then(JSON.parse)
-      .catch(() => null);
-    const projects = this.cache.projects || [];
-    const entries = (Array.isArray(refs?.entries) ? refs.entries : []).filter(
-      (e) =>
-        canonicalDesktopSessionId(e?.sessionId) &&
-        typeof e.spaceId === "string" &&
-        (!selection.id ||
-          selection.id ===
-            [
-              "remote",
-              account,
-              organization,
-              canonicalDesktopSessionId(e.sessionId),
-            ].join(":")) &&
+    const selected = catalog.rows.filter(
+      (row) =>
+        (!selection.id || row.id === selection.id) &&
         (!selection.projectId ||
-          selection.projectId ===
-            ["local-agent-mode-sessions", account, organization, e.spaceId]
-              .map(encodeURIComponent)
-              .join(":")),
+          row.projectId === (project?.id || selection.projectId)),
     );
-    const rows = [];
-    // Bound metadata concurrency; project discovery never downloads transcripts.
-    for (let offset = 0; offset < entries.length; offset += 3) {
-      const batch = await Promise.all(
-        entries.slice(offset, offset + 3).map(async (entry) => {
-          const remoteId = canonicalDesktopSessionId(entry.sessionId);
-          const projectId = [
-            "local-agent-mode-sessions",
-            account,
-            organization,
-            entry.spaceId,
-          ]
-            .map(encodeURIComponent)
-            .join(":");
-          const project = projects.find((p) => p.id === projectId);
-          if (!project) return null;
-          return this.cachedMetadata(
-            [scope, remoteId, projectId, project.name].join(":"),
-            async () => {
-              const response = await this.client.request(
-                "/v1/code/sessions/" + remoteId,
-                { scope },
-              );
-              const s = response.session || response.response_shape;
-              if (canonicalDesktopSessionId(s?.id) !== remoteId)
-                throw Error("Claude 会话身份不一致。");
-              return {
-                id: ["remote", account, organization, remoteId].join(":"),
-                remoteId,
-                scope,
-                projectId,
-                projectName: project.name,
-                workspace: project.path,
-                title: s.title || "未命名会话",
-                status: remoteSessionStatus(s),
-                updatedAt: Date.parse(s.updated_at || s.created_at) || 0,
-                revision: [
-                  s.last_event_at,
-                  s.updated_at,
-                  s.worker_status,
-                  s.status,
-                ].join(":"),
-                nativeUnread:
-                  typeof s.unread === "boolean" ? s.unread : undefined,
-                model: s.config?.model,
-                readOnly: s.status === "archived",
-                canReply: s.status !== "archived",
-                readOnlyReason:
-                  s.status === "archived"
-                    ? "此会话已在 Claude 归档。"
-                    : undefined,
-                offline:
-                  s.environment_kind === "bridge" &&
-                  s.connection_status !== "connected",
-                pending: [],
-              };
-            },
-            { stale: !!selection.projectId, fresh: selection.fresh === true },
-          );
-        }),
-      );
-      rows.push(...batch.filter(Boolean));
+    if (selection.id && !selected.length && !selection.fresh) return this.raw({...selection,fresh:true});
+    if (selection.id && selected.length) {
+      const source = selected[0];
+      return [
+        await this.cachedMetadata(
+          source.id,
+          async () => {
+            const result = await this.client.request(
+              "/v1/code/sessions/" + source.remoteId,
+              { scope: source.scope },
+            );
+            return this.row(result.session || result.response_shape, source);
+          },
+          { fresh: selection.fresh === true },
+        ),
+      ];
     }
-    const current = await this.client.identity();
-    if (current.account + ":" + current.organization !== scope)
-      throw Error("Claude 账号已切换，请刷新。");
-    return [...local, ...rows];
+    return selected.map((source) => this.row(source.native, source));
   }
   async projects() {
-    // Read local project definitions first so an expired login cannot hide names.
-    await super.raw();
-    return [
-      ...new Map(
-        [
-          ...this.cache.rows
-            .filter((s) => !s.codeLocalId)
-            .map((s) => ({
-              id: s.projectId,
-              name: !s.projectName.startsWith("Cowork · ")
-                ? "Cowork · " + s.projectName
-                : s.projectName,
-              path: s.workspace || "",
-              canCreate: false,
-              readOnly: true,
-              virtual: true,
-            })),
-          ...(this.cache.projects || []).map((p) => ({
-            ...p,
-            name: p.name.startsWith("Cowork · ")
-              ? p.name
-              : "Cowork · " + p.name,
-            virtual: true,
-            emptyState: "此项目暂无已关联的 Cowork 会话。",
-          })),
-        ].map((p) => [p.id, p]),
-      ).values(),
-    ];
+    return (await this.catalog.get({ stale: true })).projects;
   }
   async page(row, cursor) {
     if (
@@ -270,20 +202,6 @@ export class ClaudeDesktopRemote extends ClaudeDesktop {
       throw Object.assign(Error("Claude 会话不存在或账号已切换。"), {
         status: 404,
       });
-    if (!row.remoteId) {
-      const local = (await super.loadDetail(id, [row])).result;
-      const {
-        codeLocalId,
-        codeBridgeIds,
-        codeSpawnBridgeId,
-        codeRemoteEnabled,
-        ...visible
-      } = local;
-      return {
-        ...visible,
-        readOnlyReason: row.readOnlyReason || local.readOnlyReason,
-      };
-    }
     const {
       scope,
       remoteId,
@@ -311,7 +229,9 @@ export class ClaudeDesktopRemote extends ClaudeDesktop {
   async history(id, cursor) {
     const row = (await this.raw({ id })).find((s) => s.id === id);
     if (!row?.remoteId)
-      return super.history(id, cursor, row ? [row] : undefined);
+      throw Object.assign(Error("Claude 会话不存在或账号已切换。"), {
+        status: 404,
+      });
     return this.page(row, cursor);
   }
   async send(id, text, requestId) {
@@ -362,6 +282,6 @@ export class ClaudeDesktopRemote extends ClaudeDesktop {
     await this.client.close();
     this.pages.clear();
     this.metadata.clear();
-    this.details.clear();
+    this.catalog.clear();
   }
 }

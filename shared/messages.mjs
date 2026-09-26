@@ -1,5 +1,16 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  "当前账号暂无可读取的云端会话。":
+    "No readable cloud sessions for this account.",
+  "Claude 云端项目格式不兼容": "Unsupported Claude cloud project format",
+  "Claude 云端会话格式不兼容": "Unsupported Claude cloud session format",
+  "Claude 项目分页未推进": "Claude project pagination did not advance",
+  "Claude 会话分页未推进": "Claude session pagination did not advance",
+  "Claude 会话分页缺少游标": "Claude session pagination is missing a cursor",
+  "Claude 项目过多，目录未完整读取":
+    "Claude project catalog exceeded the supported size",
+  "Claude 会话过多，目录未完整读取":
+    "Claude session catalog exceeded the supported size",
   "首次连接时，请在 Mac 上允许 Cowork 的钥匙串访问。":
     "On first connection, allow Cowork keychain access on your Mac.",
   "正在等待 Mac 上的 Claude Safe Storage 授权，请允许后刷新。":
