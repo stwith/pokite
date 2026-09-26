@@ -1,5 +1,11 @@
 # Review verification and remediation — 2026-09-26
 
+> Cowork update: the key-export helper remains retired. Cowork has been restored
+> using a signed, request-only native broker, verified against the original
+> account/session. See [implementation and live validation](cowork.md). Earlier
+> statements below about Cowork being disabled describe the remediation stage.
+
+
 > Authentication policy update: the owner explicitly chose a personal-use shared
 > access code. The per-device/one-time-pairing findings and fixes below are
 > historical; they are superseded by [the shared-access design](plans/2026-09-26-shared-access.md).

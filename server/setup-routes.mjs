@@ -36,6 +36,11 @@ export function installSetupRoutes(app, post, { adapters, agentNames }) {
           );
         if (!installed) script = "setup-hermes-sharing.mjs";
       }
+      if (
+        instance.provider === "claudeDesktop" &&
+        candidate?.status === "cowork-broker-missing"
+      )
+        script = "setup-cowork.mjs";
       if (!script) return "";
       await exec(
         process.execPath,
@@ -51,7 +56,9 @@ export function installSetupRoutes(app, post, { adapters, agentNames }) {
           },
         },
       );
-      return "请等任务结束后，重新打开对应的 Desktop。";
+      return instance.provider === "claudeDesktop"
+        ? "首次连接时，请在 Mac 上允许 Cowork 的钥匙串访问。"
+        : "请等任务结束后，重新打开对应的 Desktop。";
     },
   });
   app.use("/api/setup", requireLocalAdmin);

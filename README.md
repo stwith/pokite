@@ -91,6 +91,7 @@ universal plug-and-play access to every installed AI app.
 | DeepSeek Harness | Existing projects and sessions | Native web API | Existing service must be running |
 | PenguinHarness | Existing projects and sessions | Existing local service | Cannot change the model of an existing session |
 | Claude Code CLI | Local CLI history | Agent SDK session resume | Not Desktop sharing; do not write concurrently with an external CLI |
+| Claude Desktop · Cowork | Existing projects, sessions and conversation | Replies to the original session via a native request broker | Experimental; first Mac authorization may be required; uses Anthropic session APIs; no new sessions |
 | Claude Desktop Code / Chat | Not exposed | Unsupported | Experimental transports are disabled |
 
 The independent Claude Code integration excludes Desktop-owned sessions. Discovering an installed agent does not mean it is connected or writable.
@@ -99,8 +100,9 @@ Hermes Desktop requires a local plugin: run `node scripts/setup-hermes-sharing.m
 (also pass the profile name for a named profile), then reopen Hermes after its tasks finish.
 See [Hermes setup and limitations](integrations/hermes-desktop/README.md).
 
-Claude Desktop Cowork credential bridging is disabled. The helper that exported
-the Desktop keychain secret has been retired; Claude Code CLI remains supported.
+Claude Desktop Cowork uses a local request broker: Desktop keys and OAuth tokens
+stay inside that native process. Run `npm run setup:cowork`, then enable Cowork
+in Agent connections. See [Cowork setup and boundaries](docs/cowork.md).
 
 ## Quick Start
 

@@ -28,9 +28,18 @@ import {
   restoreDraft,
   clearWithdrawnSubmission,
 } from "./lib/drafts";
-const agentOrder = ["codex", "codex2", "claude", "dsh", "hermesDesktop", "penguin"];
+const agentOrder = [
+  "codex",
+  "codex2",
+  "claudeDesktop",
+  "claude",
+  "dsh",
+  "hermesDesktop",
+  "penguin",
+];
 const compareAgents = (a, b) => {
-  const rank = id => agentOrder.includes(id) ? agentOrder.indexOf(id) : agentOrder.length;
+  const rank = (id) =>
+    agentOrder.includes(id) ? agentOrder.indexOf(id) : agentOrder.length;
   return rank(a.id) - rank(b.id);
 };
 export default function App() {

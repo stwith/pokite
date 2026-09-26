@@ -1,5 +1,13 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  "首次连接时，请在 Mac 上允许 Cowork 的钥匙串访问。":
+    "On first connection, allow Cowork keychain access on your Mac.",
+  "正在等待 Mac 上的 Claude Safe Storage 授权，请允许后刷新。":
+    "Waiting for Claude Safe Storage authorization on your Mac. Allow access, then refresh.",
+  "请在 Mac 上允许 Claude Safe Storage 钥匙串访问，然后重新连接。":
+    "Allow Claude Safe Storage access on your Mac, then reconnect.",
+  "请在电脑上运行 npm run setup:cowork 完成 Cowork 接入":
+    "Run npm run setup:cowork on your computer to set up Cowork access",
   "选择在 Pokite 中使用的 Agent，不会关闭电脑上的应用。":
     "Choose which agents to use in Pokite. Their desktop apps keep running.",
   "需使用 HTTPS": "Requires HTTPS",

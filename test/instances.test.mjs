@@ -25,7 +25,7 @@ test("unsupported native schema fails with a diagnostic instead of unsafe fallba
   }
 });
 test("instance validation preserves IDs and isolates provider type from instance", () => {
-  assert.equal(validateInstances(defaultInstances()).length, 5);
+  assert.equal(validateInstances(defaultInstances()).length, 6);
   const instances = validateInstances([
     { id: "work", provider: "codex", name: "Work", home: "/tmp/work" },
     {

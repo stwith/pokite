@@ -139,8 +139,11 @@ export function discoverDesktopApps({
 // CODEX_CLI_PATH is inherited by Chrome native hosts and CLI clients too.
 // Only the owning Desktop process should create the shared transport.
 export function isDesktopAppCaller(parentExecutable, binary) {
-  return Boolean(parentExecutable) &&
-    path.dirname(parentExecutable) === path.resolve(path.dirname(binary), "../MacOS");
+  return (
+    Boolean(parentExecutable) &&
+    path.dirname(parentExecutable) ===
+      path.resolve(path.dirname(binary), "../MacOS")
+  );
 }
 
 export function resolveCodexDesktopBinary({
@@ -181,7 +184,9 @@ export function discoverMachine({
   appRoots,
   running,
   commands,
-  sharedFile = env.POKITE_SHARED_CONFIG || env.POCKET_SHARED_CONFIG || stateFile("codex-shared.json"),
+  sharedFile = env.POKITE_SHARED_CONFIG ||
+    env.POCKET_SHARED_CONFIG ||
+    stateFile("codex-shared.json"),
   sharedProfiles = savedProfiles(sharedFile),
 } = {}) {
   const apps = discoverDesktopApps({
@@ -356,6 +361,43 @@ export function discoverMachine({
       integration: "desktop-shared-backend",
       status: "desktop-history-found",
     });
+  }
+  const coworkHome = path.join(home, "Library/Application Support/Claude");
+  if (exists(path.join(coworkHome, "local-agent-mode-sessions"))) {
+    const instance = {
+      id: "claudeDesktop",
+      provider: "claudeDesktop",
+      name: "Claude Desktop · Cowork",
+      home: coworkHome,
+    };
+    const brokerInstalled = [
+      ["Cowork", "Pokite Cowork Access"],
+      ["Keychain", "Pokite Claude Access"],
+    ].some(([directory, name]) => {
+      const base = path.join(
+        home,
+        "Library/Application Support/Pokite",
+        directory,
+      );
+      try {
+        return (
+          exists(path.join(base, name)) &&
+          JSON.parse(
+            fs.readFileSync(path.join(base, "installation.json"), "utf8"),
+          ).protocol === "cowork-broker-v1"
+        );
+      } catch {
+        return false;
+      }
+    });
+    candidates.push({
+      ...instance,
+      status: brokerInstalled
+        ? "cowork-broker-installed"
+        : "cowork-broker-missing",
+    });
+    // Do not auto-enable an authorization-dependent integration on discovery.
+    instances.push({ ...instance, enabled: false });
   }
   return {
     platform: process.platform,

@@ -2,6 +2,7 @@ import { stateFile } from "./state-paths.mjs";
 import { Codex } from "./codex.mjs";
 import { Penguin } from "./penguin.mjs";
 import { Dsh } from "./dsh.mjs";
+import { ClaudeDesktopRemote } from "./claude-desktop-remote.mjs";
 import { Claude } from "./claude.mjs";
 import { HermesDesktop } from "./hermes-desktop.mjs";
 import { loadInstances } from "./instances.mjs";
@@ -16,9 +17,11 @@ export const agentNames = {
   dsh: "DeepSeek Harness",
   penguin: "PenguinHarness",
   claude: "Claude Code",
+  claudeDesktop: "Claude Desktop · Cowork",
   hermesDesktop: "Hermes Desktop",
 };
 const factories = {
+  claudeDesktop: ({ home }) => new ClaudeDesktopRemote(home),
   codex: ({ id, home }) => new Codex(id, home),
   dsh: ({ url }) => new Dsh(url),
   penguin: ({ home }) => new Penguin(home),

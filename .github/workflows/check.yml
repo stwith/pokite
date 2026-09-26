@@ -12,5 +12,6 @@ jobs:
           node-version: '22.23.0'
           cache: npm
       - run: npm ci
+      - run: node scripts/verify-cowork-broker.mjs
       - run: npm test
       - run: npm run build

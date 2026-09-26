@@ -6,6 +6,12 @@ import { discoverMachine } from "./machine-discovery.mjs";
 
 export const defaultInstances = () => [
   {
+    id: "claudeDesktop",
+    provider: "claudeDesktop",
+    name: "Claude Desktop · Cowork",
+    home: path.join(os.homedir(), "Library/Application Support/Claude"),
+  },
+  {
     id: "hermesDesktop",
     provider: "hermesDesktop",
     name: "Hermes Desktop",
