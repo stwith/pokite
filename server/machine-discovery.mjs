@@ -330,7 +330,7 @@ export function discoverMachine({
     const instance = {
       id: "claude",
       provider: "claude",
-      name: "Claude Code",
+      name: "Claude Code CLI",
       home: claudeHome,
     };
     candidates.push({

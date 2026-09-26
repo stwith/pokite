@@ -89,10 +89,11 @@ Hermes 使用本地插件。DSH 和 Penguin 复用已有服务；Claude CLI 通�
 | DeepSeek Harness | 已有项目与会话 | 复用原生 Web API | 原服务需运行 |
 | PenguinHarness | 已有项目与会话 | 复用本地服务 | 已有会话不支持切换模型 |
 | Claude Code CLI | 本地 CLI 会话 | Agent SDK 恢复执行 | 不共享 Desktop；不要与外部 CLI 同时写同一会话 |
-| Claude Desktop · Cowork | 已有项目、会话、对话 | 通过本机请求代理向原会话回复 | 实验性；首次可能需要 Mac 授权；使用 Anthropic 会话接口；不新建会话 |
-| Claude Desktop Code / Chat | 不提供 | 不支持 | 相关实验接入已关闭 |
+| Claude Desktop · Cowork | 本地关联索引中的项目、会话、对话 | 通过本机请求代理向原会话回复 | 实验性；首次可能需要 Mac 授权；使用 Anthropic 会话接口；不新建会话 |
+| Claude Desktop Code | 不提供 | 不支持 | 相关实验接入已关闭 |
 
-独立 Claude Code 会排除 Desktop 所属会话。发现已安装的 Agent 不代表它已经连接或支持发送。
+独立 **Claude Code CLI** 会排除 Desktop 所属会话，不代表已接通 Desktop Code。
+Desktop 接入目前只覆盖本地索引已有的关联；尚未发现完整的云端项目和统一 Chat/Cowork 会话目录。发现已安装的 Agent 不代表它已经连接或支持发送。
 
 ## 开始使用
 
@@ -172,7 +173,7 @@ Tailscale 检测同时支持 PATH 命令和 macOS App 内的可执行文件，�
 
 Claude Desktop Cowork 已改用本机请求代理，钥匙串密钥和 OAuth 令牌不离开原生进程。
 运行 `npm run setup:cowork` 后，在 Agent 接入中启用。详见 [Cowork 接入与边界](docs/cowork.md)。
-独立 Claude Code CLI 仍是单独入口，Desktop Code / Chat 不在此接入范围内。
+独立 Claude Code CLI 仍是单独入口，Desktop Code 仍未接通，统一 Chat/Cowork 的完整云端目录仍待补齐。
 
 - 局域网：`http://<电脑局域网IP>:3230`。
 - Tailscale：两台设备连入同一 tailnet 后，使用电脑的 Tailscale 地址。

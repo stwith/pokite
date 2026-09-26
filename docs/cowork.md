@@ -1,8 +1,45 @@
 # Claude Desktop Cowork
 
+> Scope correction (2026-09-26): this adapter currently covers only sessions
+> present in Desktop's local project/session association files. It does not
+> enumerate the account's complete cloud project or conversation catalog. The
+> successful tests below prove those selected sessions, not complete Claude
+> Desktop support. Chat/Cowork UI labels are not reliable protocol categories.
+
+## Current product model and the missing catalog
+
+Anthropic now documents a gradual Chat/Cowork convergence for Pro and Max;
+Team/Enterprise may still retain separate experiences. Cowork runs in the cloud
+by default; existing local deployments also remain possible. Desktop is a
+client and local-tool bridge, not proof that a displayed session executes locally.
+
+Sources:
+- https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude
+- https://support.claude.com/en/articles/14479288-claude-cowork-architecture-overview
+
+Pokite's independent Claude Code entry uses the Claude Agent SDK and local CLI
+history. It does not attach to Desktop Code, and a working CLI integration does
+not establish Desktop Remote Control connectivity.
+
+The current cloud adapter starts from `spaces.json` and
+`remote-session-spaces.json`, then reads those IDs through the provider API.
+A user-reported cloud project and two reported sessions were absent from both
+local Cowork and Code metadata stores. The native broker's local-ID allowlist
+also prevents accessing these missing sessions. Changing a display filter cannot
+fix this; cloud catalog discovery is required. Session IDs alone do not determine
+whether the UI calls a conversation Chat, Cowork or Code.
+
+The next implementation must enumerate the signed-in account/organization's cloud
+projects and sessions, use authoritative metadata for grouping and execution
+capabilities, and authorize IDs from that verified catalog inside the native
+broker. It must retain account isolation and the no-credential-export boundary.
+The two reported cloud sessions have not yet been read or replied to by Pokite.
+Personal project names and session identifiers are deliberately omitted here.
+
+
 Pokite can follow the **existing Cowork projects and sessions associated with the
-currently signed-in Claude Desktop account**. Desktop Code and Chat are not part
-of this integration; standalone Claude Code remains a separate entry.
+currently signed-in Claude Desktop account**. Desktop Code is not attached. Full unified Chat/Cowork cloud-catalog discovery
+is not implemented; standalone Claude Code CLI remains a separate entry.
 
 ## Setup
 
@@ -38,7 +75,7 @@ session API. This is **not a purely local Cowork protocol**. It introduces no
 Pokite-operated relay and does not create another executor, register a worker,
 simulate UI actions or create substitute sessions. Existing reply receipts and
 unknown-delivery protection are retained. New Cowork sessions, model switching,
-and Desktop Code/Chat are outside this integration.
+and Desktop Code attachment are outside this integration.
 
 ## Credential boundary
 
@@ -74,7 +111,7 @@ replace Desktop login credentials.
 - Native route/encryption self-tests require no keychain access.
 
 This proves the tested installed version and account, not all Desktop versions
-or a clean-Mac installation. Desktop Code and Chat remain excluded.
+or a clean-Mac installation. Desktop Code remains excluded; this test does not establish complete unified Chat/Cowork coverage.
 
 After deployment, the live Pokite API exposed the restored Cowork entry, one
 project and four sessions. A second verification used the actual mobile web

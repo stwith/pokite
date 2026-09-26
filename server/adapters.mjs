@@ -16,7 +16,7 @@ export const agentNames = {
   codex2: "Codex 2",
   dsh: "DeepSeek Harness",
   penguin: "PenguinHarness",
-  claude: "Claude Code",
+  claude: "Claude Code CLI",
   claudeDesktop: "Claude Desktop · Cowork",
   hermesDesktop: "Hermes Desktop",
 };

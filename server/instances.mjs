@@ -38,7 +38,7 @@ export const defaultInstances = () => [
   {
     id: "claude",
     provider: "claude",
-    name: "Claude Code",
+    name: "Claude Code CLI",
     home: process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"),
   },
 ];
