@@ -38,3 +38,11 @@ Installed Desktop frontend sources identify:
 - New-session HTTP requests call the atomic provider path once, rather than creating and then submitting the same first message again. Lost responses remain uncertain and are not recreated automatically.
 - Model/effort control errors leave an editable blocked queue item explicitly marked Not sent.
 - 160 Node tests, native self-tests, production build, and Chromium/WebKit mobile interaction checks passed.
+
+## Live deployment acceptance
+
+- The running service reports new-session creation, ten currently available model options and effort selection enabled.
+- The actual mobile web composer created one cloud session with Sonnet 4.6 / low and received a reply. Its initial message UUID matched the web request's receipt identity.
+- Replaying the same create HTTP request returned the same session ID, without another creation.
+- In that same created session, the real model/effort menus selected Sonnet 5 / medium; the next message received a reply and server metadata confirmed both values.
+- Only the Pokite service was restarted. The access code and Desktop processes were unchanged. Test conversations contain no-tool verification instructions only.

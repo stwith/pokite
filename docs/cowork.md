@@ -108,3 +108,16 @@ in the pre-existing designated verification session: one request, one user echo
 and the expected original-session assistant reply. The three reported work
 sessions were checked read-only. 154 Node tests, native broker checks, production
 build and Chromium/WebKit synthetic mobile checks passed.
+
+### Creation, settings and loading validation
+
+The deployed web flow created a session and initial message atomically, with a
+matching native receipt. Replaying the HTTP request returned the same session.
+Sonnet 4.6 / low and then Sonnet 5 / medium both produced replies in that session;
+metadata readback confirmed the actual settings. 160 Node tests, native checks
+and Chromium/WebKit interaction checks passed.
+
+A local timing sample reduced first conversation load from ~790 ms to ~374 ms;
+warm reads were ~8–17 ms. Cold project loading remained around 2 seconds.
+Repeated session refreshes now reuse project metadata instead of fetching it
+again. These are local samples, not a cross-network latency guarantee.
