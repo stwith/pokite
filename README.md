@@ -151,6 +151,10 @@ and devices**, with no one-time pairing or per-device credentials. Connection QR
 codes and links contain this same code. Each browser origin stores its login
 separately, but you never need a different code for another address.
 
+This is an explicit personal-use product decision: no automatic expiry or usage
+limit, and no code change on restart or upgrade while the state directory is
+preserved. See the [access design and maintenance rules](docs/plans/2026-09-26-shared-access.md).
+
 To invalidate all old links, open **Connect a phone → Reset access code** on the
 computer through `http://127.0.0.1:3230`. Confirming resets access immediately;
 other pages need the new code and must enable notifications again. Agent
