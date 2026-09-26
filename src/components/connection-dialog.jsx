@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
-import { api } from "../lib/api";
+import { api, setAccessToken, persistAccessToken } from "../lib/api";
 import { HomeScreenGuide } from "./home-screen-guide";
 function CopyLink({ url, label = t("复制链接") }) {
   const [copied, setCopied] = useState(false),
@@ -118,6 +118,23 @@ function Code({ url, label }) {
   );
 }
 export function ConnectionDialog() {
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  async function reset() {
+    setResetting(true);
+    setError("");
+    try {
+      const result = await api("/auth/reset", {});
+      setAccessToken(result.token);
+      persistAccessToken();
+      setLinks(await api("/connection-links"));
+      setConfirmReset(false);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setResetting(false);
+    }
+  }
   const [open, setOpen] = useState(false),
     [mode, setMode] = useState(() => {
       const host = location.hostname;
@@ -151,10 +168,10 @@ export function ConnectionDialog() {
     };
   }, [open]);
   const address = links?.[mode]?.url;
-  const pairingToken = links?.pairingToken;
+  const accessCode = links?.accessToken;
   const url = address
     ? address +
-      (pairingToken ? "#token=" + encodeURIComponent(pairingToken) : "")
+      (accessCode ? "#token=" + encodeURIComponent(accessCode) : "")
     : "";
   const label =
     mode === "lan"
@@ -198,12 +215,8 @@ export function ConnectionDialog() {
               <p role="alert">{error}</p>
             ) : !links ? (
               <p role="status">{t("正在读取网络地址…")}</p>
-            ) : url && pairingToken ? (
+            ) : url && accessCode ? (
               <Code key={url} url={url} label={label + t("连接二维码")} />
-            ) : url ? (
-              <p role="status">
-                {t("请在电脑上通过 localhost 打开 Pokite 生成配对二维码")}
-              </p>
             ) : (
               <p role="status">
                 {t("未检测到")}
@@ -227,21 +240,44 @@ export function ConnectionDialog() {
               </a>
               <CopyLink key={url} url={url} />
             </div>
-            {pairingToken && (
+            {accessCode && (
               <div className="connection-row">
-                <span className="connection-label">{t("配对码")}</span>
-                <code className="connection-secret">{pairingToken}</code>
-                <CopyLink url={pairingToken} label={t("复制访问码")} />
+                <span className="connection-label">{t("访问码")}</span>
+                <code className="connection-secret">{accessCode}</code>
+                <CopyLink url={accessCode} label={t("复制访问码")} />
               </div>
             )}
           </div>
         )}
-        {pairingToken && (
+        {accessCode && (
           <p className="muted">
-            {t(
-              "配对码 10 分钟内有效，仅可使用一次。连接后每台设备使用独立凭据。",
-            )}
+            {t("所有网络共用此访问码，长期有效，重置后旧码失效。")}
           </p>
+        )}
+        {["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) && (
+          <div className="connection-row">
+            {confirmReset ? (
+              <>
+                <span className="muted">
+                  {t("重置后，其他页面需使用新码连接并重新开启通知。")}
+                </span>
+                <Button variant="outline" disabled={resetting} onClick={reset}>
+                  {t("确认重置")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={resetting}
+                  onClick={() => setConfirmReset(false)}
+                >
+                  {t("取消")}
+                </Button>
+              </>
+            ) : (
+              <Button variant="ghost" onClick={() => setConfirmReset(true)}>
+                {t("重置访问码")}
+              </Button>
+            )}
+          </div>
         )}
         <HomeScreenGuide />
       </DialogContent>

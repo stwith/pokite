@@ -1,16 +1,16 @@
 import { t, locale } from "./i18n.js";
 import { browserStorage as storage } from "./browser-storage.js";
 let initial;
-export function capturePairingToken() {
+export function captureAccessToken() {
   const ticket = new URLSearchParams(location.hash.slice(1)).get("token");
   if (!ticket) return false;
   initial = ticket;
   history.replaceState(null, "", location.pathname + location.search);
   return true;
 }
-capturePairingToken();
+captureAccessToken();
 let access = storage.getItem("access-token") || initial || "";
-export function takeInitialPairingToken() {
+export function takeInitialAccessToken() {
   const value = initial;
   initial = null;
   return value;

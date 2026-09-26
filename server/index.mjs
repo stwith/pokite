@@ -16,7 +16,7 @@ import os from "node:os";
 import { execFile } from "node:child_process";
 import { DesktopErrorMonitor } from "./desktop-error-monitor.mjs";
 import { PushService } from "./push.mjs";
-import { DeviceAuth } from "./device-auth.mjs";
+import { rotateAccessToken } from "./access-token.mjs";
 import { NetworkListeners } from "./network-listeners.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -127,19 +127,18 @@ try {
     return writeQueue;
   }
   const push = new PushService(local, adapters);
-  const devices = new DeviceAuth(path.join(local, "devices.json"), token);
-  if (devices.legacyRegistry)
-    console.warn(
-      "Security upgrade: stop Pokite and run npm run rotate-token once to invalidate old shared access links, then restart and re-pair devices.",
-    );
-  // Rotation invalidates subscriptions as well as API credentials. Remove
-  // unowned legacy subscriptions; never let them survive device revocation.
-  for (const d of Object.values(push.state.devices))
-    if (!d.owner || !devices.devices[d.owner])
-      push.remove(d.subscription.endpoint);
+  // Retire the device registry; there is one owner-managed access code now.
+  await fs.rm(path.join(local, "devices.json"), { force: true });
   app = createApp({
     push,
-    devices,
+    getToken: () => token,
+    resetAccess: () => {
+      push.state.devices = {};
+      push.state.outbox = [];
+      push.save();
+      token = rotateAccessToken(local);
+      return token;
+    },
     allowLan,
     adapters,
     agentNames,

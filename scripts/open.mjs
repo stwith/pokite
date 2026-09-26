@@ -12,24 +12,9 @@ const token = (
   await fs.readFile(path.join(directory, "access-token"), "utf8")
 ).trim();
 const base = `http://127.0.0.1:${port}/`;
-const response = await fetch(base + "api/auth/pairing-code", {
-  method: "POST",
-  headers: {
-    Authorization: "Bearer " + token,
-    "Content-Type": "application/json",
-  },
-  body: "{}",
-  signal: AbortSignal.timeout(5000),
-  redirect: "error",
-});
-if (!response.ok)
-  throw Error("Could not create local pairing ticket: " + response.status);
-const { pairingToken } = await response.json();
-if (typeof pairingToken !== "string" || !/^[\w-]{32}$/.test(pairingToken))
-  throw Error("Invalid pairing ticket");
 execFile(
   "/usr/bin/open",
-  [base + "#token=" + encodeURIComponent(pairingToken)],
+  [base + "#token=" + encodeURIComponent(token)],
   (error) => {
     if (error) {
       console.error("Could not open browser");

@@ -1,4 +1,3 @@
-import { isLocalAdminRequest } from "./local-admin.mjs";
 import express from "express";
 import fs from "node:fs/promises";
 import { presentSession } from "./read-state.mjs";
@@ -27,7 +26,8 @@ export function createApp({
   dist,
   getPort,
   push,
-  devices,
+  getToken = () => token,
+  resetAccess,
   allowLan = true,
   getListeningAddresses = () => [],
   getTailnetAddresses = () => [],
@@ -43,7 +43,7 @@ export function createApp({
   app.locals.events = events;
   app.disable("x-powered-by");
   const post = installWriteLifecycle(app);
-  installHttpProtection(app, { token, getPort, devices });
+  installHttpProtection(app, { token, getToken, getPort });
   app.use(express.json({ limit: "128kb" }));
   app.param("agent", (req, res, next, id) => {
     if (!Object.hasOwn(adapters, id))
@@ -53,41 +53,19 @@ export function createApp({
   });
   installResponseHandling(app, events);
   installSetupRoutes(app, post);
-  if (devices) {
-    post("/api/auth/pairing-code", (req, res) =>
-      res.json({ pairingToken: devices.pairingToken() }),
-    );
-    post("/api/auth/pair", (req, res) =>
-      res.json(devices.pair(req.auth, req.body.name)),
-    );
-    app.get("/api/auth/devices", (req, res) =>
-      res.json(devices.list(req.auth.id)),
-    );
-    post("/api/auth/revoke", (req, res) => {
-      if (typeof req.body.id !== "string")
-        throw Object.assign(Error("Invalid device id"), { status: 400 });
-      devices.revoke(req.body.id);
-      if (push)
-        for (const d of Object.values(push.state.devices))
-          if (d.owner === req.body.id) push.remove(d.subscription.endpoint);
-      res.json({ ok: true });
+  if (resetAccess)
+    post("/api/auth/reset", async (req, res) => {
+      // Body parsing can yield after middleware; reject a stale concurrent reset.
+      if (req.headers.authorization !== "Bearer " + getToken())
+        return res.status(401).json({ error: "请输入访问码" });
+      res.json({ token: await resetAccess() });
     });
-  }
   if (push) {
     app.get("/api/notifications/config", (req, res) => res.json(push.config()));
     post("/api/notifications/status", (req, res) => {
       const device = push.device({ endpoint: req.body.endpoint });
       if (device && device.locale !== req.locale) {
         device.locale = req.locale;
-        push.save();
-      }
-      if (
-        device &&
-        req.auth?.id &&
-        req.auth.id !== "bootstrap" &&
-        device.owner !== req.auth.id
-      ) {
-        device.owner = req.auth.id;
         push.save();
       }
       res.json(push.status(req.body.endpoint));
@@ -169,9 +147,7 @@ export function createApp({
       ),
       ...(!allowLan ? { lan: null } : {}),
       tailscaleHttps: await tailscaleHttpsLink(getPort()),
-      ...(devices && isLocalAdminRequest(req)
-        ? { pairingToken: devices.pairingToken() }
-        : {}),
+      accessToken: getToken(),
     }),
   );
   app.get("/api/:agent/projects", async (req, res) =>

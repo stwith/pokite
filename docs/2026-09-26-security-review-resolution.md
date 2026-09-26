@@ -1,5 +1,12 @@
 # Review verification and remediation — 2026-09-26
 
+> Authentication policy update: the owner explicitly chose a personal-use shared
+> access code. The per-device/one-time-pairing findings and fixes below are
+> historical; they are superseded by [the shared-access design](plans/2026-09-26-shared-access.md).
+> One persistent code now works on LAN and Tailscale, with an explicit global
+> reset. Local administration, network/runtime fixes and retired-code removal remain.
+
+
 The supplied review was treated as findings to verify, not as implementation
 instructions or proof of third-party product capabilities. This change addresses
 the concrete defects in the current repository; it does not claim a signed

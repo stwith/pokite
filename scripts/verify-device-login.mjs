@@ -4,19 +4,15 @@ import path from "node:path";
 import http from "node:http";
 import assert from "node:assert/strict";
 import { chromium, webkit } from "playwright";
-import { DeviceAuth } from "../server/device-auth.mjs";
 import { createApp } from "../server/app.mjs";
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokite-browser-auth-"));
-const devices = new DeviceAuth(
-  path.join(dir, "devices.json"),
-  "fixture-master-only",
-);
-let server;
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokite-browser-access-"));
+let token = "fixture-shared-access-code",
+  server;
 const app = createApp({
   adapters: {},
   agentNames: {},
-  token: "fixture-master-only",
-  devices,
+  getToken: () => token,
+  resetAccess: () => (token = "replacement-shared-code"),
   messages: {},
   operations: {},
   reads: {},
@@ -29,44 +25,58 @@ await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}/`;
 try {
   for (const [name, engine] of Object.entries({ chromium, webkit })) {
+    token = "fixture-shared-access-code";
     const browser = await engine.launch({ headless: true });
     try {
       const page = await browser.newPage();
       const errors = [];
       page.on("pageerror", (e) => errors.push(e.message));
-      const first = devices.pairingToken();
-      await page.goto(base + "#token=" + first);
+      await page.goto(base + "#token=" + token);
       await page.waitForFunction(
-        () => localStorage.getItem("access-token")?.length === 43,
+        (code) => localStorage.getItem("access-token") === code,
+        token,
       );
-      const credential = await page.evaluate(() =>
-        localStorage.getItem("access-token"),
-      );
-      assert.ok(devices.verify(credential));
       assert.equal(new URL(page.url()).hash, "");
-      const count = Object.keys(devices.devices).length;
-      await page.goto(base + "#token=" + devices.pairingToken());
+      await page.goto(base + "#token=" + token);
       await page.waitForFunction(() => document.querySelector(".sidebar"));
       assert.equal(
         await page.evaluate(() => localStorage.getItem("access-token")),
-        credential,
+        token,
       );
-      assert.equal(Object.keys(devices.devices).length, count);
-      devices.revoke(devices.verify(credential).id);
-      await page.goto(base + "#token=" + devices.pairingToken());
+      // A separate browser origin uses exactly the same code.
+      const other = await browser.newPage();
+      await other.goto(
+        base.replace("127.0.0.1", "localhost") + "#token=" + token,
+      );
+      await other.waitForFunction(
+        (code) => localStorage.getItem("access-token") === code,
+        token,
+      );
+      // Exercise the actual reset UI and its persisted new code.
+      await page
+        .getByRole("button", { name: /连接手机|Connect a phone/ })
+        .click();
+      await page
+        .getByRole("button", { name: /重置访问码|Reset access code/ })
+        .click();
+      await page
+        .getByRole("button", { name: /确认重置|Confirm reset/ })
+        .click();
       await page.waitForFunction(
-        (old) => localStorage.getItem("access-token") !== old,
-        credential,
+        () =>
+          localStorage.getItem("access-token") === "replacement-shared-code",
       );
-      const replacement = await page.evaluate(() =>
-        localStorage.getItem("access-token"),
+      await other.goto(
+        base.replace("127.0.0.1", "localhost") + "#token=" + token,
       );
-      assert.ok(devices.verify(replacement));
-      assert.equal(Object.keys(devices.devices).length, count);
+      await other.waitForFunction(
+        (code) => localStorage.getItem("access-token") === code,
+        token,
+      );
       assert.deepEqual(errors, []);
       console.log(
         name +
-          ": initial pairing, repeated open and re-pair after revocation passed",
+          ": shared code across origins, repeat login, reset UI and reconnect passed",
       );
     } finally {
       await browser.close();

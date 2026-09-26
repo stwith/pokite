@@ -14,7 +14,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ConnectionDialog } from "../connection-dialog";
 import { NotificationSettings } from "../notification-settings";
-import { DeviceSettings } from "../device-settings";
 import { DisconnectDialog } from "../disconnect-dialog";
 export function SessionSidebar({
   nav,
@@ -231,7 +230,6 @@ export function SessionSidebar({
         <SetupDialog />
         <ConnectionDialog />
         <NotificationSettings />
-        <DeviceSettings />
         <DisconnectDialog disabled={busy} />
       </footer>
     </Navigation>

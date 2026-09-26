@@ -1,9 +1,18 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
-  "请在电脑上通过 localhost 打开 Pokite 执行此操作": "Open Pokite through localhost on your computer to perform this action",
-  "请在电脑上通过 localhost 打开 Pokite 生成配对二维码": "Open Pokite through localhost on your computer to create a pairing QR code",
-  "主访问码仅限电脑本机使用，请扫码配对此设备": "The master code is local-only. Scan a pairing code to connect this device",
-  "配对码已使用或已过期": "This pairing code has already been used or expired",
+  "所有网络共用此访问码，长期有效，重置后旧码失效。":
+    "One persistent access code for all networks. Resetting invalidates the old code.",
+  "重置后，其他页面需使用新码连接并重新开启通知。":
+    "Other pages will need the new code and must enable notifications again.",
+  确认重置: "Confirm reset",
+  重置访问码: "Reset access code",
+  "请在电脑上通过 localhost 打开 Pokite 执行此操作":
+    "Open Pokite through localhost on your computer to perform this action",
+  "请在电脑上通过 localhost 打开 Pokite 生成配对二维码":
+    "Open Pokite through localhost on your computer to create a pairing QR code",
+  "主访问码仅限电脑本机使用，请扫码配对此设备":
+    "The master code is local-only. Scan a pairing code to connect this device",
+  配对码已使用或已过期: "This pairing code has already been used or expired",
   "配置操作正在进行，请稍后重试": "Setup is in progress. Try again shortly.",
   "配置未完成，请查看电脑上的 Pokite 日志。":
     "Setup did not complete. Check the Pokite log on your computer.",

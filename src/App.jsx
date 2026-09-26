@@ -1,4 +1,4 @@
-import { takeInitialPairingToken, capturePairingToken } from "./lib/api";
+import { takeInitialAccessToken, captureAccessToken } from "./lib/api";
 import { useModelSettings } from "./hooks/use-model-settings";
 import { ConversationView } from "./components/views/ConversationView";
 import { t } from "./lib/i18n.js";
@@ -164,18 +164,6 @@ export default function App() {
   async function login(credential = token, retryInitial = true) {
     setAccessToken(credential.trim());
     try {
-      const paired = await api("/auth/pair", {
-        name: /iPhone/.test(navigator.userAgent)
-          ? "iPhone"
-          : /iPad/.test(navigator.userAgent)
-            ? "iPad"
-            : navigator.platform || "Browser",
-      });
-      if (paired.token) {
-        setAccessToken(paired.token);
-        setToken(paired.token);
-        persistAccessToken();
-      }
       const order = [
         "codex",
         "codex2",
@@ -195,13 +183,13 @@ export default function App() {
       if (!available.some((item) => item.id === agent))
         setAgent(available[0]?.id || "");
       persistAccessToken();
-      takeInitialPairingToken();
+      takeInitialAccessToken();
       setAuthed(true);
       setError("");
     } catch (e) {
       const ticket =
         retryInitial && [401, 403].includes(e.status)
-          ? takeInitialPairingToken()
+          ? takeInitialAccessToken()
           : null;
       if (ticket && ticket !== credential.trim()) return login(ticket, false);
       setError(e.message);
@@ -209,9 +197,9 @@ export default function App() {
   }
   useEffect(() => {
     if (getAccessToken()) login();
-    // Opening another ticket may reuse this tab as a same-document navigation.
+    // Opening another access link may reuse this tab as a same-document navigation.
     const pairedLink = () => {
-      if (capturePairingToken()) void login(getAccessToken());
+      if (captureAccessToken()) void login(getAccessToken());
     };
     window.addEventListener("hashchange", pairedLink);
     return () => window.removeEventListener("hashchange", pairedLink);

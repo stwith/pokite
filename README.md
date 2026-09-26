@@ -125,7 +125,7 @@ npm start
 ```
 
 1. Open `http://127.0.0.1:3230` on the computer.
-2. Run `npm run open` on the computer to open the browser with a single-use pairing ticket. Existing browser credentials are reused. The master access code stays on the computer and is never placed in the URL.
+2. Run `npm run open` on the computer. It opens the browser with your persistent access code. The same code works for LAN, Tailscale HTTP and Tailscale HTTPS, and can be reused on your devices.
 3. Choose an agent and project. The sidebar QR button offers LAN and Tailscale connection links.
 4. Connect your phone to the selected network and scan the QR. The login page also accepts a QR image; decoding stays in your browser.
 
@@ -146,19 +146,22 @@ Trusted-LAN HTTP requires explicit `POKITE_ALLOW_LAN=true npm start` or
 clients to reach an HTTP service with powerful agent permissions; use HTTPS on
 untrusted networks. Enabling Serve requires your tailnet administrator's approval.
 
-QR codes contain single-use, ten-minute pairing codes. Pairing creates an
-independent browser/device credential, stored as a hash on the server. Use
-**Connected devices** in the sidebar on the computer at `http://127.0.0.1:3230` to revoke one device without signing out
-the others. Revocation closes its event streams and rejects subsequent requests;
-it does not undo already accepted work. The local `access-token` file is a
-local-only bootstrap/recovery secret; it is rejected over LAN and Tailscale. Only direct, authenticated localhost requests can generate pairing codes or change integration settings. Phone connection links never copy an existing device credential.
+Pokite is designed for personal use: **one persistent access code for all networks
+and devices**, with no one-time pairing or per-device credentials. Connection QR
+codes and links contain this same code. Each browser origin stores its login
+separately, but you never need a different code for another address.
 
-**Upgrade from shared-token versions:** reset access once. Stop Pokite (`npm run stop`),
-run `npm run rotate-token`, then restart (`npm start`, or `node scripts/start.mjs`
-for background operation) and run `npm run open`. Pair your phones and enable
-notifications again. Rotation invalidates all previous master/device credentials
-and notification subscriptions; agent accounts, sessions and accepted tasks are
-preserved. The reset command refuses to run while the service is active.
+To invalidate all old links, open **Connect a phone → Reset access code** on the
+computer through `http://127.0.0.1:3230`. Confirming resets access immediately;
+other pages need the new code and must enable notifications again. Agent
+accounts, sessions and accepted tasks are preserved. Integration configuration
+and access reset are restricted to authenticated direct localhost requests.
+
+For command-line recovery: `npm run stop`, `npm run rotate-token`, restart Pokite
+(`npm start` or `node scripts/start.mjs`), then `npm run open`. The CLI reset
+refuses to run while the service is active. Switching from the temporary
+per-device scheme does not rotate the existing persistent code; use that code
+or scan a fresh connection QR to replace saved device credentials.
 
 Tailscale detection supports both the PATH command and the macOS app executable.
 Listeners refresh every ten seconds; links are shown only for confirmed active
@@ -214,7 +217,7 @@ Use `POKITE_CONFIG`, `POKITE_STATE_DIR` and `POKITE_SHARED_CONFIG` for explicit 
 - Native Codex withdrawal/edit can produce `App-server queued follow-up no longer exists`. This preview does not claim to fix the vendor client.
 - Some native errors are transient rather than persisted. Received errors/retries are displayed, but recovering every historical event is not guaranteed.
 - Closing a browser does not cancel submitted work. Unknown delivery is never blindly retried.
-- Disconnect clears browser storage; use Connected devices to revoke a device credential.
+- Disconnect clears this browser’s saved code. Reset the access code to invalidate it everywhere.
 - This remains a developer preview, with installation diagnostics and cross-device acceptance still evolving.
 
 ## State, upgrades and uninstall

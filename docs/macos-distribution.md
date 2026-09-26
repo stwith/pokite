@@ -27,7 +27,7 @@ Pokite 是电脑上的轻量本地服务，通过手机、平板或电脑的网�
 
 ## 停止原生应用发布路线
 
-早期 `native/macos/`、`scripts/macos/`、`mac:*` 命令和手动 macOS 打包工作流已删除。开发签名 `.app` / DMG 不再作为交付物。电脑端用 `npm run open` 打开网页：在本机将主凭据换成一次性配对码，主凭据不会进入 URL，已有浏览器凭据也不会被覆盖。
+早期 `native/macos/`、`scripts/macos/`、`mac:*` 命令和手动 macOS 打包工作流已删除。开发签名 `.app` / DMG 不再作为交付物。电脑端用 `npm run open` 打开网页：携带长期访问码打开网页，局域网和 Tailscale 使用同一个码；需要时整体重置。
 
 Developer ID Application、notarytool 和 Apple 公证不再列为当前源码发布或本地服务安装方案的前置事项。未来选定安装包格式后，再按实际分发方式评估签名要求；这不意味着所有 macOS 安装包都无需签名。
 

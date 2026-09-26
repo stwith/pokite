@@ -4,7 +4,10 @@ import { timingSafeEqual, createHash } from "node:crypto";
 import { tailscaleHttpsLink } from "./network-links.mjs";
 import { normalizeLocale, localizeResponse } from "../shared/i18n.mjs";
 
-export function installHttpProtection(app, { token, getPort, devices }) {
+export function installHttpProtection(
+  app,
+  { token, getToken = () => token, getPort },
+) {
   app.use((req, res, next) => {
     req.locale = normalizeLocale(req.headers["accept-language"]);
     res.set("Content-Language", req.locale);
@@ -53,47 +56,27 @@ export function installHttpProtection(app, { token, getPort, devices }) {
   });
   app.use("/api", (req, res, next) => {
     res.set("Cache-Control", "no-store");
-    const got = Buffer.from(
-        (req.headers.authorization || "").replace(/^Bearer /, ""),
-      ),
-      want = Buffer.from(token);
-    req.auth = devices?.verify(got.toString());
+    const credential = (req.headers.authorization || "").replace(
+      /^Bearer /,
+      "",
+    );
+    const valid = () => {
+      const got = Buffer.from(credential),
+        want = Buffer.from(getToken());
+      return got.length === want.length && timingSafeEqual(got, want);
+    };
+    if (!valid()) return res.status(401).json({ error: "请输入访问码" });
+    req.auth = { id: "shared" };
     if (
-      devices
-        ? !req.auth
-        : got.length !== want.length || !timingSafeEqual(got, want)
-    )
-      return res.status(401).json({ error: "请输入访问码" });
-    if (
-      req.auth?.id === "bootstrap" &&
-      !req.auth.pairing &&
-      !isLocalAdminRequest(req)
-    )
-      return res
-        .status(403)
-        .json({ error: "主访问码仅限电脑本机使用，请扫码配对此设备" });
-    if (
-      (req.path.startsWith("/setup/") ||
-        req.path === "/auth/devices" ||
-        req.path === "/auth/revoke" ||
-        req.path === "/auth/pairing-code") &&
+      (req.path.startsWith("/setup/") || req.path === "/auth/reset") &&
       !isLocalAdminRequest(req)
     )
       return requireLocalAdmin(req, res, next);
-    if (
-      req.auth?.pairing &&
-      !(
-        (req.method === "POST" && req.path === "/auth/pair") ||
-        (req.method === "GET" && req.path === "/agents")
-      )
-    )
-      return res.status(403).json({ error: "请先完成设备配对" });
     if (req.headers.origin && req.headers.origin !== req.pokiteOrigin)
       return res.status(403).json({ error: "Cross-origin request rejected" });
-    if (devices && req.path.endsWith("/events")) {
-      const credential = got.toString();
+    if (req.path.endsWith("/events")) {
       const timer = setInterval(() => {
-        if (!devices.verify(credential)) res.end();
+        if (!valid()) res.end();
       }, 1000);
       timer.unref?.();
       res.on("close", () => clearInterval(timer));
