@@ -261,13 +261,21 @@ export default function App() {
                   p.aliases?.includes(notificationTarget.current?.project)) &&
                 notificationTarget.current.agent === agent,
             ) ||
-              rows.find((p) => p.id === storage.getItem("project:" + agent)) ||
+              rows.find(
+                (p) =>
+                  p.id === storage.getItem("project:" + agent) ||
+                  p.aliases?.includes(storage.getItem("project:" + agent)),
+              ) ||
               rows[0] ||
               null,
           );
           if (
             notificationTarget.current?.agent === agent &&
-            rows.some((p) => p.id === notificationTarget.current.project)
+            rows.some(
+              (p) =>
+                p.id === notificationTarget.current.project ||
+                p.aliases?.includes(notificationTarget.current.project),
+            )
           ) {
             const target = notificationTarget.current;
             setSid(target.session);

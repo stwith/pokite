@@ -81,7 +81,8 @@ session and the two reported Chat sessions were all readable: the former mapped
 to its real cloud project, the latter to the ungrouped list. No personal IDs or
 conversation content are recorded in this document.
 
-Earlier live reply verification used the pre-existing designated test session,
-with one request, one user echo and matching receipt. The current cloud adapter
-retains that exact existing-session reply transport. Current deployment and
-reply acceptance are recorded in the implementation plan after validation.
+The deployed cloud adapter was tested through the actual mobile web composer
+in the pre-existing designated verification session: one request, one user echo
+and the expected original-session assistant reply. The three reported work
+sessions were checked read-only. 154 Node tests, native broker checks, production
+build and Chromium/WebKit synthetic mobile checks passed.

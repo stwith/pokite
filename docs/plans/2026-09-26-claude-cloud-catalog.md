@@ -24,3 +24,11 @@
 - The old local-only reader was removed. Shared metadata caching keeps listing separate from transcript loading; old project IDs can resolve as aliases for notification links.
 - 154 tests passed, native broker self-tests passed, production build passed, and Chromium/WebKit synthetic mobile UI checks passed.
 - Live read checks: 3 cloud projects, 9 unified sessions; the reported project session maps to its cloud project, the two reported Chat sessions appear ungrouped. Personal names/IDs are not stored in this plan.
+
+## Deployed acceptance
+
+- 154 Node tests, native broker self-tests and production build passed.
+- The live mobile web UI opened the reported project session and listed both reported Chat sessions in the ungrouped group. Their conversations loaded and replies were enabled.
+- A no-tool message sent through the actual web composer to the pre-existing designated verification session produced exactly one browser submission, one user echo and the expected original-session reply. No message was sent to the user's three reported work sessions.
+- Existing project aliases are resolved for notification links and saved project selections.
+- Only Pokite was restarted. Desktop processes, account configuration and the shared access code were not changed.

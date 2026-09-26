@@ -7,6 +7,7 @@ const app = express();
 app.use(express.json());
 const project = {
   id: "cowork-fixture",
+  aliases: ["old-local-project"],
   name: "Cloud Demo",
   path: "",
   canCreate: false,
@@ -93,6 +94,10 @@ try {
       );
       assert.deepEqual(errors, []);
       await page.screenshot({ path: `artifacts/cowork/${name}-mobile.png` });
+      await page.goto(
+        `http://127.0.0.1:${server.address().port}/?agent=claudeDesktop&project=old-local-project&session=${encodeURIComponent(session.id)}#token=FIXTURE234`,
+      );
+      await page.getByText("This is the original Cowork session.").waitFor();
       console.log(
         name +
           ": existing Cowork project/history/composer UI passed with synthetic data",
