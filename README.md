@@ -146,7 +146,7 @@ Trusted-LAN HTTP requires explicit `POKITE_ALLOW_LAN=true npm start` or
 clients to reach an HTTP service with powerful agent permissions; use HTTPS on
 untrusted networks. Enabling Serve requires your tailnet administrator's approval.
 
-Pokite is designed for personal use: **one persistent 10-character access code for all networks
+Pokite is designed for personal use: **one persistent 20-character access code for all networks
 and devices**, with no one-time pairing or per-device credentials. Connection QR
 codes and links contain this same code. Each browser origin stores its login
 separately, but you never need a different code for another address.

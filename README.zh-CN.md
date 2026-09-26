@@ -150,7 +150,7 @@ Tailscale Serve HTTPS：`tailscale serve --bg http://127.0.0.1:3230`。
 需要可信局域网 HTTP 时，显式使用 `POKITE_ALLOW_LAN=true npm start`，或在状态
 目录的 `network.json` 写入 `{"allowLan":true}`。公共网络应使用 HTTPS。
 
-Pokite 面向个人自用：**所有网络和设备共用一个 10 位字母数字长期访问码**，没有一次性配对码，
+Pokite 面向个人自用：**所有网络和设备共用一个 20 位字母数字长期访问码**，没有一次性配对码，
 也不为每台设备换发凭据。二维码和连接链接都携带同一个码。不同网址的浏览器存储
 仍然独立，但输入的码完全相同，不需要分别申请。
 

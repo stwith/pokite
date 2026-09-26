@@ -81,7 +81,7 @@ test("short access codes avoid ambiguous characters and remain valid QR credenti
   const codes = new Set(Array.from({ length: 100 }, generateAccessToken));
   assert.equal(codes.size, 100);
   for (const code of codes) {
-    assert.match(code, /^[A-HJ-NP-Z2-9]{10}$/);
+    assert.match(code, /^[A-HJ-NP-Z2-9]{20}$/);
     assert.equal(
       parsePairingQR(
         "http://localhost:3230/#token=" + code,
@@ -105,8 +105,8 @@ test("repeated wrong access codes are throttled and recover after a minute", () 
 });
 
 test("short codes accept lowercase and grouped input without weakening legacy code comparison", () => {
-  assert.equal(matchesAccessToken("abcd2 efgh3", "ABCD2EFGH3"), true);
-  assert.equal(matchesAccessToken("abcd2-efgh3", "ABCD2EFGH3"), true);
-  assert.equal(matchesAccessToken("abcd2-efgh4", "ABCD2EFGH3"), false);
+  assert.equal(matchesAccessToken("abcd2 efgh3 jklm4 npqr5", "ABCD2EFGH3JKLM4NPQR5"), true);
+  assert.equal(matchesAccessToken("abcd2-efgh3-jklm4-npqr5", "ABCD2EFGH3JKLM4NPQR5"), true);
+  assert.equal(matchesAccessToken("abcd2-efgh3-jklm4-npqr6", "ABCD2EFGH3JKLM4NPQR5"), false);
   assert.equal(matchesAccessToken("LEGACY-secret", "legacy-secret"), false);
 });

@@ -5,7 +5,7 @@ import { randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 export function matchesAccessToken(credential, expected) {
   if (typeof credential !== "string" || typeof expected !== "string")
     return false;
-  const normalize = /^[A-HJ-NP-Z2-9]{10}$/.test(expected)
+  const normalize = /^[A-HJ-NP-Z2-9]{20}$/.test(expected)
     ? credential.replace(/[\s-]/g, "").toUpperCase()
     : credential;
   const got = Buffer.from(normalize),
@@ -15,7 +15,7 @@ export function matchesAccessToken(credential, expected) {
 export function generateAccessToken() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from(
-    { length: 10 },
+    { length: 20 },
     () => alphabet[randomInt(alphabet.length)],
   ).join("");
 }
