@@ -138,3 +138,57 @@ test("project pagination honors a smaller server page size instead of skipping p
   assert.equal((await catalog.get()).projects.length, 2);
   assert.deepEqual(offsets, [0, 30]);
 });
+test("only same-account Desktop-owned bridges appear as Code projects", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pokite-code-bridge-"));
+  try {
+    const dir = path.join(root, "claude-code-sessions/a/o");
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(
+      path.join(dir, "local_owned.json"),
+      JSON.stringify({
+        sessionId: "local_owned",
+        originCwd: "/workspace/repo",
+        bridgeSessionIds: ["session_desktop"],
+      }),
+    );
+    const other = path.join(root, "claude-code-sessions/other/o");
+    await fs.mkdir(other, { recursive: true });
+    await fs.writeFile(
+      path.join(other, "local_other.json"),
+      JSON.stringify({
+        sessionId: "local_other",
+        originCwd: "/workspace/other",
+        bridgeSessionIds: ["session_foreign"],
+      }),
+    );
+    const client = {
+      identity: async () => ({ account: "a", organization: "o" }),
+      request: async (route) =>
+        route.includes("projects_v2")
+          ? { data: [], pagination: { has_more: false } }
+          : {
+              data: [
+                {
+                  id: "cse_desktop",
+                  environment_kind: "bridge",
+                  status: "active",
+                  connection_status: "connected",
+                },
+                { id: "cse_cli", environment_kind: "bridge", status: "active" },
+                {
+                  id: "cse_foreign",
+                  environment_kind: "bridge",
+                  status: "active",
+                },
+              ],
+            },
+    };
+    const result = await new ClaudeCloudCatalog(root, client).get();
+    assert.equal(result.rows.length, 1);
+    assert.equal(result.rows[0].remoteId, "cse_desktop");
+    assert.equal(result.projects[0].name, "Code · repo");
+    assert.equal(result.projects[0].canCreate, false);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

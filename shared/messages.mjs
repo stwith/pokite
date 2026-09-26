@@ -1,5 +1,6 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  "Desktop Code 模型请在原客户端选择": "Choose Desktop Code models in the original app",
   "访问码已失效，请重新连接": "Your access code is no longer valid. Reconnect to continue.",
   未发送: "Not sent",
   "Claude 模型列表不可用": "Claude model catalog is unavailable",

@@ -93,6 +93,7 @@ struct Identity {
     let organization: String
     let config: [String: Any]
     let sessions: Set<String>
+    var codeSessions: Set<String> = []
     var scope: String { account + ":" + organization }
 }
 func identity() throws -> Identity {
@@ -115,7 +116,14 @@ func identity() throws -> Identity {
         guard let id = entry["sessionId"] as? String else { return nil }
         return canonical(id)
     })
-    return Identity(account: account, organization: organization, config: config, sessions: sessions)
+    var owner=Identity(account:account,organization:organization,config:config,sessions:sessions)
+    let codeRoot=desktopRoot.appendingPathComponent("claude-code-sessions").appendingPathComponent(account).appendingPathComponent(organization)
+    for file in (try? FileManager.default.contentsOfDirectory(at:codeRoot,includingPropertiesForKeys:nil)) ?? [] {
+        guard matches(file.lastPathComponent,"^local_[A-Za-z0-9-]+\\.json$"),let row=try? jsonFile(file),row["isArchived"] as? Bool != true else {continue}
+        let ids=(row["bridgeSessionIds"] as? [String] ?? []) + [((row["remoteControlSpawn"] as? [String:Any])?["ccrSessionId"] as? String) ?? ""]
+        owner.codeSessions.formUnion(ids.compactMap(canonical))
+    }
+    return owner
 }
 var catalogSessions: [String:Set<String>] = [:]
 var catalogTimes: [String:Date] = [:]
@@ -318,7 +326,7 @@ func rememberCatalog(_ object: [String:Any], _ owner: Identity, _ first: Bool) {
     let ids = rows.compactMap { row -> String? in
         guard let raw = row["id"] as? String, let id = canonical(raw) else { return nil }
         let tags = row["tags"] as? [String] ?? []
-        guard owner.sessions.contains(id) || ((row["environment_kind"] as? String) == "anthropic_cloud" && (tags.contains("cowork-remote") || tags.contains("product:cowork-remote"))) else { return nil }
+        guard owner.sessions.contains(id) || (owner.codeSessions.contains(id) && row["environment_kind"] as? String == "bridge") || ((row["environment_kind"] as? String) == "anthropic_cloud" && (tags.contains("cowork-remote") || tags.contains("product:cowork-remote"))) else { return nil }
         return id
     }
     if first { catalogSessions = [owner.scope: Set(ids)];catalogTimes = [owner.scope:Date()] }
@@ -413,6 +421,12 @@ func selfTest() throws {
     _ = try validate(settings)
     settings["body"]=["session_id":"cse_example","events":[["payload":["type":"control_request","request_id":"unsafe","request":["subtype":"apply_flag_settings","settings":["permissionMode":"bypassPermissions"]]]]]]
     do { _ = try validate(settings);throw reject("Self-test allowed arbitrary flag settings",500) } catch let e as Failure {if e.status==500 {throw e}}
+    var codeOwner=cloudOwner;codeOwner.codeSessions=["cse_desktop"]
+    rememberCatalog(["data":[["id":"cse_desktop","environment_kind":"bridge"],["id":"cse_cli","environment_kind":"bridge"]]],codeOwner,true)
+    cloudRequest["route"]="/v1/code/sessions/cse_desktop";try allow(validate(cloudRequest),codeOwner)
+    cloudRequest["route"]="/v1/code/sessions/cse_cli"
+    do {try allow(validate(cloudRequest),codeOwner);throw reject("Unowned CLI bridge allowed",500)}catch let e as Failure {if e.status==500{throw e}}
+    catalogSessions.removeAll();catalogTimes.removeAll()
     let clean=sanitize(["access_token":"secret","nested":["authorization":"secret","text":"content"]]) as! [String:Any]
     guard clean["access_token"] == nil, (clean["nested"] as? [String:Any])?["authorization"] == nil else { throw reject("Self-test failed sanitization",500) }
     print("cowork-broker self-test passed")

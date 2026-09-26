@@ -3,7 +3,7 @@
 Pokite reads the signed-in Desktop account's **cloud project catalog and unified
 CSE sessions**. It no longer treats the local Cowork folder index as a complete
 conversation list. The independent **Claude Code CLI** entry is separate;
-Desktop Code attachment remains unsupported.
+Desktop Code is supported for existing local sessions whose own Remote Control bridge is connected.
 
 ## Setup and identity
 
@@ -62,8 +62,9 @@ allows fixed HTTPS hosts, read-only project catalog operations and validated
 existing-session reads/replies. Redirects are refused. Web-cookie identity is
 checked against the active Desktop account, organization paths are restricted,
 and cloud session IDs must be established by an authenticated catalog. Short
-catalog grants expire and are refreshed before use. Desktop Code sessions do not
-become writable merely because they appear in the global session response.
+catalog grants expire and are refreshed before use. Desktop Code sessions become eligible only when a bridge ID is also recorded
+in the current Desktop account and organization’s local Code metadata. Independent
+CLI bridges and other accounts remain excluded.
 
 Native protocol v4 also permits creation in an existing cloud project and only
 two settings controls: `set_model` and `apply_flag_settings` containing
@@ -122,3 +123,20 @@ A local timing sample reduced first conversation load from ~790 ms to ~374 ms;
 warm reads were ~8–17 ms. Cold project loading remained around 2 seconds.
 Repeated session refreshes now reuse project metadata instead of fetching it
 again. These are local samples, not a cross-network latency guarantee.
+
+## Desktop Code (local execution)
+
+Under the same Claude Desktop entry, local Code workspaces appear as **Code ·
+workspace name** when an existing Desktop session has a connected Remote Control
+bridge. Reading and replying target that bridge and original executor; Pokite
+does not resume it through Claude Code CLI or simulate Desktop composer actions.
+Desktop must remain running. Disconnected bridges are shown offline. New local
+Code sessions and model controls remain in Desktop for this initial integration;
+cloud Chat/Cowork creation and controls remain unchanged.
+
+Remote Control needs official subscription authentication and feature evaluation.
+A shared `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` setting prevents it. Removing
+that flag can require reopening the Code backend; simply changing the file does
+not rebuild an already initialized connection. Do not interrupt a running task.
+The mobile app does not need to be logged in for Desktop to establish its bridge.
+The bridge itself uses Anthropic's service, not an entirely local protocol.

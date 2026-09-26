@@ -288,7 +288,8 @@ export class ClaudeDesktopRemote {
         this.metadata.clear();
         if (this.catalog.cached) this.catalog.cached.time = this.now() - 5001;
         error.delivery = "not-sent";
-        if (!error.message.includes("可能已切换")) error.message = "模型或强度可能已切换；消息未发送。" + error.message;
+        if (!error.message.includes("可能已切换"))
+          error.message = "模型或强度可能已切换；消息未发送。" + error.message;
         error.blocked = true;
         throw error;
       }
@@ -312,6 +313,13 @@ export class ClaudeDesktopRemote {
     const row = sessionId
       ? (await this.raw({ id: sessionId })).find((s) => s.id === sessionId)
       : null;
+    if (row?.codeLocalId)
+      return {
+        options: row.model ? [{ id: row.model, label: row.model }] : [],
+        current: row.model,
+        canSwitch: false,
+        reason: "Desktop Code 模型请在原客户端选择",
+      };
     const result = await this.modelSettings.get({
       model: row?.model,
       effort: row?.effort,
@@ -434,7 +442,9 @@ export class ClaudeDesktopRemote {
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
     throw Object.assign(
-      Error("模型或强度可能已切换，但确认尚未收到；消息未发送，请核对原会话后重试。"),
+      Error(
+        "模型或强度可能已切换，但确认尚未收到；消息未发送，请核对原会话后重试。",
+      ),
       { status: 409, delivery: "not-sent" },
     );
   }

@@ -1,3 +1,4 @@
+import { desktopCodeBridges } from "./desktop-code-bridges.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { canonicalDesktopSessionId } from "./cowork-session-id.mjs";
@@ -119,10 +120,13 @@ export class ClaudeCloudCatalog {
       projectsWork,
       sessionsWork,
       localWork,
+      desktopCodeBridges(this.root, owner.account, owner.organization),
     ]);
     const failed = settled.find((x) => x.status === "rejected");
     if (failed) throw failed.reason;
-    let [cloudProjects, cloudRows, local] = settled.map((x) => x.value);
+    let [cloudProjects, cloudRows, local, codeBridges] = settled.map(
+      (x) => x.value,
+    );
     const known = new Set(
       cloudProjects.flatMap((p) => [p.uuid, cloudProjectAlias(p.uuid)]),
     );
@@ -172,8 +176,35 @@ export class ClaudeCloudCatalog {
     const rows = [];
     for (const row of cloudRows) {
       const id = canonicalDesktopSessionId(row.id),
-        entry = entries.get(id);
-      if (!id || (!unifiedCloudSession(row) && !entry)) continue;
+        entry = entries.get(id),
+        code = row.environment_kind === "bridge" ? codeBridges.get(id) : null;
+      if (!id || (!unifiedCloudSession(row) && !entry && !code)) continue;
+      if (row.status === "archived") continue;
+      if (code) {
+        const projectId =
+          "desktop-code:" + scope + ":" + encodeURIComponent(code.workspace);
+        if (!projects.some((p) => p.id === projectId))
+          projects.push({
+            id: projectId,
+            name: "Code · " + path.basename(code.workspace),
+            path: code.workspace,
+            virtual: true,
+            canCreate: false,
+            readOnly: false,
+            aliases: [],
+          });
+        rows.push({
+          native: row,
+          id: ["remote", owner.account, owner.organization, id].join(":"),
+          remoteId: id,
+          scope,
+          projectId,
+          projectName: "Code · " + path.basename(code.workspace),
+          workspace: code.workspace,
+          codeLocalId: code.localId,
+        });
+        continue;
+      }
       let project = row.chat_project_id
         ? byCloud.get(row.chat_project_id)
         : ungrouped;

@@ -92,10 +92,10 @@ universal plug-and-play access to every installed AI app.
 | PenguinHarness | Existing projects and sessions | Existing local service | Cannot change the model of an existing session |
 | Claude Code CLI | Local CLI history | Agent SDK session resume | Not Desktop sharing; do not write concurrently with an external CLI |
 | Claude Desktop — Chat / Cowork | Cloud projects and unified conversations | Create and continue cloud sessions; model and effort selection | Experimental; may require first Mac authorization; unified CSE sessions |
-| Claude Desktop Code | Not exposed | Unsupported | Experimental transports are disabled |
+| Claude Desktop Code | Existing local sessions with an active Remote Control bridge | Same Desktop executor through its own bridge | Desktop must stay running; create sessions and select models in Desktop |
 
 The independent **Claude Code CLI** integration excludes Desktop-owned sessions.
-The Desktop adapter discovers the current account’s cloud projects and unified Chat/Cowork sessions. Desktop Code remains separate and is not attached. Discovering an installed agent does not mean it is connected or writable.
+The Desktop adapter discovers the current account’s cloud projects and unified Chat/Cowork sessions. Connected Desktop Code bridges are grouped separately by their original local workspace. Discovering an installed agent does not mean it is connected or writable.
 
 Hermes Desktop requires a local plugin: run `node scripts/setup-hermes-sharing.mjs`
 (also pass the profile name for a named profile), then reopen Hermes after its tasks finish.
