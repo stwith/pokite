@@ -25,7 +25,10 @@ Consequently **Code creation is not implemented**: its adapter has no `createAnd
 - Unit regressions cover provider isolation, direct cross-surface access rejection, separate model catalogs and missing Code catalog failure.
 - Native broker route/encryption self-test passes.
 - Chromium and WebKit cloud creation/model-control UI regressions pass (fixtures, not live Code creation).
-- The updated native broker requires a fresh macOS Safe Storage authorization. Live Code model selection has not yet been accepted; requests currently return the explicit authorization-required error. Existing Code reply acceptance was verified in the previous iteration, not re-proven by these fixture tests.
+- macOS authorization completed. The live service returned one Code workspace with two connected original Desktop sessions and the account's Code-specific model catalog.
+- Live idle-session control test changed Sonnet 5 / high to Sonnet 4.6 / low. Both controls were acknowledged and server metadata confirmed the new model and effort. The original Sonnet 5 / high settings were then restored with acknowledgment. No user turn or inference task was sent.
+- Live mobile-sized Chromium page opened the original Code session and displayed the Code-specific model options.
+- 168 Node tests passed. Existing Code reply acceptance was verified in the previous iteration; this round verifies model controls separately.
 
 ## Upgrade
 
