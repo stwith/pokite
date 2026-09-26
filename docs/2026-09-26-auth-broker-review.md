@@ -38,3 +38,14 @@ Regression tests cover peer isolation, valid-code recovery, localhost exemption,
 - Chromium and WebKit tested access expiration, stopped polling/SSE, provider-side
   401 preservation, replacement-code reconnect and reset UI behavior.
 - Native protocol self-tests passed without credentials.
+
+## Deployment on this Mac
+
+- 165 Node tests, native self-tests, production build and browser flows passed.
+- Live invalid-code bursts against Tailscale HTTPS did not block valid localhost,
+  LAN HTTP, Tailscale HTTP or HTTPS access. Both Codex project reads returned 200.
+- Only Pokite restarted. The persistent access code and Desktop processes were
+  unchanged. Old helper executable/installation record were removed after ACL cleanup.
+- Fresh authorization for the new ad-hoc-signed helper remains a macOS user step.
+  The old approval was not silently inherited. The first validation timed out
+  awaiting authorization; this is not a successful live Claude read/write check.
