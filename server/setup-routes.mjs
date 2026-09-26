@@ -46,7 +46,7 @@ export function installSetupRoutes(app, post, { adapters, agentNames }) {
         process.execPath,
         [path.join(root, "scripts", script), ...args],
         {
-          timeout: 60000,
+          timeout: script === "setup-cowork.mjs" ? 210000 : 60000,
           maxBuffer: 1024 * 1024,
           env: {
             ...process.env,

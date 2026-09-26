@@ -12,7 +12,7 @@ function fakeProcess(reply) {
   child.stderr = new PassThrough();
   child.stdin = new PassThrough();
   child.stdin.on("data", (data) => reply(JSON.parse(data), child));
-  child.kill = () => queueMicrotask(() => child.emit("exit", 0));
+  child.kill = () => queueMicrotask(() => child.emit("close", 0));
   return child;
 }
 test("broker client correlates requests and never needs a Desktop master key", async () => {
@@ -57,8 +57,9 @@ test("lost broker response after a write is unknown and is never retried", async
     binary,
     timeout: 30,
     launch: () =>
-      fakeProcess(() => {
+      fakeProcess((r, c) => {
         sent++;
+        c.stdout.write(JSON.stringify({ event: "started", id: r.id }) + "\n");
       }),
   });
   try {
@@ -138,6 +139,93 @@ test("a macOS authorization wait fails history reads promptly without cancelling
     );
     assert.equal(sent, 1);
     assert.ok(broker.child);
+  } finally {
+    await broker.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+test("queued POST behind a blocked read is not-sent when the broker exits before starting it", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-started-"));
+  const binary = path.join(dir, "fixture");
+  await fs.writeFile(binary, "");
+  let child,
+    seen = 0;
+  const broker = new CoworkBroker({
+    binary,
+    verify: async () => {},
+    timeout: 1000,
+    launch: () =>
+      (child = fakeProcess((r, c) => {
+        seen++;
+        if (r.method === "GET")
+          c.stdout.write(JSON.stringify({ event: "started", id: r.id }) + "\n");
+      })),
+  });
+  try {
+    const first = broker.request("/api/oauth/profile").catch((e) => e);
+    while (seen < 1) await new Promise((r) => setTimeout(r, 1));
+    const second = broker
+      .request("/v1/code/sessions/cse_test/events", {
+        method: "POST",
+        body: {},
+      })
+      .catch((e) => e);
+    while (seen < 2) await new Promise((r) => setTimeout(r, 1));
+    child.kill();
+    assert.equal((await first).delivery, "not-sent");
+    assert.equal((await second).delivery, "not-sent");
+  } finally {
+    await broker.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+test("unstarted POST times out as not-sent, while a started POST remains unknown", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-started-"));
+  const binary = path.join(dir, "fixture");
+  await fs.writeFile(binary, "");
+  const broker = new CoworkBroker({
+    binary,
+    verify: async () => {},
+    timeout: 20,
+    launch: () => fakeProcess(() => {}),
+  });
+  try {
+    await assert.rejects(
+      broker.request("/v1/code/sessions/cse_test/events", {
+        method: "POST",
+        body: {},
+      }),
+      { delivery: "not-sent" },
+    );
+  } finally {
+    await broker.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+test("stdout started receipt arriving after process exit is drained before classifying a POST", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-drain-"));
+  const binary = path.join(dir, "fixture");
+  await fs.writeFile(binary, "");
+  const broker = new CoworkBroker({
+    binary,
+    verify: async () => {},
+    launch: () =>
+      fakeProcess((r, c) => {
+        queueMicrotask(() => {
+          c.emit("exit", 1);
+          c.stdout.write(JSON.stringify({ event: "started", id: r.id }) + "\n");
+          c.emit("close", 1);
+        });
+      }),
+  });
+  try {
+    await assert.rejects(
+      broker.request("/v1/code/sessions/cse_test/events", {
+        method: "POST",
+        body: {},
+      }),
+      { delivery: "unknown" },
+    );
   } finally {
     await broker.close();
     await fs.rm(dir, { recursive: true, force: true });

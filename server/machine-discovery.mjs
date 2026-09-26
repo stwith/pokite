@@ -373,26 +373,25 @@ export function discoverMachine({
       name: "Claude Desktop",
       home: coworkHome,
     };
-    const brokerInstalled = [
-      ["Cowork", "Pokite Cowork Access"],
-      ["Keychain", "Pokite Claude Access"],
-    ].some(([directory, name]) => {
-      const base = path.join(
-        home,
-        "Library/Application Support/Pokite",
-        directory,
-      );
-      try {
-        return (
-          exists(path.join(base, name)) &&
-          JSON.parse(
-            fs.readFileSync(path.join(base, "installation.json"), "utf8"),
-          ).protocol === "claude-cloud-broker-v3"
+    const brokerInstalled = [["Cowork", "Pokite Cowork Access"]].some(
+      ([directory, name]) => {
+        const base = path.join(
+          home,
+          "Library/Application Support/Pokite",
+          directory,
         );
-      } catch {
-        return false;
-      }
-    });
+        try {
+          return (
+            exists(path.join(base, name)) &&
+            JSON.parse(
+              fs.readFileSync(path.join(base, "installation.json"), "utf8"),
+            ).protocol === "claude-cloud-broker-v4"
+          );
+        } catch {
+          return false;
+        }
+      },
+    );
     candidates.push({
       ...instance,
       status: brokerInstalled

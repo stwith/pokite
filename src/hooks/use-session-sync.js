@@ -1,6 +1,6 @@
 import { locale } from "../lib/i18n.js";
 import { useEffect } from "react";
-import { getAccessToken } from "../lib/api";
+import { getAccessToken, rejectAccessToken } from "../lib/api";
 import { createRefreshLoop } from "../lib/resource-refresh";
 import { createReconnectBackoff } from "../lib/reconnect-backoff";
 
@@ -34,19 +34,29 @@ export function useSessionSync(enabled, agent) {
     };
     async function connect() {
       stop();
-      if (stopped || document.hidden || !navigator.onLine) return;
+      if (stopped || !getAccessToken() || document.hidden || !navigator.onLine)
+        return;
       const current = new AbortController();
       controller = current;
       let watchdog;
       try {
         watchdog = setTimeout(() => current.abort(), 45000);
+        const credential = getAccessToken();
         const response = await fetch("/api/" + agent + "/events", {
           headers: {
             "Accept-Language": locale,
-            Authorization: "Bearer " + getAccessToken(),
+            Authorization: "Bearer " + credential,
           },
           signal: current.signal,
         });
+        if (response.status === 401) {
+          const body = await response.json().catch(() => null);
+          if (body?.code === "ACCESS_REJECTED") {
+            rejectAccessToken(credential);
+            stopped = true;
+            return;
+          }
+        }
         if (
           !response.ok ||
           !response.headers.get("content-type")?.includes("text/event-stream")
@@ -100,10 +110,16 @@ export function useSessionSync(enabled, agent) {
       else reconnect();
     };
     void connect();
+    const expired = () => {
+      stopped = true;
+      stop();
+    };
+    window.addEventListener("pokite:auth-expired", expired);
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("online", reconnect);
     window.addEventListener("offline", stop);
     return () => {
+      window.removeEventListener("pokite:auth-expired", expired);
       stopped = true;
       stop();
       document.removeEventListener("visibilitychange", visibility);
@@ -123,9 +139,12 @@ export function watchResource(
     refresh,
     interval,
     isDone,
-    isVisible: () => !document.hidden && navigator.onLine !== false,
+    isVisible: () =>
+      !!getAccessToken() && !document.hidden && navigator.onLine !== false,
     isConnected: () => !once && connected.has(agent),
   });
+  const expired = () => loop.stop();
+  window.addEventListener("pokite:auth-expired", expired);
   const change = (event) => {
     if (!once && event.detail?.agent === agent) void loop.trigger();
   };
@@ -139,6 +158,7 @@ export function watchResource(
   window.addEventListener("pocket-sync-status", status);
   return () => {
     loop.stop();
+    window.removeEventListener("pokite:auth-expired", expired);
     document.removeEventListener("visibilitychange", loop.trigger);
     window.removeEventListener("online", loop.trigger);
     window.removeEventListener("offline", loop.reschedule);

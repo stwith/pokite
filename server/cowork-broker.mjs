@@ -1,5 +1,4 @@
 import fs from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 const exec = promisify(execFile);
@@ -8,20 +7,17 @@ import os from "node:os";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline";
-export const coworkBrokerPath = () => {
-  const support = path.join(os.homedir(), "Library/Application Support/Pokite");
-  // Upgrade our own previously authorized helper in place. This preserves the
-  // user's existing OS grant without changing the keychain ACL or exporting keys.
-  return existsSync(path.join(support, "Keychain/installation.json"))
-    ? path.join(support, "Keychain/Pokite Claude Access")
-    : path.join(support, "Cowork/Pokite Cowork Access");
-};
+export const coworkBrokerPath = () =>
+  path.join(
+    os.homedir(),
+    "Library/Application Support/Pokite/Cowork/Pokite Cowork Access",
+  );
 async function verifyBroker(binary) {
   const { stdout } = await exec(binary, ["--version"], {
     timeout: 5000,
     maxBuffer: 1024,
   });
-  if (stdout.trim() !== "pokite-cowork-broker 3")
+  if (stdout.trim() !== "pokite-cowork-broker 4")
     throw fail("请在电脑上运行 npm run setup:cowork 完成 Cowork 接入");
 }
 const fail = (message, delivery = "not-sent", status = 503) =>
@@ -68,6 +64,11 @@ export class CoworkBroker {
         response = JSON.parse(line);
       } catch {
         child.kill();
+        return;
+      }
+      if (response.event === "started") {
+        const entry = this.pending.get(response.id);
+        if (entry?.child === child) entry.started = true;
         return;
       }
       if (response.event === "authorization") {
@@ -124,14 +125,16 @@ export class CoworkBroker {
         pending.reject(
           fail(
             "Cowork 本机连接中断，请核对原会话",
-            pending.sent && pending.method !== "GET" ? "unknown" : "not-sent",
+            pending.started && pending.method !== "GET"
+              ? "unknown"
+              : "not-sent",
           ),
         );
         this.pending.delete(id);
       }
     };
     child.once("error", ended);
-    child.once("exit", ended);
+    child.once("close", ended);
   }
   async request(
     route,
@@ -162,7 +165,7 @@ export class CoworkBroker {
         method,
         resolve,
         reject,
-        sent: false,
+        started: false,
         retryAuthorization,
         child,
       };
@@ -171,21 +174,22 @@ export class CoworkBroker {
         reject(
           fail(
             "Cowork 请求超时；请检查 Mac 上的授权提示或原会话",
-            entry.sent && method !== "GET" ? "unknown" : "not-sent",
+            entry.started && method !== "GET" ? "unknown" : "not-sent",
           ),
         );
-        // Never let an old timed-out message be submitted later after a prompt.
+        // Detach the doomed process immediately: no new request may be queued
+        // onto it between timeout and the close event.
+        if (this.child === child) this.child = null;
         child.kill();
       }, this.timeout);
       this.pending.set(id, entry);
-      entry.sent = true;
       child.stdin.write(data + "\n", (error) => {
         if (error && this.pending.delete(id)) {
           clearTimeout(entry.timer);
           reject(
             fail(
               "Cowork 请求未能完整发送",
-              method === "GET" ? "not-sent" : "unknown",
+              entry.started && method !== "GET" ? "unknown" : "not-sent",
             ),
           );
         }

@@ -70,6 +70,21 @@ export default function App() {
     [historyBusy, setHistoryBusy] = useState(false),
     [showLatest, setShowLatest] = useState(false),
     [answers, setAnswers] = useState({});
+  useEffect(() => {
+    const expired = () => {
+      setAuthed(false);
+      setToken("");
+      setAgents([]);
+      setProjects([]);
+      setProject(null);
+      setSessions([]);
+      setSid(null);
+      setDetail(null);
+      setError(t("访问码已失效，请重新连接"));
+    };
+    window.addEventListener("pokite:auth-expired", expired);
+    return () => window.removeEventListener("pokite:auth-expired", expired);
+  }, []);
   useSessionSync(authed && !!agent, agent);
   useNotificationNavigation({
     authed,
@@ -188,6 +203,7 @@ export default function App() {
       setAgents(available);
       if (!available.some((item) => item.id === agent))
         setAgent(available[0]?.id || "");
+      if (getAccessToken() !== credential.trim()) return;
       persistAccessToken();
       takeInitialAccessToken();
       setAuthed(true);

@@ -16,7 +16,7 @@ const run = (command, args) =>
   execFileSync(command, args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 90000,
+    timeout: 180000,
   });
 const digest = (data) => createHash("sha256").update(data).digest("hex");
 const sourceHash = digest(await fs.readFile(source));
@@ -24,13 +24,14 @@ const previous = await fs
   .readFile(manifest, "utf8")
   .then(JSON.parse)
   .catch(() => null);
-if (previous?.sourceHash === sourceHash) {
+if (
+  previous?.sourceHash === sourceHash &&
+  previous.protocol === "claude-cloud-broker-v4"
+) {
   try {
     run("/usr/bin/codesign", ["--verify", "--strict", binary]);
     if (digest(await fs.readFile(binary)) === previous.binaryHash) {
-      console.log(
-        "Cowork request broker is current; existing keychain permission retained.",
-      );
+      console.log("Cowork request broker is current; no rebuild needed.");
       process.exit(0);
     }
   } catch {}
@@ -44,11 +45,7 @@ const identities = run("/usr/bin/security", [
 const available = [...identities.matchAll(/\) ([A-F0-9]{40}) "/g)].map(
   (match) => match[1],
 );
-const identity =
-  process.env.POKITE_COWORK_SIGN_IDENTITY ||
-  previous?.identity ||
-  available[0] ||
-  "-";
+const identity = process.env.POKITE_COWORK_SIGN_IDENTITY || "-";
 if (identity !== "-" && !available.includes(identity))
   throw Error("Configured Cowork signing identity is unavailable");
 await fs.mkdir(directory, { recursive: true, mode: 0o700 });
@@ -68,9 +65,7 @@ try {
     "--sign",
     identity,
     "--identifier",
-    binary.includes("/Keychain/")
-      ? "app.pokite.claude-keychain"
-      : "app.pokite.cowork-request-broker",
+    "app.pokite.cowork-request-broker",
     "--options",
     "runtime",
     "--timestamp=none",
@@ -87,7 +82,7 @@ try {
   await fs.writeFile(
     manifest,
     JSON.stringify(
-      { sourceHash, binaryHash, identity, protocol: "claude-cloud-broker-v3" },
+      { sourceHash, binaryHash, identity, protocol: "claude-cloud-broker-v4" },
       null,
       2,
     ),

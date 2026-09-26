@@ -187,8 +187,12 @@ sessionConfig.httpShouldSetCookies = false
 sessionConfig.timeoutIntervalForRequest = 20
 sessionConfig.timeoutIntervalForResource = 25
 let network = URLSession(configuration: sessionConfig, delegate: NoRedirect(), delegateQueue: nil)
+var requestDeadline = Date.distantFuture
 func perform(_ route: String, _ method: String, _ body: [String: Any]?, _ owner: Identity, _ token: String, web: Bool = false) throws -> Any {
+    let remaining = requestDeadline.timeIntervalSinceNow
+    guard remaining > 0 else { throw reject("Broker request deadline exceeded before submission",503) }
     var request = URLRequest(url: URL(string: (web ? "https://claude.ai" : "https://api.anthropic.com") + route)!)
+    request.timeoutInterval = min(20,remaining)
     request.httpMethod = method
     for (key,value) in ["Authorization":"Bearer " + token,"Content-Type":"application/json","anthropic-version":"2023-06-01","anthropic-beta":"ccr-byoc-2025-07-29","anthropic-client-feature":"ccr","anthropic-client-platform":"web_claude_ai","x-organization-uuid":owner.organization] { request.setValue(value, forHTTPHeaderField: key) }
     if web { request.setValue(nil, forHTTPHeaderField:"Authorization");request.setValue("sessionKey=" + token,forHTTPHeaderField:"Cookie") }
@@ -337,6 +341,7 @@ func handle(_ input: [String: Any]) throws -> Any {
     if let id = request.session, !owner.sessions.contains(id), !((catalogTimes[owner.scope]?.timeIntervalSinceNow ?? -1000) > -60 && (catalogSessions[owner.scope]?.contains(id) ?? false)) {
         var cursor: String?; var seen = Set<String>()
         for _ in 0..<100 {
+            guard requestDeadline.timeIntervalSinceNow > 0 else { throw reject("Cloud catalog deadline exceeded",503) }
             let route = "/v1/code/sessions?limit=100&include_trigger_sessions=true&exclude_tags=-" + (cursor.map { "&cursor=" + $0.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed)! } ?? "")
             guard let result = try perform(route,"GET",nil,owner,token) as? [String:Any] else { throw reject("Invalid cloud catalog",503) }
             rememberCatalog(result,owner,cursor == nil)
@@ -414,7 +419,7 @@ func selfTest() throws {
 }
 var coreLimit = rlimit(rlim_cur: 0, rlim_max: 0)
 setrlimit(RLIMIT_CORE, &coreLimit)
-if CommandLine.arguments == [CommandLine.arguments[0], "--version"] { print("pokite-cowork-broker 3");exit(0) }
+if CommandLine.arguments == [CommandLine.arguments[0], "--version"] { print("pokite-cowork-broker 4");exit(0) }
 if CommandLine.arguments == [CommandLine.arguments[0], "--self-test"] { do { try selfTest();exit(0) } catch { fputs("Broker self-test failed\n",stderr);exit(1) } }
 guard CommandLine.arguments.count == 1, isatty(STDIN_FILENO) == 0, isatty(STDOUT_FILENO) == 0 else { exit(64) }
 // Only bounded JSON requests/responses. There is deliberately no key/token export operation.
@@ -423,6 +428,11 @@ while let line = readLine() {
     do {
         guard line.utf8.count <= 512 * 1024, let data=line.data(using:.utf8), let input=try JSONSerialization.jsonObject(with:data) as? [String:Any] else { throw reject("Invalid broker input") }
         output["id"]=input["id"] as? String ?? "invalid"
+        _ = try validate(input)
+        let started:[String:Any] = ["event":"started","id":output["id"]!]
+        let startedData = try JSONSerialization.data(withJSONObject:started)
+        print(String(data:startedData,encoding:.utf8)!);fflush(stdout)
+        requestDeadline = Date(timeIntervalSinceNow:50)
         output["result"]=try handle(input)
     } catch let error as Failure {
         output["error"]=["message":error.message,"status":error.status,"delivery":error.delivery]

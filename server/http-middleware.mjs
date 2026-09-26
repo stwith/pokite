@@ -1,5 +1,5 @@
 import { matchesAccessToken } from "./access-token.mjs";
-import { AccessThrottle } from "./access-throttle.mjs";
+import { AccessThrottle, accessPeer } from "./access-throttle.mjs";
 import { isLocalAdminRequest, requireLocalAdmin } from "./local-admin.mjs";
 import os from "node:os";
 import { createHash } from "node:crypto";
@@ -45,6 +45,7 @@ export function installHttpProtection(
       if (!serve || new URL(serve.url).host !== req.headers.host)
         return res.sendStatus(403);
       expectedOrigin = new URL(serve.url).origin;
+      req.pokiteServe = true;
     }
     req.pokiteOrigin = expectedOrigin;
     res.set({
@@ -64,17 +65,23 @@ export function installHttpProtection(
       "",
     );
     const valid = () => matchesAccessToken(credential, getToken());
-    const peer = req.socket.remoteAddress || "unknown";
-    if (throttle.blocked(peer))
-      return res
-        .status(429)
-        .set("Retry-After", "60")
-        .json({ error: "尝试次数过多，请一分钟后重试" });
+    const peer = accessPeer(req),
+      local = isLocalAdminRequest(req);
     if (!valid()) {
-      throttle.failed(peer);
-      return res.status(401).json({ error: "请输入访问码" });
+      if (!local && throttle.blocked(peer))
+        return res
+          .status(429)
+          .set("Retry-After", "60")
+          .json({
+            error: "尝试次数过多，请一分钟后重试",
+            code: "ACCESS_RATE_LIMITED",
+          });
+      if (!local) throttle.failed(peer);
+      return res
+        .status(401)
+        .json({ error: "请输入访问码", code: "ACCESS_REJECTED" });
     }
-    throttle.succeeded(peer);
+    if (!local) throttle.succeeded(peer);
     req.auth = { id: "shared" };
     if (
       (req.path.startsWith("/setup/") || req.path === "/auth/reset") &&

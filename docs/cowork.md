@@ -19,11 +19,12 @@ or separate browser login is required. Open Desktop and its Chat/Cowork surface
 if its cached session authorization needs refreshing. Pokite does not refresh,
 replace or write Desktop login credentials itself.
 
-The signed helper stays under Application Support. An existing Pokite helper is
-upgraded in place with its signing identity so the owner's macOS permission can
-be retained. New installations can use a local ad-hoc signature; no native GUI
-app, Developer ID subscription, DMG or notarization is required. macOS may request
-Claude Safe Storage permission on first use or after signing changes.
+The helper always uses `Application Support/Pokite/Cowork/Pokite Cowork Access`
+and identifier `app.pokite.cowork-request-broker`. It does not inherit the old
+key-export helper identity. Local ad-hoc signing is the default; a specific
+certificate is used only when explicitly configured. A changed binary may need
+fresh macOS permission. No native GUI app, DMG or notarization is required.
+See [authorization migration and current fixes](2026-09-26-auth-broker-review.md).
 
 ## Discovery and grouping
 
@@ -64,7 +65,7 @@ and cloud session IDs must be established by an authenticated catalog. Short
 catalog grants expire and are refreshed before use. Desktop Code sessions do not
 become writable merely because they appear in the global session response.
 
-Native protocol v3 also permits creation in an existing cloud project and only
+Native protocol v4 also permits creation in an existing cloud project and only
 two settings controls: `set_model` and `apply_flag_settings` containing
 `effortLevel`. Other flags, permission changes, worker registration, project
 mutations and credential export remain unavailable. Model and effort values are

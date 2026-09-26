@@ -1,13 +1,15 @@
+> 历史审查记录：仅供追溯，不代表当前产品设计或接入状态。当前认证设计见 [共享访问码](../plans/2026-09-26-shared-access.md)，Claude 接入见 [当前说明](../cowork.md)。
+
 # Review verification and remediation — 2026-09-26
 
 > Cowork update: the key-export helper remains retired. Unified Chat/Cowork now uses cloud catalog discovery through a signed,
-> request-only native broker, verified against the original account/session. See [implementation and live validation](cowork.md). Earlier
+> request-only native broker, verified against the original account/session. See [implementation and live validation](../cowork.md). Earlier
 > statements below about Cowork being disabled describe the remediation stage.
 
 
 > Authentication policy update: the owner explicitly chose a personal-use shared
 > access code. The per-device/one-time-pairing findings and fixes below are
-> historical; they are superseded by [the shared-access design](plans/2026-09-26-shared-access.md).
+> historical; they are superseded by [the shared-access design](../plans/2026-09-26-shared-access.md).
 > One persistent code now works on LAN and Tailscale, with an explicit global
 > reset. Local administration, network/runtime fixes and retired-code removal remain.
 
@@ -55,9 +57,9 @@ retention, with replay fingerprints preserved separately.
 - Updated distribution scope: ship a local-service installation package with a
   browser/PWA interface, not a native app. The package is not released yet; clean
   installation, updates, removal and opt-in service autostart need acceptance.
-  See [distribution scope](macos-distribution.md).
+  See [distribution scope](../macos-distribution.md).
 - Follow-up work delivered the first-run web setup dialog, focused App views and
-  frontend/backend localization; see [validation](2026-09-26-distribution-validation.md).
+  frontend/backend localization; see [validation](../2026-09-26-distribution-validation.md).
 - Old POCKET_* environment names and installed LaunchAgent labels remain aliases
   for migration. New public path settings use POKITE_*.
 - Upstream protocol compatibility and each provider's same-session behavior still
