@@ -43,9 +43,15 @@ export class ClaudeDesktopRemote {
     this.catalog = new ClaudeCloudCatalog(this.root, this.client, {
       now: this.now,
     });
-    this.modelSettings = new ClaudeModels(this.client, { now: this.now, surface: this.surface });
+    this.modelSettings = new ClaudeModels(this.client, {
+      now: this.now,
+      surface: this.surface,
+    });
     this.created = new Map();
-    this.emptyState = this.surface === "code" ? "请在 Claude Desktop 的 Code 中开启会话的 Remote Control。" : "当前账号暂无可读取的云端会话。";
+    this.emptyState =
+      this.surface === "code"
+        ? "请在 Claude Desktop 的 Code 中开启会话的 Remote Control。"
+        : "当前账号暂无可读取的云端会话。";
   }
   async connect() {
     return this.client.connect();
@@ -184,11 +190,20 @@ export class ClaudeDesktopRemote {
     return this.surface === "code" ? !!row.codeLocalId : !row.codeLocalId;
   }
   async projects() {
-    return (await this.catalog.get({ stale: true })).projects.filter((project) =>
-      this.surface === "code"
-        ? project.id.startsWith("desktop-code:")
-        : !project.id.startsWith("desktop-code:"),
-    ).map((project) => ({ ...project, name: this.surface === "code" ? project.name.replace(/^Code · /, "") : project.name }));
+    const { projects } = await this.catalog.get({ stale: true });
+    return projects
+      .filter((project) =>
+        this.surface === "code"
+          ? project.id.startsWith("desktop-code:")
+          : !project.id.startsWith("desktop-code:"),
+      )
+      .map((project) => ({
+        ...project,
+        name:
+          this.surface === "code"
+            ? project.name.replace(/^Code · /, "")
+            : project.name,
+      }));
   }
   async page(row, cursor) {
     if (

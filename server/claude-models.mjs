@@ -1,6 +1,8 @@
 export function parseClaudeModels(value, current = {}, surface = "cowork") {
   const ids = surface === "code" ? ["ccd", "cc", "code"] : ["cowork", "chat"];
-  const entry = ids.map((id) => value.model_selector_config?.find((x) => x.id === id)).find(Boolean);
+  const entry = ids
+    .map((id) => value.model_selector_config?.find((x) => x.id === id))
+    .find(Boolean);
   const state = value.model_selector_state?.find((x) => x.id === entry?.id);
   if (!Array.isArray(entry?.models))
     throw Object.assign(Error("Claude 模型列表不可用"), { status: 503 });
@@ -15,13 +17,12 @@ export function parseClaudeModels(value, current = {}, surface = "cowork") {
       );
       const preference = state?.thinking_by_model?.find((x) => x.id === m.id)
         ?.thinking?.effort;
-      const desired = preference;
       return {
         id: m.id,
         label: typeof m.name === "string" ? m.name : m.id,
         efforts: levels.map((e) => e.id),
         defaultEffort:
-          levels.find((e) => e.id === desired)?.id ||
+          levels.find((e) => e.id === preference)?.id ||
           levels.find((e) => e.recommended)?.id ||
           levels[0]?.id,
       };

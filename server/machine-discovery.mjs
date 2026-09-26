@@ -400,8 +400,18 @@ export function discoverMachine({
     });
     // Do not auto-enable an authorization-dependent integration on discovery.
     instances.push({ ...instance, enabled: false });
-    const code = { ...instance, id: "claudeDesktopCode", provider: "claudeDesktopCode", name: "Claude Desktop Code" };
-    candidates.push({ ...code, status: brokerInstalled ? "cowork-broker-installed" : "cowork-broker-missing" });
+    const code = {
+      ...instance,
+      id: "claudeDesktopCode",
+      provider: "claudeDesktopCode",
+      name: "Claude Desktop Code",
+    };
+    candidates.push({
+      ...code,
+      status: brokerInstalled
+        ? "cowork-broker-installed"
+        : "cowork-broker-missing",
+    });
     instances.push({ ...code, enabled: false });
   }
   return {

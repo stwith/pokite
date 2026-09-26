@@ -23,7 +23,8 @@ export const agentNames = {
 };
 const factories = {
   claudeDesktop: ({ home }) => new ClaudeDesktopRemote(home),
-  claudeDesktopCode: ({ home }) => new ClaudeDesktopRemote(home, { surface: "code" }),
+  claudeDesktopCode: ({ home }) =>
+    new ClaudeDesktopRemote(home, { surface: "code" }),
   codex: ({ id, home }) => new Codex(id, home),
   dsh: ({ url }) => new Dsh(url),
   penguin: ({ home }) => new Penguin(home),
