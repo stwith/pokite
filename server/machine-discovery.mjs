@@ -370,7 +370,7 @@ export function discoverMachine({
     const instance = {
       id: "claudeDesktop",
       provider: "claudeDesktop",
-      name: "Claude Desktop",
+      name: "Claude Desktop Cowork",
       home: coworkHome,
     };
     const brokerInstalled = [["Cowork", "Pokite Cowork Access"]].some(
@@ -400,6 +400,9 @@ export function discoverMachine({
     });
     // Do not auto-enable an authorization-dependent integration on discovery.
     instances.push({ ...instance, enabled: false });
+    const code = { ...instance, id: "claudeDesktopCode", provider: "claudeDesktopCode", name: "Claude Desktop Code" };
+    candidates.push({ ...code, status: brokerInstalled ? "cowork-broker-installed" : "cowork-broker-missing" });
+    instances.push({ ...code, enabled: false });
   }
   return {
     platform: process.platform,

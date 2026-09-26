@@ -8,7 +8,13 @@ export const defaultInstances = () => [
   {
     id: "claudeDesktop",
     provider: "claudeDesktop",
-    name: "Claude Desktop",
+    name: "Claude Desktop Cowork",
+    home: path.join(os.homedir(), "Library/Application Support/Claude"),
+  },
+  {
+    id: "claudeDesktopCode",
+    provider: "claudeDesktopCode",
+    name: "Claude Desktop Code",
     home: path.join(os.homedir(), "Library/Application Support/Claude"),
   },
   {

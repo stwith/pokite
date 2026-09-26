@@ -32,6 +32,7 @@ const agentOrder = [
   "codex",
   "codex2",
   "claudeDesktop",
+  "claudeDesktopCode",
   "claude",
   "dsh",
   "hermesDesktop",

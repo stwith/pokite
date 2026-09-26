@@ -89,8 +89,8 @@ Hermes 使用本地插件。DSH 和 Penguin 复用已有服务；Claude CLI 通�
 | DeepSeek Harness | 已有项目与会话 | 复用原生 Web API | 原服务需运行 |
 | PenguinHarness | 已有项目与会话 | 复用本地服务 | 已有会话不支持切换模型 |
 | Claude Code CLI | 本地 CLI 会话 | Agent SDK 恢复执行 | 不共享 Desktop；不要与外部 CLI 同时写同一会话 |
-| Claude Desktop — Chat / Cowork | 云端项目及统一会话 | 新建、继续云端会话，切换模型与推理强度 | 实验性；首次可能需要 Mac 授权；统一 CSE 会话 |
-| Claude Desktop Code | 已建立 Remote Control 的本地会话 | 经原桥接回复同一个 Desktop 执行器 | Desktop 需运行；新建会话和模型选择暂在原客户端完成 |
+| Claude Desktop Cowork（含 Chat） | 云端项目及统一会话 | 新建、继续云端会话，切换模型与推理强度 | 实验性；首次可能需要 Mac 授权；统一 CSE 会话 |
+| Claude Desktop Code | 已建立 Remote Control 的本地会话 | 经原桥接回复，按 Code 模型目录选择模型和强度 | Desktop 需运行并开启 Remote Control；新建会话仍需在 Desktop 完成 |
 
 独立 **Claude Code CLI** 会排除 Desktop 所属会话，不用于接管 Desktop Code。
 Desktop 接入从当前账号的云端目录发现项目和统一 Chat/Cowork 会话，不再依赖本地关联索引。Desktop Code 按原本地目录单独分组，仅接入已建立的原生桥接。发现已安装的 Agent 不代表它已经连接或支持发送。

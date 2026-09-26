@@ -1,5 +1,5 @@
 import path from "node:path";
-import { ClaudeDesktopClient } from "./claude-desktop-client.mjs";
+import { acquireDesktopClient } from "./claude-desktop-client.mjs";
 import { canonicalDesktopSessionId } from "./cowork-session-id.mjs";
 import {
   remoteMessages,
@@ -18,12 +18,14 @@ import { WeightedCache } from "./weighted-cache.mjs";
 export class ClaudeDesktopRemote {
   constructor(root, options = {}) {
     this.root = root;
+    this.surface = options.surface || "cowork";
+    if (this.surface === "code") this.createAndSend = undefined;
     this.watchPaths = [
       { path: path.join(root, "config.json") },
       { path: path.join(root, "Cookies") },
     ];
     this.now = options.now || Date.now;
-    this.client = options.client || new ClaudeDesktopClient(this.root);
+    this.client = options.client || acquireDesktopClient(this.root);
     this.readOnly = false;
     this.supportsVirtualProjects = true;
     this.pages = new WeightedCache({
@@ -41,9 +43,9 @@ export class ClaudeDesktopRemote {
     this.catalog = new ClaudeCloudCatalog(this.root, this.client, {
       now: this.now,
     });
-    this.modelSettings = new ClaudeModels(this.client, { now: this.now });
+    this.modelSettings = new ClaudeModels(this.client, { now: this.now, surface: this.surface });
     this.created = new Map();
-    this.emptyState = "当前账号暂无可读取的云端会话。";
+    this.emptyState = this.surface === "code" ? "请在 Claude Desktop 的 Code 中开启会话的 Remote Control。" : "当前账号暂无可读取的云端会话。";
   }
   async connect() {
     return this.client.connect();
@@ -133,7 +135,7 @@ export class ClaudeDesktopRemote {
       (p) =>
         p.id === selection.projectId || p.aliases.includes(selection.projectId),
     );
-    const sources = [...catalog.rows];
+    const sources = catalog.rows.filter((row) => this.accepts(row));
     for (const [id, row] of this.created) {
       if (row.scope !== catalog.scope || sources.some((s) => s.id === id))
         this.created.delete(id);
@@ -178,8 +180,15 @@ export class ClaudeDesktopRemote {
     }
     return selected.map((source) => this.row(source.native, source));
   }
+  accepts(row) {
+    return this.surface === "code" ? !!row.codeLocalId : !row.codeLocalId;
+  }
   async projects() {
-    return (await this.catalog.get({ stale: true })).projects;
+    return (await this.catalog.get({ stale: true })).projects.filter((project) =>
+      this.surface === "code"
+        ? project.id.startsWith("desktop-code:")
+        : !project.id.startsWith("desktop-code:"),
+    ).map((project) => ({ ...project, name: this.surface === "code" ? project.name.replace(/^Code · /, "") : project.name }));
   }
   async page(row, cursor) {
     if (
@@ -313,13 +322,6 @@ export class ClaudeDesktopRemote {
     const row = sessionId
       ? (await this.raw({ id: sessionId })).find((s) => s.id === sessionId)
       : null;
-    if (row?.codeLocalId)
-      return {
-        options: row.model ? [{ id: row.model, label: row.model }] : [],
-        current: row.model,
-        canSwitch: false,
-        reason: "Desktop Code 模型请在原客户端选择",
-      };
     const result = await this.modelSettings.get({
       model: row?.model,
       effort: row?.effort,

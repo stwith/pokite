@@ -272,10 +272,11 @@ func modelCatalog(_ owner: Identity) throws -> [String:Any] {
     guard let result=try webCatalog(Request(id:"models",method:"GET",route:bootstrapRoute(owner),scope:owner.scope,session:nil,body:nil),owner) as? [String:Any] else {throw reject("Model catalog unavailable",503)}
     return result
 }
-func modelEntry(_ owner: Identity, _ model: String?, _ effort: String?) throws {
+func modelEntry(_ owner: Identity, _ model: String?, _ effort: String?, code: Bool = false) throws {
     let catalog=try modelCatalog(owner)
     let entries=catalog["model_selector_config"] as? [[String:Any]] ?? []
-    guard let surface=entries.first(where:{$0["id"] as? String=="cowork"}) ?? entries.first(where:{$0["id"] as? String=="chat"}),let models=surface["models"] as? [[String:Any]] else {throw reject("Model catalog unavailable",503)}
+    let ids = code ? ["ccd", "cc", "code"] : ["cowork", "chat"]
+    guard let surface=ids.compactMap({ id in entries.first(where:{$0["id"] as? String==id}) }).first,let models=surface["models"] as? [[String:Any]] else {throw reject("Model catalog unavailable",503)}
     guard let model,let selected=models.first(where:{$0["id"] as? String==model && $0["disabled"] as? Bool != true && $0["section"] as? String != "deprecated"}) else {throw reject("Model is not available for this account")}
     if let effort {
         let thinking=selected["thinking"] as? [String:Any] ?? [:]
@@ -301,10 +302,10 @@ func webCatalog(_ request: Request, _ owner: Identity) throws -> Any {
         guard try identity().scope==owner.scope else {throw reject("Desktop account changed",409)}
         if request.route.hasPrefix("/api/bootstrap/"),let object=result as? [String:Any] {
             let configs=object["model_selector_config"] as? [[String:Any]] ?? []
-            let selected=configs.first(where:{$0["id"] as? String=="cowork"}) ?? configs.first(where:{$0["id"] as? String=="chat"})
-            let surface=selected?["id"] as? String
-            let states=(object["model_selector_state"] as? [[String:Any]] ?? []).filter{$0["id"] as? String==surface}
-            let filtered:[String:Any]=["model_selector_config":sanitize(selected.map{[$0]} ?? []),"model_selector_state":sanitize(states)]
+            let selected=configs.filter{["cowork", "chat", "ccd", "cc", "code"].contains($0["id"] as? String ?? "")}
+            let surfaces=Set(selected.compactMap{$0["id"] as? String})
+            let states=(object["model_selector_state"] as? [[String:Any]] ?? []).filter{surfaces.contains($0["id"] as? String ?? "")}
+            let filtered:[String:Any]=["model_selector_config":sanitize(selected),"model_selector_state":sanitize(states)]
             modelCatalogCache=[owner.scope:(filtered,Date())];return filtered
         }
         if request.method == "POST" {
@@ -371,7 +372,7 @@ func handle(_ input: [String: Any]) throws -> Any {
             let session=response["session"] as? [String:Any] ?? response["response_shape"] as? [String:Any] ?? [:]
             selectedModel=(session["config"] as? [String:Any])?["model"] as? String
         }
-        try modelEntry(owner,selectedModel,selectedEffort)
+        try modelEntry(owner,selectedModel,selectedEffort,code: owner.codeSessions.contains(request.session ?? ""))
     }
     let before = try identity(); try allow(request,before)
     guard before.scope == owner.scope else { throw reject("Claude account changed",409) }

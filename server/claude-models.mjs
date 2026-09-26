@@ -1,7 +1,6 @@
-export function parseClaudeModels(value, current = {}) {
-  const entry =
-    value.model_selector_config?.find((x) => x.id === "cowork") ||
-    value.model_selector_config?.find((x) => x.id === "chat");
+export function parseClaudeModels(value, current = {}, surface = "cowork") {
+  const ids = surface === "code" ? ["ccd", "cc", "code"] : ["cowork", "chat"];
+  const entry = ids.map((id) => value.model_selector_config?.find((x) => x.id === id)).find(Boolean);
   const state = value.model_selector_state?.find((x) => x.id === entry?.id);
   if (!Array.isArray(entry?.models))
     throw Object.assign(Error("Claude 模型列表不可用"), { status: 503 });
@@ -37,8 +36,8 @@ export function parseClaudeModels(value, current = {}) {
   };
 }
 export class ClaudeModels {
-  constructor(client, { now = Date.now } = {}) {
-    Object.assign(this, { client, now });
+  constructor(client, { now = Date.now, surface = "cowork" } = {}) {
+    Object.assign(this, { client, now, surface });
   }
   async get(current = {}) {
     const owner = await this.client.identity(),
@@ -54,7 +53,7 @@ export class ClaudeModels {
             { scope },
           )
           .then((value) => {
-            parseClaudeModels(value);
+            parseClaudeModels(value, {}, this.surface);
             this.cache = { scope, time: this.now(), value };
             return value;
           })
@@ -65,7 +64,7 @@ export class ClaudeModels {
       }
       await this.pending.work;
     }
-    return parseClaudeModels(this.cache.value, current);
+    return parseClaudeModels(this.cache.value, current, this.surface);
   }
   clear() {
     this.cache = null;

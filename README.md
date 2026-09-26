@@ -91,8 +91,8 @@ universal plug-and-play access to every installed AI app.
 | DeepSeek Harness | Existing projects and sessions | Native web API | Existing service must be running |
 | PenguinHarness | Existing projects and sessions | Existing local service | Cannot change the model of an existing session |
 | Claude Code CLI | Local CLI history | Agent SDK session resume | Not Desktop sharing; do not write concurrently with an external CLI |
-| Claude Desktop — Chat / Cowork | Cloud projects and unified conversations | Create and continue cloud sessions; model and effort selection | Experimental; may require first Mac authorization; unified CSE sessions |
-| Claude Desktop Code | Existing local sessions with an active Remote Control bridge | Same Desktop executor through its own bridge | Desktop must stay running; create sessions and select models in Desktop |
+| Claude Desktop Cowork (including Chat) | Cloud projects and unified conversations | Create and continue cloud sessions; model and effort selection | Experimental; may require first Mac authorization; unified CSE sessions |
+| Claude Desktop Code | Existing local sessions with an active Remote Control bridge | Reply through the original bridge; Code model and effort selection | Desktop must stay running with Remote Control enabled; create sessions in Desktop |
 
 The independent **Claude Code CLI** integration excludes Desktop-owned sessions.
 The Desktop adapter discovers the current account’s cloud projects and unified Chat/Cowork sessions. Connected Desktop Code bridges are grouped separately by their original local workspace. Discovering an installed agent does not mean it is connected or writable.

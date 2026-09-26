@@ -48,3 +48,30 @@ export class ClaudeDesktopClient {
     return this.broker.close();
   }
 }
+
+// Cowork and Code use the same Desktop identity and native broker. Closing one
+// adapter must not disconnect the other or create another authorization process.
+const clients = new Map();
+export function acquireDesktopClient(root) {
+  const key = path.resolve(root);
+  let entry = clients.get(key);
+  if (!entry) {
+    entry = { client: new ClaudeDesktopClient(root), refs: 0 };
+    clients.set(key, entry);
+  }
+  entry.refs++;
+  let closed = false;
+  return {
+    identity: (...args) => entry.client.identity(...args),
+    request: (...args) => entry.client.request(...args),
+    connect: (...args) => entry.client.connect(...args),
+    close: async () => {
+      if (closed) return;
+      closed = true;
+      if (--entry.refs === 0) {
+        clients.delete(key);
+        await entry.client.close();
+      }
+    },
+  };
+}
