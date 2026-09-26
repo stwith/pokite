@@ -55,6 +55,7 @@ export function QueuedMessage({ item, onAction, canEdit }) {
       </div>
       <MessageContent text={item.text} />
       {item.error && <small>{item.error}</small>}
+      {item.state === "uncertain" && <small role="status">为避免重复执行，后续消息已暂停。请先查看原会话确认是否送达，再点右上角 × 移除此待确认记录，队列才会继续。移除记录不会撤销已执行的任务。</small>}
     </div>
   );
 }

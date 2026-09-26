@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { sharingConfigFile } from "../server/state-paths.mjs";
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
@@ -9,13 +10,14 @@ import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import WebSocket from "ws";
 import { execFileSync } from "node:child_process";
-import { isDesktopAppCaller, resolveCodexDesktopBinary } from "../server/machine-discovery.mjs";
+import {
+  isDesktopAppCaller,
+  resolveCodexDesktopBinary,
+} from "../server/machine-discovery.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
-const configFile =
-  process.env.POCKET_SHARED_CONFIG ||
-  path.join(root, ".local/codex-shared.json");
+const configFile = sharingConfigFile();
 const home = path.resolve(
   process.env.CODEX_HOME || path.join(process.env.HOME, ".codex"),
 );

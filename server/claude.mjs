@@ -1,3 +1,4 @@
+import { stateFile } from "./state-paths.mjs";
 import {
   query,
   listSessions,
@@ -24,7 +25,9 @@ export class Claude {
   constructor(sdk = { query, listSessions, getSessionMessages }, options = {}) {
     this.sdk = sdk;
     this.id = "claude";
-    this.desktopRoot = options.desktopRoot || path.join(process.env.HOME, "Library/Application Support/Claude");
+    this.desktopRoot =
+      options.desktopRoot ||
+      path.join(process.env.HOME, "Library/Application Support/Claude");
     this.root =
       options.root ||
       process.env.CLAUDE_CONFIG_DIR ||
@@ -32,10 +35,11 @@ export class Claude {
     this.watchPaths = [
       { path: path.join(this.root, "projects"), recursive: true },
     ];
-    this.file =
-      options.stateFile ||
-      new URL("../.local/claude-state.json", import.meta.url);
-    this.tempFile = new URL(this.file.href + ".tmp");
+    this.file = options.stateFile || stateFile("claude-state.json");
+    this.tempFile =
+      this.file instanceof URL
+        ? new URL(this.file.href + ".tmp")
+        : this.file + ".tmp";
     this.states = fs.existsSync(this.file)
       ? JSON.parse(fs.readFileSync(this.file, "utf8"))
       : {};
@@ -71,7 +75,9 @@ export class Claude {
   }
   async raw() {
     const owned = await desktopCodeSessionIds(this.desktopRoot);
-    return (await this.sdk.listSessions({ limit: 1000 })).filter((s) => !owned.has(s.sessionId));
+    return (await this.sdk.listSessions({ limit: 1000 })).filter(
+      (s) => !owned.has(s.sessionId),
+    );
   }
   async projects() {
     let known = {};
@@ -102,7 +108,12 @@ export class Claude {
     if (!/^[0-9a-f-]{36}$/i.test(id))
       throw Object.assign(Error("Invalid Claude session"), { status: 400 });
     if ((await desktopCodeSessionIds(this.desktopRoot)).has(id))
-      throw Object.assign(Error("此会话属于 Claude Desktop，请从 Claude Desktop 的 Code 项目进入。独立 CLI 不能接管此会话。"), { status: 409, delivery: "not-sent" });
+      throw Object.assign(
+        Error(
+          "此会话属于 Claude Desktop，请从 Claude Desktop 的 Code 项目进入。独立 CLI 不能接管此会话。",
+        ),
+        { status: 409, delivery: "not-sent" },
+      );
     const native = (await this.raw()).find((s) => s.sessionId === id);
     if (native) return native;
     const s = this.states[id];
@@ -190,8 +201,16 @@ export class Claude {
       projectId: info.cwd,
       title: info.customTitle || info.summary || state?.title || "新会话",
       status,
-      executionIssue: live && state?.retryIssue ? state.retryIssue :
-        status === "failed" ? { message: state?.error || "Claude 执行失败，请查看会话中的错误记录。", retrying: false } : null,
+      executionIssue:
+        live && state?.retryIssue
+          ? state.retryIssue
+          : status === "failed"
+            ? {
+                message:
+                  state?.error || "Claude 执行失败，请查看会话中的错误记录。",
+                retrying: false,
+              }
+            : null,
       updatedAt: Math.max(info.lastModified, state?.updatedAt || 0),
       revision:
         String(info.lastModified) +
@@ -227,29 +246,31 @@ export class Claude {
           .map(([id]) => id),
       ]),
     ];
-    const rows = ids.filter((id) => !owned.has(id)).map((id) => {
-      const n = native.find((s) => s.sessionId === id),
-        s = this.states[id];
-      return {
-        id,
-        projectId,
-        title: n?.customTitle || n?.summary || s?.title || "新会话",
-        status: this.jobs.has(id)
-          ? "running"
-          : !n?.fileSize ||
-              s?.revision === String(n?.lastModified) + ":" + n?.fileSize
-            ? s?.status || "unknown"
-            : "unknown",
-        updatedAt: n?.lastModified || s?.updatedAt || 0,
-        revision:
-          String(n?.lastModified || s?.updatedAt || 0) +
-          ":" +
-          (n?.fileSize || 0) +
-          ":" +
-          (s?.updatedAt || 0),
-        canReply: true,
-      };
-    });
+    const rows = ids
+      .filter((id) => !owned.has(id))
+      .map((id) => {
+        const n = native.find((s) => s.sessionId === id),
+          s = this.states[id];
+        return {
+          id,
+          projectId,
+          title: n?.customTitle || n?.summary || s?.title || "新会话",
+          status: this.jobs.has(id)
+            ? "running"
+            : !n?.fileSize ||
+                s?.revision === String(n?.lastModified) + ":" + n?.fileSize
+              ? s?.status || "unknown"
+              : "unknown",
+          updatedAt: n?.lastModified || s?.updatedAt || 0,
+          revision:
+            String(n?.lastModified || s?.updatedAt || 0) +
+            ":" +
+            (n?.fileSize || 0) +
+            ":" +
+            (s?.updatedAt || 0),
+          canReply: true,
+        };
+      });
     return rows
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .map(({ messages, ...s }) => s);
@@ -382,8 +403,10 @@ export class Claude {
         if (message.session_id && message.session_id !== id)
           throw Error("Claude session identity changed; execution stopped");
         if (message.type === "system" && message.subtype === "api_retry") {
-          state.retryIssue = { retrying: true, message:
-            `${message.error_status ? "HTTP " + message.error_status : "网络连接异常"}，正在重试 ${message.attempt}/${message.max_retries}，约 ${Math.ceil(message.retry_delay_ms / 1000)} 秒后再次尝试。` };
+          state.retryIssue = {
+            retrying: true,
+            message: `${message.error_status ? "HTTP " + message.error_status : "网络连接异常"}，正在重试 ${message.attempt}/${message.max_retries}，约 ${Math.ceil(message.retry_delay_ms / 1000)} 秒后再次尝试。`,
+          };
           state.updatedAt = Date.now();
           this.onChange?.();
         }

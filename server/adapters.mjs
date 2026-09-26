@@ -1,8 +1,8 @@
+import { stateFile } from "./state-paths.mjs";
 import { Codex } from "./codex.mjs";
 import { Penguin } from "./penguin.mjs";
 import { Dsh } from "./dsh.mjs";
 import { Claude } from "./claude.mjs";
-import { ClaudeDesktopRemote } from "./claude-desktop-remote.mjs";
 import { HermesDesktop } from "./hermes-desktop.mjs";
 import { loadInstances } from "./instances.mjs";
 
@@ -19,36 +19,22 @@ export const agentNames = {
   claudeDesktop: "Claude Desktop",
   hermesDesktop: "Hermes Desktop",
 };
+const factories = {
+  codex: ({id, home}) => new Codex(id, home),
+  dsh: ({url}) => new Dsh(url),
+  penguin: ({home}) => new Penguin(home),
+  hermesDesktop: ({home}) => new HermesDesktop(home),
+  claude: ({id, home}) => new Claude(undefined, {
+    root: home,
+    ...(id !== "claude" ? {stateFile: stateFile(`claude-${id}.json`)} : {}),
+  }),
+};
 export function makeAdapters(instances = loadInstances()) {
-  return Object.fromEntries(
-    instances.map((instance) => {
-      const { id, provider } = instance;
-      const adapter =
-        provider === "codex"
-          ? new Codex(id, instance.home)
-          : provider === "dsh"
-            ? new Dsh(instance.url)
-            : provider === "penguin"
-              ? new Penguin(instance.home)
-              : provider === "hermesDesktop"
-                ? new HermesDesktop(instance.home)
-                : provider === "claudeDesktop"
-                  ? new ClaudeDesktopRemote(instance.home)
-                  : new Claude(undefined, {
-                      root: instance.home,
-                      ...(id !== "claude"
-                        ? {
-                            stateFile: new URL(
-                              `../.local/claude-${id}.json`,
-                              import.meta.url,
-                            ),
-                          }
-                        : {}),
-                    });
-      adapter.id = id;
-      adapter.provider = provider;
-      adapter.name = instance.name;
-      return [id, adapter];
-    }),
-  );
+  return Object.fromEntries(instances.filter(x => x.provider !== "claudeDesktop").map(instance => {
+    const factory = factories[instance.provider];
+    if (!Object.hasOwn(factories, instance.provider)) throw Error("Unsupported provider: " + instance.provider);
+    const adapter = factory(instance);
+    Object.assign(adapter, {id:instance.id, provider:instance.provider, name:instance.name});
+    return [instance.id, adapter];
+  }));
 }

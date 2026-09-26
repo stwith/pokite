@@ -1,12 +1,11 @@
+import { stateDirectory } from "../server/state-paths.mjs";
 import fs from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { matchesProcessGeneration } from "../server/process-identity.mjs";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-const local =
-  process.env.POCKET_STATE_DIR ||
-  fileURLToPath(new URL("../.local", import.meta.url));
+const local = stateDirectory();
 const state = JSON.parse(
   await fs.readFile(path.join(local, "server-state.json"), "utf8"),
 );

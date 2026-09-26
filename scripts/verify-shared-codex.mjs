@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import net from "node:net";
 import http from "node:http";
 import path from "node:path";
+import os from "node:os";
 import assert from "node:assert/strict";
 import { SharedRpc } from "../server/shared-rpc.mjs";
 import { Rpc } from "../server/rpc.mjs";
@@ -11,7 +12,7 @@ import { MessageQueue } from "../server/message-queue.mjs";
 import { resolveCodexDesktopBinary } from "../server/machine-discovery.mjs";
 import { renderDesktopLauncher } from "../server/sharing-setup.mjs";
 
-const home = await fs.mkdtemp(path.resolve(".local/shared-proof-"));
+const home = await fs.mkdtemp(path.join(os.tmpdir(), "pokite-shared-proof-"));
 const streams = new Set();
 const requests = [];
 let sequence = 0;
@@ -410,4 +411,5 @@ try {
   clearTimeout(force);
   for (const stream of streams) stream.destroy();
   await new Promise((resolve) => provider.close(resolve));
+  await fs.rm(home, { recursive: true, force: true });
 }

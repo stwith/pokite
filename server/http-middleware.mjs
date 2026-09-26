@@ -2,7 +2,7 @@ import os from "node:os";
 import { timingSafeEqual, createHash } from "node:crypto";
 import { tailscaleHttpsLink } from "./network-links.mjs";
 
-export function installHttpProtection(app, { token, getPort }) {
+export function installHttpProtection(app, { token, getPort, devices }) {
   const localIPs = () =>
     new Set([
       "127.0.0.1",
@@ -20,13 +20,15 @@ export function installHttpProtection(app, { token, getPort }) {
     } catch {
       return res.sendStatus(400);
     }
-    const direct = localIPs().has(host.hostname) && Number(host.port) === getPort();
+    const direct =
+      localIPs().has(host.hostname) && Number(host.port) === getPort();
     const peer = req.socket.remoteAddress?.replace(/^::ffff:/, "");
     let expectedOrigin = "http://" + req.headers.host;
     if (!direct) {
       if (!["127.0.0.1", "::1"].includes(peer)) return res.sendStatus(403);
       const serve = await tailscaleHttpsLink(getPort());
-      if (!serve || new URL(serve.url).host !== req.headers.host) return res.sendStatus(403);
+      if (!serve || new URL(serve.url).host !== req.headers.host)
+        return res.sendStatus(403);
       expectedOrigin = new URL(serve.url).origin;
     }
     req.pokiteOrigin = expectedOrigin;
@@ -45,13 +47,31 @@ export function installHttpProtection(app, { token, getPort }) {
         (req.headers.authorization || "").replace(/^Bearer /, ""),
       ),
       want = Buffer.from(token);
-    if (got.length !== want.length || !timingSafeEqual(got, want))
+    req.auth = devices?.verify(got.toString());
+    if (
+      devices
+        ? !req.auth
+        : got.length !== want.length || !timingSafeEqual(got, want)
+    )
       return res.status(401).json({ error: "请输入访问码" });
     if (
-      req.headers.origin &&
-      req.headers.origin !== req.pokiteOrigin
+      req.auth?.pairing &&
+      !(
+        (req.method === "POST" && req.path === "/auth/pair") ||
+        (req.method === "GET" && req.path === "/agents")
+      )
     )
+      return res.status(403).json({ error: "请先完成设备配对" });
+    if (req.headers.origin && req.headers.origin !== req.pokiteOrigin)
       return res.status(403).json({ error: "Cross-origin request rejected" });
+    if (devices && req.path.endsWith("/events")) {
+      const credential = got.toString();
+      const timer = setInterval(() => {
+        if (!devices.verify(credential)) res.end();
+      }, 1000);
+      timer.unref?.();
+      res.on("close", () => clearInterval(timer));
+    }
     next();
   });
 }

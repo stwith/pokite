@@ -128,7 +128,7 @@ export class PushService {
       lastAttempt: d?.lastAttempt || null,
     };
   }
-  async subscribe(subscription, origin) {
+  async subscribe(subscription, origin, owner) {
     const clean = validateSubscription(subscription);
     if (!origin.startsWith("https://")) throw bad("请通过 HTTPS 开启通知");
     const id = keyOf(clean.endpoint);
@@ -139,6 +139,7 @@ export class PushService {
     this.state.devices[id] = {
       ...old,
       subscription: clean,
+      owner,
       origin,
       scope: "all",
     };

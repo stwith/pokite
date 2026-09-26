@@ -76,12 +76,27 @@ export async function availablePort() {
   await new Promise((resolve) => server.close(resolve));
   return port;
 }
-export function renderDesktopLauncher(node, proxy, config) {
+export function renderDesktopLauncher(node, proxy, config, fallback = "") {
   const quote = (value) => "'" + value.replaceAll("'", "'\\''") + "'";
   return (
     "#!/bin/sh\nexport POCKET_SHARED_CONFIG=" +
     quote(config) +
-    "\nexec " +
+    "\nexport POKITE_SHARED_CONFIG=" +
+    quote(config) +
+    (fallback
+      ? "\nif [ ! -x " +
+        quote(node) +
+        " ] || [ ! -f " +
+        quote(proxy) +
+        " ] || [ ! -d " +
+        quote(path.resolve(path.dirname(proxy), "../node_modules/ws")) +
+        " ] || ! " +
+        quote(node) +
+        " --version >/dev/null 2>&1; then\n  unset CODEX_CLI_PATH\n  exec " +
+        quote(fallback) +
+        ' "$@"\nfi\n'
+      : "\n") +
+    "exec " +
     quote(node) +
     " " +
     quote(proxy) +

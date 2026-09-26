@@ -50,6 +50,7 @@ import {
 import { Navigation } from "./components/navigation";
 import { ConnectionDialog } from "./components/connection-dialog";
 import { NotificationSettings } from "./components/notification-settings";
+import { DeviceSettings } from "./components/device-settings";
 import { DisconnectDialog } from "./components/disconnect-dialog";
 import { HomeScreenGuide } from "./components/home-screen-guide";
 import { PairingScanner } from "./components/pairing-scanner";
@@ -80,6 +81,13 @@ export default function App() {
     [showLatest, setShowLatest] = useState(false),
     [answers, setAnswers] = useState({});
   useSessionSync(authed && !!agent, agent);
+  useEffect(() => {
+    if (!authed || !navigator.serviceWorker) return;
+    void navigator.serviceWorker.getRegistration("/").then(async registration => {
+      const subscription = await registration?.pushManager?.getSubscription();
+      if (subscription) await api("/notifications/status", {endpoint:subscription.endpoint});
+    }).catch(()=>{});
+  }, [authed]);
   useEffect(() => {
     if (!authed) return;
     const clear = () => { void clearNotifications(navigator, document); };
@@ -257,6 +265,8 @@ export default function App() {
   async function login(credential = token) {
     setAccessToken(credential.trim());
     try {
+      const paired = await api("/auth/pair", { name: /iPhone/.test(navigator.userAgent) ? "iPhone" : /iPad/.test(navigator.userAgent) ? "iPad" : navigator.platform || "Browser" });
+      if (paired.token) { setAccessToken(paired.token); setToken(paired.token); persistAccessToken(); }
       const order = ["codex", "codex2", "claude", "claudeDesktop", "dsh", "hermesDesktop", "penguin"];
       const rank = ({ id }) => {
         const index = order.indexOf(id);
@@ -965,6 +975,7 @@ export default function App() {
           <span className="host">Mac mini</span>
           <ConnectionDialog />
           <NotificationSettings />
+          <DeviceSettings />
           <DisconnectDialog disabled={busy} />
         </footer>
       </Navigation>

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { RetiredReceipts, fingerprint } from "./retired-receipts.mjs";
 const hidden = new Set(["sent", "withdrawn", "removed"]);
 
 export class MessageQueue {
@@ -8,6 +9,7 @@ export class MessageQueue {
     this.active = new Set();
     this.inFlight = new Set();
     this.stopping = false;
+    this.retired = new RetiredReceipts(file + ".receipts.sqlite");
     this.items = fs.existsSync(file)
       ? JSON.parse(fs.readFileSync(file, "utf8"))
       : [];
@@ -19,6 +21,29 @@ export class MessageQueue {
     this.save();
   }
   save() {
+    for (const item of this.items)
+      if (hidden.has(item.state) && !item.finishedAt)
+        item.finishedAt = item.createdAt || Date.now();
+    const completed = this.items
+      .filter((x) => hidden.has(x.state))
+      .sort((a, b) => b.createdAt - a.createdAt);
+    let bytes = 0;
+    const expired = completed.filter((x, i) => {
+      bytes += Buffer.byteLength(JSON.stringify(x));
+      return (
+        i >= 500 ||
+        bytes > 2 * 1024 * 1024 ||
+        Date.now() - x.finishedAt > 7 * 86400000
+      );
+    });
+    this.retired.put(
+      expired.map((x) => [
+        x.requestId,
+        x.inputHash || fingerprint([x.agent, x.id, x.text, x.model]),
+      ]),
+    );
+    const ids = new Set(expired.map((x) => x.requestId));
+    this.items = this.items.filter((x) => !ids.has(x.requestId));
     fs.writeFileSync(this.file + ".tmp", JSON.stringify(this.items), {
       mode: 0o600,
     });
@@ -41,6 +66,7 @@ export class MessageQueue {
       );
     const previous = { ...item };
     item.state = "removed";
+    item.finishedAt = Date.now();
     item.removedAt = Date.now();
     try {
       this.save();
@@ -51,12 +77,30 @@ export class MessageQueue {
     }
   }
   add(agent, id, text, requestId, model) {
+    const hash = fingerprint([agent, id, text, model]);
+    const existing = this.items.find((x) => x.requestId === requestId);
+    const previous = existing
+      ? existing.inputHash ||
+        fingerprint([
+          existing.agent,
+          existing.id,
+          existing.text,
+          existing.model,
+        ])
+      : this.retired.get(requestId);
+    if (previous && previous !== hash)
+      throw Object.assign(
+        Error("Request id reused with different session or content"),
+        { status: 409 },
+      );
+    if (previous && !existing) return { accepted: true, queued: false };
     if (!this.items.some((x) => x.requestId === requestId)) {
       this.items.push({
         agent,
         id,
         text,
         requestId,
+        inputHash: hash,
         model,
         state: "queued",
         createdAt: Date.now(),
@@ -81,6 +125,7 @@ export class MessageQueue {
     if (item.state !== "withdrawn") {
       const previous = { ...item };
       item.state = "withdrawn";
+      item.finishedAt = Date.now();
       item.withdrawnAt = Date.now();
       try {
         this.save();
@@ -106,6 +151,7 @@ export class MessageQueue {
       const consumed = detail.acceptedRequestIds?.includes(receiptId);
       if (!native && !consumed) continue;
       item.state = "sent";
+      item.finishedAt = Date.now();
       item.receipt = {
         accepted: true,
         ...(native ? { nativeQueueId: native.nativeId } : { consumed: true }),
@@ -183,6 +229,7 @@ export class MessageQueue {
               item.model,
             );
             item.state = "sent";
+            item.finishedAt = Date.now();
           } catch (e) {
             if (e.retrySafe === true || e.delivery === "not-sent") {
               item.state = "queued";

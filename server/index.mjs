@@ -1,3 +1,4 @@
+import { stateDirectory } from "./state-paths.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import http from "node:http";
@@ -15,11 +16,20 @@ import os from "node:os";
 import { execFile } from "node:child_process";
 import { DesktopErrorMonitor } from "./desktop-error-monitor.mjs";
 import { PushService } from "./push.mjs";
+import { DeviceAuth } from "./device-auth.mjs";
+import { listenAddresses, localTailnetIPs } from "./listen-addresses.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const local = path.resolve(
-  process.env.POCKET_STATE_DIR || path.join(root, ".local"),
-);
+const local = stateDirectory();
+const network = await fs
+  .readFile(path.join(local, "network.json"), "utf8")
+  .then(JSON.parse)
+  .catch((e) => {
+    if (e.code === "ENOENT") return {};
+    throw e;
+  });
+const allowLan =
+  process.env.POKITE_ALLOW_LAN === "true" || network.allowLan === true;
 const instances = loadInstances();
 const release = acquireInstanceLock(local);
 process.once("exit", release);
@@ -57,13 +67,28 @@ const server = http.createServer((req, res) => {
     res.end("Service starting");
   }
 });
+const extraServers = [];
 // Bind before constructing anything that may write queues or native state.
 await new Promise((resolve, reject) => {
   server.once("error", reject);
-  server.listen(port, "0.0.0.0", resolve);
+  server.listen(port, allowLan ? "0.0.0.0" : "127.0.0.1", resolve);
 });
 port = server.address().port;
 try {
+  for (const address of listenAddresses(
+    allowLan,
+    undefined,
+    allowLan ? [] : await localTailnetIPs(),
+  ).slice(1)) {
+    const listener = http.createServer((req, res) =>
+      app ? app(req, res) : res.writeHead(503).end(),
+    );
+    await new Promise((resolve, reject) => {
+      listener.once("error", reject);
+      listener.listen(port, address, resolve);
+    });
+    extraServers.push(listener);
+  }
   await fs.chmod(local, 0o700);
   const tokenFile = path.join(local, "access-token");
   let token;
@@ -91,6 +116,7 @@ try {
     }),
   );
   const operations = new Operations(path.join(local, "operations.json"));
+  operations.save();
   let writeQueue = Promise.resolve(),
     readError;
   function saveReads() {
@@ -108,8 +134,11 @@ try {
     return writeQueue;
   }
   const push = new PushService(local, adapters);
+  const devices = new DeviceAuth(path.join(local, "devices.json"), token);
   app = createApp({
     push,
+    devices,
+    allowLan,
     adapters,
     agentNames,
     token,
@@ -121,46 +150,69 @@ try {
     getPort: () => port,
   });
   push.start();
+  const retentionTimer = setInterval(() => {
+    try {
+      operations.save();
+      messages.save();
+    } catch {
+      console.error("State retention failed; existing receipts preserved.");
+    }
+  }, 3600000);
+  retentionTimer.unref();
   const queueTimer = setInterval(
     () =>
       messages.tick().catch((error) => console.error("Queue:", error.message)),
     2000,
   );
   let stopping;
-  const monitor = new DesktopErrorMonitor({
-    root: path.join(os.homedir(), "Library/Logs/com.openai.codex"),
-    report: path.join(local, "desktop-errors.jsonl"),
-    onAlert: (event) => {
-      console.error("Desktop queue error observed:", event.time, event.source);
-      if (process.platform === "darwin")
-        execFile(
-          "/usr/bin/osascript",
-          [
-            "-e",
-            'display notification "检测到新的 Desktop 队列提交错误，已记录诊断时间；未重发或修改消息。" with title "Pokite"',
-          ],
-          { timeout: 3000 },
-          () => {},
-        );
-    },
-  });
+  const monitor = instances.some((x) => x.provider === "codex")
+    ? new DesktopErrorMonitor({
+        root: path.join(os.homedir(), "Library/Logs/com.openai.codex"),
+        report: path.join(local, "desktop-errors.jsonl"),
+        onAlert: (event) => {
+          console.error(
+            "Desktop queue error observed:",
+            event.time,
+            event.source,
+          );
+          if (process.platform === "darwin")
+            execFile(
+              "/usr/bin/osascript",
+              [
+                "-e",
+                /^zh/i.test(
+                  process.env.POKITE_LANGUAGE || process.env.LANG || "",
+                )
+                  ? 'display notification "检测到 Desktop 队列错误；已记录，未重发消息。" with title "Pokite"'
+                  : 'display notification "Desktop queue error recorded. No messages were resent." with title "Pokite"',
+              ],
+              { timeout: 3000 },
+              () => {},
+            );
+        },
+      })
+    : null;
   await monitor
-    .tick()
+    ?.tick()
     .catch((error) =>
       console.error("Desktop monitor:", error.code || "read failed"),
     );
-  const monitorTimer = setInterval(
-    () =>
-      monitor
-        .tick()
-        .catch((error) =>
-          console.error("Desktop monitor:", error.code || "read failed"),
-        ),
-    5000,
-  );
+  const monitorTimer = monitor
+    ? setInterval(
+        () =>
+          monitor
+            .tick()
+            .catch((error) =>
+              console.error("Desktop monitor:", error.code || "read failed"),
+            ),
+        5000,
+      )
+    : null;
   shutdown = () =>
     (stopping ||= (async () => {
+      for (const listener of extraServers) listener.close();
       clearInterval(queueTimer);
+      clearInterval(retentionTimer);
       clearInterval(monitorTimer);
       await push.close();
       await shutdownServer({
@@ -173,7 +225,8 @@ try {
           if (readError) throw readError;
         },
       });
-      await monitor.close();
+      await monitor?.close();
+      for (const listener of extraServers) listener.closeAllConnections();
       process.exit(0);
     })().catch((error) => {
       console.error("Shutdown failed:", error.message);
@@ -193,6 +246,10 @@ try {
       if (process.connected) process.disconnect();
     });
 } catch (error) {
+  for (const listener of extraServers) {
+    listener.close();
+    listener.closeAllConnections();
+  }
   server.close();
   server.closeAllConnections();
   throw error;

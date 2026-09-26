@@ -1,3 +1,4 @@
+import { stateFile } from "./state-paths.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -180,8 +181,7 @@ export function discoverMachine({
   appRoots,
   running,
   commands,
-  sharedFile = env.POCKET_SHARED_CONFIG ||
-    new URL("../.local/codex-shared.json", import.meta.url),
+  sharedFile = env.POKITE_SHARED_CONFIG || env.POCKET_SHARED_CONFIG || stateFile("codex-shared.json"),
   sharedProfiles = savedProfiles(sharedFile),
 } = {}) {
   const apps = discoverDesktopApps({
@@ -372,9 +372,8 @@ export function discoverMachine({
     candidates.push({
       ...instance,
       integration: "desktop-history-only",
-      status: "read-only",
+      status: "disabled-credential-bridge-retired",
     });
-    instances.push(instance);
   }
   return {
     platform: process.platform,

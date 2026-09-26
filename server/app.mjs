@@ -25,6 +25,8 @@ export function createApp({
   dist,
   getPort,
   push,
+  devices,
+  allowLan = true,
   events = new SessionEvents(adapters),
 }) {
   const locks = new Map();
@@ -37,7 +39,7 @@ export function createApp({
   app.locals.events = events;
   app.disable("x-powered-by");
   const post = installWriteLifecycle(app);
-  installHttpProtection(app, { token, getPort });
+  installHttpProtection(app, { token, getPort, devices });
   app.use(express.json({ limit: "128kb" }));
   app.param("agent", (req, res, next, id) => {
     if (!Object.hasOwn(adapters, id))
@@ -46,13 +48,50 @@ export function createApp({
     next();
   });
   installResponseHandling(app, events);
+  if (devices) {
+    post("/api/auth/pair", (req, res) =>
+      res.json(devices.pair(req.auth, req.body.name)),
+    );
+    app.get("/api/auth/devices", (req, res) =>
+      res.json(devices.list(req.auth.id)),
+    );
+    post("/api/auth/revoke", (req, res) => {
+      if (typeof req.body.id !== "string")
+        throw Object.assign(Error("Invalid device id"), { status: 400 });
+      devices.revoke(req.body.id);
+      if (push)
+        for (const d of Object.values(push.state.devices))
+          if (d.owner === req.body.id) push.remove(d.subscription.endpoint);
+      res.json({ ok: true });
+    });
+  }
   if (push) {
     app.get("/api/notifications/config", (req, res) => res.json(push.config()));
-    post("/api/notifications/status", (req, res) => res.json(push.status(req.body.endpoint)));
-    post("/api/notifications/subscribe", async (req, res) => {
-      res.json(await push.subscribe(req.body.subscription, req.pokiteOrigin));
+    post("/api/notifications/status", (req, res) => {
+      const device = push.device({ endpoint: req.body.endpoint });
+      if (
+        device &&
+        req.auth?.id &&
+        req.auth.id !== "bootstrap" &&
+        device.owner !== req.auth.id
+      ) {
+        device.owner = req.auth.id;
+        push.save();
+      }
+      res.json(push.status(req.body.endpoint));
     });
-    post("/api/notifications/remove", (req, res) => res.json(push.remove(req.body.endpoint)));
+    post("/api/notifications/subscribe", async (req, res) => {
+      res.json(
+        await push.subscribe(
+          req.body.subscription,
+          req.pokiteOrigin,
+          req.auth?.id,
+        ),
+      );
+    });
+    post("/api/notifications/remove", (req, res) =>
+      res.json(push.remove(req.body.endpoint)),
+    );
   }
   app.get("/api/:agent/events", (req, res) =>
     serveEventStream(req, res, events),
@@ -107,13 +146,16 @@ export function createApp({
     ),
   );
   app.get("/api/connection-links", async (req, res) =>
-    res.json(
-      { ...networkLinks(
+    res.json({
+      ...networkLinks(
         getPort(),
         undefined,
         req.socket.localAddress?.replace(/^::ffff:/, ""),
-      ), tailscaleHttps: await tailscaleHttpsLink(getPort()) },
-    ),
+      ),
+      ...(!allowLan ? { lan: null } : {}),
+      tailscaleHttps: await tailscaleHttpsLink(getPort()),
+      ...(devices ? { pairingToken: devices.pairingToken() } : {}),
+    }),
   );
   app.get("/api/:agent/projects", async (req, res) =>
     res.json(await read(req, "projects")),
@@ -190,7 +232,12 @@ export function createApp({
     res.json(await read(req, "history", req.params.id, req.query.before));
   });
   post("/api/:agent/sessions/:id/read", async (req, res) => {
-    const s = await req.adapter.detail(req.params.id);
+    // Acknowledgement revalidates native state after the displayed snapshot;
+    // sharing an older in-flight read could mark unseen output as read.
+    const s = await readCoordinator.run(
+      [req.params.agent, "acknowledge", req.params.id],
+      () => req.adapter.detail(req.params.id),
+    );
     const acknowledged = req.body.revision === s.revision;
     if (acknowledged) {
       reads[key(req.params.agent, s.id)] = s.revision;

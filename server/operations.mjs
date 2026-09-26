@@ -1,14 +1,30 @@
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { RetiredReceipts } from "./retired-receipts.mjs";
 export class Operations {
   constructor(file) {
     this.file = file;
     this.pending = new Map();
+    this.retired = new RetiredReceipts(file + ".receipts.sqlite");
     this.records = fs.existsSync(file)
       ? JSON.parse(fs.readFileSync(file, "utf8"))
       : {};
   }
   save() {
+    const completed = Object.entries(this.records)
+      .filter(([, r]) => r.state === "done")
+      .sort((a, b) => (b[1].finishedAt || 0) - (a[1].finishedAt || 0));
+    let bytes = 0;
+    const expired = completed.filter(([, r], index) => {
+      bytes += Buffer.byteLength(JSON.stringify(r));
+      return (
+        index >= 1000 ||
+        bytes > 2 * 1024 * 1024 ||
+        Date.now() - (r.finishedAt || 0) > 7 * 86400000
+      );
+    });
+    this.retired.put(expired.map(([id, r]) => [id, r.hash]));
+    for (const [id] of expired) delete this.records[id];
     fs.writeFileSync(this.file + ".tmp", JSON.stringify(this.records), {
       mode: 0o600,
     });
@@ -21,6 +37,11 @@ export class Operations {
       .update(JSON.stringify(input))
       .digest("hex");
     const old = this.records[id];
+    if (!old && this.retired.get(id))
+      throw Object.assign(
+        Error("此请求已处理，详细回执已过期；请核对原会话，不会再次执行。"),
+        { status: 409 },
+      );
     if (old) {
       if (old.hash !== hash)
         throw Object.assign(Error("Request id reused"), { status: 409 });
@@ -44,7 +65,12 @@ export class Operations {
     const work = Promise.resolve()
       .then(fn)
       .then((result) => {
-        this.records[id] = { hash, state: "done", result };
+        this.records[id] = {
+          hash,
+          state: "done",
+          result,
+          finishedAt: Date.now(),
+        };
         this.save();
         return result;
       })

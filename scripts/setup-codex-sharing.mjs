@@ -1,3 +1,4 @@
+import { stateDirectory, sharingConfigFile } from "../server/state-paths.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -28,11 +29,11 @@ if (values.enable && values.disable) throw Error("Choose enable or disable");
 if (process.platform !== "darwin")
   throw Error("Desktop sharing setup is currently verified on macOS only");
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const local = path.join(root, ".local");
-const configFile =
-  process.env.POCKET_SHARED_CONFIG || path.join(local, "codex-shared.json");
+const local = stateDirectory();
+const configFile = sharingConfigFile();
 const proxy = path.join(root, "scripts/codex-desktop-proxy.mjs");
 const launcher = path.join(local, "codex-desktop-launcher");
+const nodeRuntime = path.join(local, "runtime", "node");
 const agentFile = path.join(
   process.env.HOME,
   "Library/LaunchAgents/local.agent-pocket.codex-sharing.plist",
@@ -108,12 +109,14 @@ try {
       encoding: "utf8",
     }).trim() || null;
 } catch {}
-const conflict = previousEnv && ![proxy, launcher].includes(previousEnv);
+const legacyLauncher = path.join(root, ".local/codex-desktop-launcher");
+const ownedLaunchers = [proxy, launcher, legacyLauncher];
+const conflict = previousEnv && !ownedLaunchers.includes(previousEnv);
 const plan = {
   action: values.disable ? "disable" : values.enable ? "enable" : "prepare",
   dryRun: !!values["dry-run"],
   launcher,
-  node: process.execPath,
+  node: nodeRuntime,
   compatibility,
   profiles: Object.entries(config.profiles).map(([id, profile]) => ({
     id,
@@ -133,6 +136,19 @@ if (values["dry-run"]) {
       "An unrelated CODEX_CLI_PATH is set; disable/review that integration before changing it",
     );
   await fs.mkdir(local, { recursive: true, mode: 0o700 });
+  // An application-owned copy survives removal/upgrades of Hermes, nvm or brew.
+  await fs.mkdir(path.dirname(nodeRuntime), { recursive: true, mode: 0o700 });
+  if (
+    !(await fs.access(nodeRuntime).then(
+      () => true,
+      () => false,
+    ))
+  ) {
+    await fs.copyFile(process.execPath, nodeRuntime + ".tmp");
+    await fs.chmod(nodeRuntime + ".tmp", 0o700);
+    execFileSync(nodeRuntime + ".tmp", ["--version"], { timeout: 5000 });
+    await fs.rename(nodeRuntime + ".tmp", nodeRuntime);
+  }
   await fs.mkdir(path.dirname(configFile), { recursive: true, mode: 0o700 });
   await withSetupLock(configFile, previous, async () => {
     const backup = path.join(
@@ -170,9 +186,10 @@ if (values["dry-run"]) {
         await fs.writeFile(
           launcher,
           renderDesktopLauncher(
-            process.execPath,
+            nodeRuntime,
             proxy,
             path.resolve(configFile),
+            Object.values(config.profiles).find((p) => p.binary)?.binary || "",
           ),
           { mode: 0o700 },
         );
@@ -214,7 +231,7 @@ if (values["dry-run"]) {
               { stdio: "ignore" },
             );
           } catch {}
-          if ([proxy, launcher].includes(previousEnv))
+          if (ownedLaunchers.includes(previousEnv))
             execFileSync("/bin/launchctl", ["unsetenv", "CODEX_CLI_PATH"]);
           await fs.rm(agentFile, { force: true });
         }

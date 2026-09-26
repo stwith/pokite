@@ -1,3 +1,4 @@
+import { instanceConfigFile } from "./state-paths.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -95,9 +96,11 @@ export function validateInstances(value) {
 }
 export function loadInstances(file) {
   const explicit =
-    arguments.length > 0 || process.env.POCKET_CONFIG !== undefined;
-  const defaultFile = new URL("../.local/instances.json", import.meta.url);
-  file ??= process.env.POCKET_CONFIG ?? defaultFile;
+    arguments.length > 0 ||
+    process.env.POKITE_CONFIG !== undefined ||
+    process.env.POCKET_CONFIG !== undefined;
+  const defaultFile = instanceConfigFile();
+  file ??= defaultFile;
   if (typeof file === "string" && !file.trim())
     throw Error("Specified instance configuration path is empty");
   if (!fs.existsSync(file)) {

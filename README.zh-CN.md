@@ -14,12 +14,12 @@ Pokite 给电脑上的 Agent 会话加一个手机入口。离开电脑后，在
 
 Pokite 是一个自托管的移动端网页入口，让你从手机或平板继续使用电脑上
 受支持的 Desktop Agent 会话。覆盖 **Codex Desktop、Hermes Desktop、
-DeepSeek Harness、PenguinHarness、Claude Code CLI 和 Claude Desktop Cowork**，
+DeepSeek Harness、PenguinHarness 和 Claude Code CLI**，
 各接入的能力与限制见下表。
 
 你继续在原来的桌面客户端工作，手机打开网页，就能查看进展、阅读结果、补充指令。
 项目、执行环境和模型凭据留在电脑上，通过家庭局域网或 Tailscale 连接。
-Pokite 不运营外部中转服务器；Cowork 使用 Anthropic 远程会话接口，模型推理
+Pokite 不运营外部中转服务器；模型推理
 仍使用各 Agent 原先配置的服务。
 
 > macOS 开发者预览版。尚无签名安装包，也未完成 Windows/Linux 和多种 Desktop 版本的兼容验收。
@@ -38,7 +38,7 @@ Pokite 不运营外部中转服务器；Cowork 使用 Anthropic 远程会话接�
 - **局域网 / Tailscale**：在家通过局域网访问，外出通过自己的 Tailscale 网络连接。
 - **自托管在你的电脑上**：Pokite 服务由你运行，不依赖 Pokite 托管的中转服务器。
 
-模型调用仍使用各 Agent 配置的服务；Cowork 控制链路依赖 Anthropic 服务，
+模型调用仍使用各 Agent 配置的服务；
 Tailscale 在无法直连时可能使用加密中继。自托管不等于所有接入都能离线运行。
 
 ## 离开电脑，也能接着聊
@@ -64,7 +64,7 @@ flowchart LR
 
 上图对应 **Codex Desktop、Hermes Desktop** 的共享方式：Codex 使用本地转发进程，
 Hermes 使用本地插件。DSH 和 Penguin 复用已有服务；Claude CLI 通过 SDK 恢复执行；
-Cowork 的控制链路经过 Anthropic 服务。不同接入不能一概称为纯本地 Desktop 共享。
+不同接入不能一概称为相同的 Desktop 共享方式。
 
 ## Pokite 的取舍
 
@@ -89,7 +89,6 @@ Cowork 的控制链路经过 Anthropic 服务。不同接入不能一概称为�
 | DeepSeek Harness | 已有项目与会话 | 复用原生 Web API | 原服务需运行 |
 | PenguinHarness | 已有项目与会话 | 复用本地服务 | 已有会话不支持切换模型 |
 | Claude Code CLI | 本地 CLI 会话 | Agent SDK 恢复执行 | 不共享 Desktop；不要与外部 CLI 同时写同一会话 |
-| Claude Desktop Cowork | 当前账号关联会话 | Anthropic 远程会话接口 | **不是纯局域网控制**；可能需要钥匙串授权；不支持新建、审批或切换模型 |
 | Claude Desktop Code / Chat | 不提供 | 不支持 | 相关实验接入已关闭 |
 
 独立 Claude Code 会排除 Desktop 所属会话。发现已安装的 Agent 不代表它已经连接或支持发送。
@@ -110,7 +109,7 @@ npm start
 ```
 
 1. 在电脑打开 `http://127.0.0.1:3230`。
-2. 首次启动会生成 `.local/access-token`，输入其中的访问码连接。这不是模型 API Key。
+2. 首次启动会生成 `~/Library/Application Support/Pokite/state/access-token`，输入其中的访问码连接。这不是模型 API Key。
 3. 在侧栏选择 Agent 和项目。底部二维码按钮提供局域网和 Tailscale 两种连接地址。
 4. 手机连接对应网络后扫码，或在 Pokite 首屏选择二维码图片。识别在浏览器本地进行，不上传照片。
 
@@ -120,7 +119,7 @@ Codex 初次发现默认只读。明确启用共享：
 npm run setup -- --enable-codex
 ```
 
-等待 Desktop 任务完成后，退出并重新打开对应 Desktop。安装脚本不自动重启它，也不改变模型和账号配置。实例配置保存在 `.local/instances.json`，可使用 `npm run doctor` 检查环境。
+等待 Desktop 任务完成后，退出并重新打开对应 Desktop。安装脚本不自动重启它，也不改变模型和账号配置。实例配置保存在 `~/Library/Application Support/Pokite/state/instances.json`，可使用 `npm run doctor` 检查环境。
 
 ## Hermes Desktop 接入
 
@@ -130,7 +129,7 @@ node scripts/setup-hermes-sharing.mjs main  # 使用 main 配置时另外执行
 ```
 
 等待 Hermes 任务结束后重新打开 Hermes Desktop，再运行发现与配置流程。已有
-`.local/instances.json` 的安装需增加 `provider: "hermesDesktop"`、名称和 Hermes
+`~/Library/Application Support/Pokite/state/instances.json` 的安装需增加 `provider: "hermesDesktop"`、名称和 Hermes
 根目录（通常 `~/.hermes`）。不要覆盖其他实例配置。
 
 插件安装在 Hermes 的 `plugins/pokite`，只提供本机会话快照、新建和发送接口，
@@ -141,19 +140,23 @@ node scripts/setup-hermes-sharing.mjs main  # 使用 main 配置时另外执行
 
 ## 网络与认证
 
-Claude Desktop Cowork 使用专用的 macOS 钥匙串工具。开发者预览版先运行
-`node scripts/setup-claude-keychain.mjs`，需要 Xcode Command Line Tools 和本机
-代码签名证书。首次访问时确认请求方是 **Pokite Claude Access**，选择“始终允许”。
-工具固定安装在用户的 `Library/Application Support/Pokite/Keychain`；重复安装
-不会替换未变化的已签名二进制。密钥只传入服务内存，不落盘，不新增常驻进程。
-普通服务重启可沿用系统保存的访问许可；钥匙串锁定、条目重建或签名变更仍可能
-要求重新授权。当前未提供面向普通用户的 Developer ID 签名安装包。
+新安装默认只监听本机回环和当前可用的 Tailscale IPv4 地址。推荐使用私有
+Tailscale Serve HTTPS：`tailscale serve --bg http://127.0.0.1:3230`。
+需要可信局域网 HTTP 时，显式使用 `POKITE_ALLOW_LAN=true npm start`，或在状态
+目录的 `network.json` 写入 `{"allowLan":true}`。公共网络应使用 HTTPS。
+
+二维码含有效期十分钟的一次性配对码。配对后，每台浏览器设备获得独立令牌，
+服务端只保存其哈希。侧栏“已连接设备”可以单独撤销设备，断开事件流并拒绝
+后续请求，不撤回已经接受的任务。本机 `access-token` 是初始配对/恢复凭据，
+持有它仍可重新配对，因此不要分享或公开它。
+
+Claude Desktop Cowork 凭据桥接已暂停，旧的钥匙串主密钥导出工具已撤除。独立 Claude Code CLI 仍受支持。
 
 - 局域网：`http://<电脑局域网IP>:3230`。
 - Tailscale：两台设备连入同一 tailnet 后，使用电脑的 Tailscale 地址。
 - 保留访问码认证；二维码和连接链接含凭据，不能公开分享。
 - 普通 HTTP 没有 TLS 加密。仅在可信网络使用；远程访问优先使用受限的 Tailscale 网络。不要把端口暴露到公网。
-- Tailscale 自身可能使用 DERP 中继。Pokite 不运营中转服务器；Cowork 控制链路和 Agent 模型调用仍依赖原厂或已配置的外部服务。
+- Tailscale 自身可能使用 DERP 中继。Pokite 不运营中转服务器；Agent 模型调用仍依赖原厂或已配置的外部服务。
 
 ## 添加到主屏幕
 
@@ -189,15 +192,30 @@ npm run dev            # 前端开发服务，后端需单独启动
 
 停止网页服务可能中断它拥有的 Claude Code SDK 执行。它不会退出原生 Desktop。默认没有网页服务的开机自启。
 
-高级配置继续使用 `POCKET_CONFIG`、`POCKET_STATE_DIR` 等既有环境变量。它们是运行接口，品牌名称为 Pokite。
+高级配置使用 `POKITE_CONFIG`、`POKITE_STATE_DIR`、`POKITE_SHARED_CONFIG`；旧 `POCKET_*` 名称继续兼容已安装的启动器。
 
 ## 已知限制
 
 - Codex Desktop 原生撤回再编辑可能出现 `App-server queued follow-up no longer exists`；首版不宣称已修复厂商客户端问题。
 - 某些原生错误不会持久化；网页可以显示收到的错误和重试事件，但不保证恢复所有历史瞬时事件。
 - 浏览器关闭或离线不代表任务已取消。结果不明的提交不会盲目重发。
-- 没有逐设备撤销能力；退出浏览器不等于吊销已复制的令牌。
 - 当前仍是开发者预览版，安装诊断和跨设备体验还在迭代。
+
+## 状态、迁移和卸载
+
+macOS 状态目录为 `~/Library/Application Support/Pokite/state`。旧安装先使用
+原状态路径停止服务，再运行 `npm run migrate-state -- --apply`。未使用的验证
+目录移入废纸篓，`.local` 仅保留兼容现有 Desktop 进程的符号链接，不重复存储。
+废纸篓仍在同一磁盘，需清空后才释放空间，不等于外部备份。
+
+Codex setup 会在状态目录安装独立 Node runtime 和固定启动器。仓库、依赖或
+runtime 缺失时，启动器回退到原始 Desktop 二进制。卸载请运行
+`npm run uninstall -- --apply`，停止 Pokite 后再删除仓库；账号、会话和本地
+状态均保留，旧客户端仍可通过保留的启动器回退。
+
+已完成操作的详细结果、队列消息正文最多保留七天，并有数量和体积上限。
+小型哈希回执保存在 SQLite，阻止旧请求 ID 再次执行。待确认或未发送消息不
+自动删除；确认原会话结果后，移除待确认记录即可继续队列。
 
 ## 贡献与许可
 

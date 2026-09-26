@@ -1,3 +1,4 @@
+import { instanceConfigFile, stateDirectory } from "../server/state-paths.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,15 +14,15 @@ const { values } = parseArgs({
   },
 });
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const local = path.join(root, ".local"),
-  file = process.env.POCKET_CONFIG || path.join(local, "instances.json");
+const local = stateDirectory(),
+  file = instanceConfigFile();
 const report = discoverMachine();
 const present = await fs.access(file).then(
   () => true,
   () => false,
 );
 const instances =
-  present || process.env.POCKET_CONFIG !== undefined
+  present || process.env.POKITE_CONFIG !== undefined || process.env.POCKET_CONFIG !== undefined
     ? loadInstances(file)
     : validateInstances(report.instances);
 if (!instances.length)

@@ -14,15 +14,13 @@ send follow-ups. No mobile app required. Connect over LAN or Tailscale, with
 Pokite self-hosted on your computer.
 
 Pokite is a self-hosted mobile web interface for supported desktop AI coding agents:
-**Codex Desktop, Hermes Desktop, DeepSeek Harness, PenguinHarness, Claude Code CLI,
-and Claude Desktop Cowork**, with different capabilities for each integration.
+**Codex Desktop, Hermes Desktop, DeepSeek Harness, PenguinHarness and Claude Code CLI**, with different capabilities for each integration.
 Keep working in your desktop client; open Pokite in iPhone Safari, an Android
 browser, or on an iPad to read progress and send follow-up instructions.
 
 Your projects, execution environment and model credentials stay on the computer.
 Connect over your home LAN or Tailscale. Pokite runs on that computer and does not
-operate a hosted relay. Cowork uses Anthropic's remote session API; model calls
-still use each agent's configured provider. See the support table before setup.
+operate a hosted relay. Model calls still use each agent's configured provider. See the support table before setup.
 
 > macOS developer preview. There is no signed installer yet. Windows, Linux and multiple Desktop versions have not passed compatibility acceptance.
 
@@ -40,8 +38,7 @@ still use each agent's configured provider. See the support table before setup.
 - **LAN or Tailscale.** Connect over your local network at home, or your own Tailscale network when away.
 - **Self-hosted on your computer.** You run Pokite alongside your agents; no Pokite-hosted relay is required.
 
-Agent model calls still use their configured providers. Cowork's control path
-uses Anthropic services; Tailscale may use encrypted relays when direct
+Agent model calls still use their configured providers; Tailscale may use encrypted relays when direct
 connections are unavailable. Self-hosting does not mean every integration is offline.
 
 ## From your desk to your phone
@@ -68,8 +65,7 @@ flowchart LR
 
 This diagram describes the **Codex Desktop and Hermes Desktop** sharing path.
 Codex uses a local forwarding process; Hermes uses a local plugin. DSH and
-Penguin reuse their services. Claude CLI resumes through the SDK; Cowork has a
-cloud-mediated control path. They are not interchangeable transports.
+Penguin reuse their services. Claude CLI resumes through the SDK. They are not interchangeable transports.
 
 ## Why Pokite?
 
@@ -95,7 +91,6 @@ universal plug-and-play access to every installed AI app.
 | DeepSeek Harness | Existing projects and sessions | Native web API | Existing service must be running |
 | PenguinHarness | Existing projects and sessions | Existing local service | Cannot change the model of an existing session |
 | Claude Code CLI | Local CLI history | Agent SDK session resume | Not Desktop sharing; do not write concurrently with an external CLI |
-| Claude Desktop Cowork | Sessions associated with the current account | Anthropic remote session API | **Not LAN-only control**; keychain authorization may be required; no creation, approvals or model switching |
 | Claude Desktop Code / Chat | Not exposed | Unsupported | Experimental transports are disabled |
 
 The independent Claude Code integration excludes Desktop-owned sessions. Discovering an installed agent does not mean it is connected or writable.
@@ -104,13 +99,8 @@ Hermes Desktop requires a local plugin: run `node scripts/setup-hermes-sharing.m
 (also pass the profile name for a named profile), then reopen Hermes after its tasks finish.
 See [Hermes setup and limitations](integrations/hermes-desktop/README.md).
 
-Claude Desktop Cowork requires `node scripts/setup-claude-keychain.mjs` on macOS.
-This developer setup needs Xcode Command Line Tools and a local code-signing
-identity. On first access, grant **Always Allow** to **Pokite Claude Access**.
-The helper has a fixed installation path and is reused unchanged across service
-restarts; credentials stay in memory. Keychain locking, item recreation, or
-signing changes can require authorization again. A Developer ID signed installer
-for non-developers is not yet distributed.
+Claude Desktop Cowork credential bridging is disabled. The helper that exported
+the Desktop keychain secret has been retired; Claude Code CLI remains supported.
 
 ## Quick Start
 
@@ -128,7 +118,7 @@ npm start
 ```
 
 1. Open `http://127.0.0.1:3230` on the computer.
-2. Enter the access code generated in `.local/access-token`. This is a Pokite credential, not a model API key.
+2. Enter the access code generated in `~/Library/Application Support/Pokite/state/access-token`. This is a Pokite credential, not a model API key.
 3. Choose an agent and project. The sidebar QR button offers LAN and Tailscale connection links.
 4. Connect your phone to the selected network and scan the QR. The login page also accepts a QR image; decoding stays in your browser.
 
@@ -138,15 +128,29 @@ Codex starts read-only until sharing is explicitly enabled:
 npm run setup -- --enable-codex
 ```
 
-Wait for Desktop tasks to finish, then quit and reopen the relevant Desktop app. Setup does not restart it automatically or change model/account configuration. Instances are stored in `.local/instances.json`. Run `npm run doctor` for diagnostics.
+Wait for Desktop tasks to finish, then quit and reopen the relevant Desktop app. Setup does not restart it automatically or change model/account configuration. Instances are stored in `~/Library/Application Support/Pokite/state/instances.json`. Run `npm run doctor` for diagnostics.
 
 ## Connection and Security
+
+New installations bind only loopback and currently available Tailscale IPv4
+addresses. Use private Tailscale Serve HTTPS (`tailscale serve --bg http://127.0.0.1:3230`).
+Trusted-LAN HTTP requires explicit `POKITE_ALLOW_LAN=true npm start` or
+`{"allowLan":true}` in the state directory's `network.json`. This allows LAN
+clients to reach an HTTP service with powerful agent permissions; use HTTPS on
+untrusted networks. Enabling Serve requires your tailnet administrator's approval.
+
+QR codes contain single-use, ten-minute pairing codes. Pairing creates an
+independent browser/device credential, stored as a hash on the server. Use
+**Connected devices** in the sidebar to revoke one device without signing out
+the others. Revocation closes its event streams and rejects subsequent requests;
+it does not undo already accepted work. The local `access-token` file is a
+bootstrap/recovery secret: anyone retaining it can pair again, so keep it private.
 
 - LAN: `http://<computer-LAN-IP>:3230`.
 - Tailscale: connect both devices to the same tailnet and use the computer's Tailscale address.
 - Authentication stays enabled. QR codes and pairing links contain credentials; do not publish them.
 - Plain HTTP is not TLS-encrypted. Use a trusted network, or a restricted Tailscale network for remote access. Do not expose the port publicly.
-- Tailscale may use DERP relays. Pokite operates no relay service; Cowork control and model inference still use the original providers' external services.
+- Tailscale may use DERP relays. Model inference still uses the configured providers.
 
 ## Home Screen
 
@@ -185,15 +189,34 @@ npm run dev            # Frontend only; run the backend separately
 
 Stopping the web service may interrupt Claude Code SDK executions it owns; it does not quit native Desktop apps. Web-service login autostart is not configured by default.
 
-Advanced configuration retains the `POCKET_CONFIG`, `POCKET_STATE_DIR` and related environment variable names. These are runtime interfaces; the product is Pokite.
+Use `POKITE_CONFIG`, `POKITE_STATE_DIR` and `POKITE_SHARED_CONFIG` for explicit paths. Legacy `POCKET_*` names remain supported for installed launchers.
 
 ## Known Limits
 
 - Native Codex withdrawal/edit can produce `App-server queued follow-up no longer exists`. This preview does not claim to fix the vendor client.
 - Some native errors are transient rather than persisted. Received errors/retries are displayed, but recovering every historical event is not guaranteed.
 - Closing a browser does not cancel submitted work. Unknown delivery is never blindly retried.
-- Per-device credential revocation is not implemented; disconnecting a browser does not invalidate a copied token.
+- Disconnect clears browser storage; use Connected devices to revoke a device credential.
 - This remains a developer preview, with installation diagnostics and cross-device acceptance still evolving.
+
+## State, upgrades and uninstall
+
+State lives in `~/Library/Application Support/Pokite/state` on macOS. To migrate
+an older repository-local `.local`, stop its service using its existing state
+path, then run `npm run migrate-state -- --apply`. Unused proof directories move
+to Trash; an ignored `.local` symlink preserves active Desktop process paths.
+Trash is on the same disk, not an independent backup.
+
+Codex setup installs an application-owned Node runtime and launcher in that
+state directory. If the repository, dependencies or runtime are missing, the
+launcher executes the original Desktop binary. Uninstall with
+`npm run uninstall -- --apply`, then stop Pokite before deleting its repository.
+It preserves sessions, local state and the fallback launcher for running clients.
+
+Completed operation results and queue message bodies are retained for at most
+seven days with count/byte limits. Small hashed receipts remain in SQLite so
+old request IDs cannot execute again. Pending and uncertain messages are not
+automatically discarded; reconcile them before removing the blocking record.
 
 ## Contributing
 

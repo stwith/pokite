@@ -140,8 +140,9 @@ export function ConnectionDialog() {
     };
   }, [open]);
   const address = links?.[mode]?.url;
+  const pairingToken = links?.pairingToken || getAccessToken();
   const url = address
-    ? address + "#token=" + encodeURIComponent(getAccessToken())
+    ? address + "#token=" + encodeURIComponent(pairingToken)
     : "";
   const label = mode === "lan" ? "局域网 HTTP" : mode === "tailscale" ? "Tailscale HTTP" : "Tailscale HTTPS";
   return (
@@ -186,11 +187,12 @@ export function ConnectionDialog() {
             <CopyLink key={url} url={url} />
           </div>
           <div className="connection-row">
-            <span className="connection-label">访问码</span>
-            <code className="connection-secret">{getAccessToken()}</code>
-            <CopyLink url={getAccessToken()} label="复制访问码" />
+            <span className="connection-label">配对码</span>
+            <code className="connection-secret">{pairingToken}</code>
+            <CopyLink url={pairingToken} label="复制访问码" />
           </div>
         </div>}
+        <p className="muted">配对码 10 分钟内有效，仅可使用一次。连接后每台设备使用独立凭据。</p>
         <HomeScreenGuide />
       </DialogContent>
     </Dialog>

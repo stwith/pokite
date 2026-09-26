@@ -24,8 +24,7 @@ Hermes Desktop use the same backend as the original desktop client.
 
 No Pokite mobile app or account. No Pokite-hosted relay. Your computer keeps
 doing the work. Other integrations include DeepSeek Harness, PenguinHarness,
-Claude Code CLI and Claude Desktop Cowork, with clearly documented differences;
-Cowork's control path uses Anthropic services.
+Claude Code CLI, with clearly documented differences.
 
 Open-source macOS developer preview. Try it with a test project and report your
 agent version, setup experience, and whether messages stay synchronized.
@@ -52,8 +51,8 @@ Pokite 让你从手机浏览器继续受支持的 Desktop 会话。选择项目�
 回到桌面还可以接着聊。
 
 不需要安装 Pokite 手机 App，不需要注册 Pokite 账号。通过局域网或自己的
-Tailscale 网络连接，Pokite 不运营中转服务器。DSH、Penguin、Claude CLI 和
-Cowork 也有接入，各自能力不同；Cowork 使用 Anthropic 的远程会话接口。
+Tailscale 网络连接，Pokite 不运营中转服务器。DSH、Penguin、Claude CLI
+也有接入，各自能力见文档。
 
 目前是开源的 macOS 开发者预览版。欢迎用测试项目试用，反馈安装、会话同步
 和手机体验的问题。
@@ -63,7 +62,7 @@ https://github.com/stwith/pokite
 ## Discoverability and release experiment
 
 - Keep README names exact: Codex Desktop, Hermes Desktop, DeepSeek Harness,
-  PenguinHarness, Claude Code CLI, Claude Desktop Cowork; include mobile web,
+  PenguinHarness, Claude Code CLI; include mobile web,
   self-hosted, LAN, Tailscale, existing sessions and macOS naturally.
 - GitHub About should describe the desktop-to-mobile workflow. Topics should
   reflect implemented capabilities rather than unsupported popular products.

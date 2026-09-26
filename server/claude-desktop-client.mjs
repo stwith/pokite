@@ -8,7 +8,6 @@ import {
   sessionCredential,
 } from "./claude-desktop-credentials.mjs";
 import { macHttpsProxy } from "./desktop-network.mjs";
-import { readClaudeKeychain } from "./claude-keychain.mjs";
 
 const exec = promisify(execFile);
 const safeId = (value) =>
@@ -20,10 +19,16 @@ export class ClaudeDesktopClient {
   constructor(root, options = {}) {
     this.root = root;
     this.keyWaitMs = options.keyWaitMs ?? 1500;
+    this.disabled = !options.readKey;
     this.lifecycle = new AbortController();
     this.readKey =
       options.readKey ||
-      (() => readClaudeKeychain(this.lifecycle.signal));
+      (async () => {
+        throw failure(
+          "Cowork 接入已暂停：旧钥匙串导出方式已移除，未读取 Desktop 登录凭据。",
+          403,
+        );
+      });
     this.fetcher = options.fetcher || fetch;
     this.network =
       options.network ||
@@ -80,9 +85,15 @@ export class ClaudeDesktopClient {
       key = await Promise.race([
         this.keyPromise,
         new Promise((_, reject) => {
-          timer = setTimeout(() => reject(failure(
-            "正在等待 Mac 上的 Claude Safe Storage 钥匙串授权，请允许访问后重试。",
-          )), this.keyWaitMs);
+          timer = setTimeout(
+            () =>
+              reject(
+                failure(
+                  "正在等待 Mac 上的 Claude Safe Storage 钥匙串授权，请允许访问后重试。",
+                ),
+              ),
+            this.keyWaitMs,
+          );
         }),
       ]);
     } finally {
@@ -119,6 +130,8 @@ export class ClaudeDesktopClient {
     return this.request("/api/oauth/profile").then(() => ({ ok: true }));
   }
   async request(route, { method = "GET", body, scope } = {}) {
+    if (this.disabled)
+      throw failure("Cowork 接入已暂停：旧凭据桥接已撤除。", 403);
     const progress = { submitted: false };
     try {
       if (this.closed) throw failure("Claude 连接已关闭。");
