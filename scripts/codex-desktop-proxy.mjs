@@ -9,7 +9,7 @@ import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import WebSocket from "ws";
 import { execFileSync } from "node:child_process";
-import { resolveCodexDesktopBinary } from "../server/machine-discovery.mjs";
+import { isDesktopAppCaller, resolveCodexDesktopBinary } from "../server/machine-discovery.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -54,6 +54,7 @@ const globalFlags =
     );
 const intercept =
   found &&
+  isDesktopAppCaller(parentExecutable, binary) &&
   globalFlags &&
   (!args[command + 1] || args[command + 1].startsWith("-")) &&
   (listen < 0 || args[listen + 1] === "stdio://");

@@ -135,6 +135,13 @@ export function discoverDesktopApps({
   }
   return apps;
 }
+// CODEX_CLI_PATH is inherited by Chrome native hosts and CLI clients too.
+// Only the owning Desktop process should create the shared transport.
+export function isDesktopAppCaller(parentExecutable, binary) {
+  return Boolean(parentExecutable) &&
+    path.dirname(parentExecutable) === path.resolve(path.dirname(binary), "../MacOS");
+}
+
 export function resolveCodexDesktopBinary({
   explicit,
   apps,

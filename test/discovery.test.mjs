@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import {
+  isDesktopAppCaller,
   discoverMachine,
   discoverDesktopApps,
   findExecutable,
@@ -262,4 +263,14 @@ test("a newer incompatible native store is not replaced with an older snapshot",
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("shared transport only intercepts its Desktop app, not Chrome native hosts", () => {
+  const binary = "/Applications/ChatGPT.app/Contents/Resources/codex";
+  assert.equal(isDesktopAppCaller("/Applications/ChatGPT.app/Contents/MacOS/ChatGPT", binary), true);
+  assert.equal(isDesktopAppCaller("/Users/cjs/.codex/plugins/cache/chrome/extension-host/macos/arm64/ChatGPT for Chrome", binary), false);
+  assert.equal(isDesktopAppCaller("/usr/local/bin/node", binary), false);
+  assert.equal(isDesktopAppCaller(undefined, binary), false);
+  assert.equal(isDesktopAppCaller("/Applications/Other.app/Contents/MacOS/ChatGPT", binary), false);
+  assert.equal(isDesktopAppCaller("/Portable/Work Tools.app/Contents/MacOS/Codex", "/Portable/Work Tools.app/Contents/Resources/codex"), true);
 });
