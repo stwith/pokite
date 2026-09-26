@@ -75,3 +75,13 @@ replace Desktop login credentials.
 
 This proves the tested installed version and account, not all Desktop versions
 or a clean-Mac installation. Desktop Code and Chat remain excluded.
+
+After deployment, the live Pokite API exposed the restored Cowork entry, one
+project and four sessions. A second verification used the actual mobile web
+composer and queue: exactly one browser submission, one user echo and the
+expected assistant response in the original verification session. Both Codex
+project endpoints remained available. The access code was not changed.
+
+All 149 Node tests, native broker self-tests, production build and GitHub Checks
+passed. The native broker's initial keychain check also passed without a manual
+connect call after the existing system grant was reused.
