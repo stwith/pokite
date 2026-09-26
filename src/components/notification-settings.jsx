@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n.js";
 import { useState } from "react";
 import { Bell } from "lucide-react";
 import { Switch } from "radix-ui";
@@ -10,7 +11,6 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { api } from "../lib/api";
-
 export function NotificationSettings() {
   const [open, setOpen] = useState(false);
   const [subscription, setSubscription] = useState(null);
@@ -47,15 +47,20 @@ export function NotificationSettings() {
     setSubscription(sub);
     setEnabled(
       sub
-        ? (await api("/notifications/status", { endpoint: sub.endpoint }))
-            .enabled
+        ? (
+            await api("/notifications/status", {
+              endpoint: sub.endpoint,
+            })
+          ).enabled
         : false,
     );
   }
   async function toggle(next) {
     if (!next) {
       if (subscription) {
-        await api("/notifications/remove", { endpoint: subscription.endpoint });
+        await api("/notifications/remove", {
+          endpoint: subscription.endpoint,
+        });
         setEnabled(false);
         await subscription.unsubscribe();
         setSubscription(null);
@@ -63,7 +68,7 @@ export function NotificationSettings() {
       return;
     }
     if ((await Notification.requestPermission()) !== "granted")
-      throw Error("请在系统设置中允许 Pokite 通知。");
+      throw Error(t("请在系统设置中允许 Pokite 通知。"));
     const { publicKey } = await api("/notifications/config");
     const key = Uint8Array.from(
       atob(
@@ -94,27 +99,29 @@ export function NotificationSettings() {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="任务通知">
+        <Button variant="ghost" size="icon-sm" aria-label={t("任务通知")}>
           <Bell size={18} />
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogTitle className="connection-title">任务通知</DialogTitle>
+        <DialogTitle className="connection-title">{t("任务通知")}</DialogTitle>
         <DialogDescription className="connection-description">
-          任务完成或失败时提醒你，点击通知回到对应会话。
+          {t("任务完成或失败时提醒你，点击通知回到对应会话。")}
         </DialogDescription>
         {!isSecureContext ? (
-          <p className="notification-hint">请通过 HTTPS 入口开启通知。</p>
+          <p className="notification-hint">
+            {t("请通过 HTTPS 入口开启通知。")}
+          </p>
         ) : !supported ? (
           <p className="notification-hint">
-            iPhone / iPad 请将 HTTPS 网页添加到主屏幕，再从主屏幕打开。
+            {t("iPhone / iPad 请将 HTTPS 网页添加到主屏幕，再从主屏幕打开。")}
           </p>
         ) : (
           <>
             <div className="notification-setting">
               <div>
-                <label htmlFor="task-notifications">接收任务通知</label>
-                <p>所有已接入 Agent 的项目，无需逐个关注</p>
+                <label htmlFor="task-notifications">{t("接收任务通知")}</label>
+                <p>{t("所有已接入 Agent 的项目，无需逐个关注")}</p>
               </div>
               <Switch.Root
                 id="task-notifications"
@@ -122,13 +129,15 @@ export function NotificationSettings() {
                 checked={enabled}
                 disabled={busy}
                 onCheckedChange={(value) => run(() => toggle(value))}
-                aria-label="接收任务通知"
+                aria-label={t("接收任务通知")}
               >
                 <Switch.Thumb className="notification-switch-thumb" />
               </Switch.Root>
             </div>
             <p className="notification-hint">
-              仅控制这台设备。通知显示会话标题和项目路径，不含对话正文。电脑需保持运行并联网。
+              {t(
+                "仅控制这台设备。通知显示会话标题和项目路径，不含对话正文。电脑需保持运行并联网。",
+              )}
             </p>
           </>
         )}

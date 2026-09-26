@@ -1,8 +1,8 @@
+import { t } from "../../lib/i18n.js";
 import { useState } from "react";
 import { Pencil, X, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MessageContent } from "./message-bubble";
-
 export function QueuedMessage({ item, onAction, canEdit }) {
   const [busy, setBusy] = useState(false);
   const act = async (action) => {
@@ -20,11 +20,11 @@ export function QueuedMessage({ item, onAction, canEdit }) {
           <Clock3 size={13} aria-hidden="true" />
           {item.state === "queued"
             ? item.native
-              ? "Agent 队列中"
-              : "排队中"
+              ? t("Agent 队列中")
+              : t("排队中")
             : item.state === "sending"
-              ? "提交中"
-              : "待确认"}
+              ? t("提交中")
+              : t("待确认")}
         </span>
         {!item.native && (
           <div className="queued-message-actions">
@@ -33,7 +33,7 @@ export function QueuedMessage({ item, onAction, canEdit }) {
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label="撤回编辑"
+                aria-label={t("撤回编辑")}
                 disabled={busy || !canEdit}
                 onClick={() => act("withdraw")}
               >
@@ -44,7 +44,7 @@ export function QueuedMessage({ item, onAction, canEdit }) {
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label="移除排队消息"
+              aria-label={t("移除排队消息")}
               disabled={busy || item.state === "sending"}
               onClick={() => act("remove")}
             >
@@ -55,7 +55,13 @@ export function QueuedMessage({ item, onAction, canEdit }) {
       </div>
       <MessageContent text={item.text} />
       {item.error && <small>{item.error}</small>}
-      {item.state === "uncertain" && <small role="status">为避免重复执行，后续消息已暂停。请先查看原会话确认是否送达，再点右上角 × 移除此待确认记录，队列才会继续。移除记录不会撤销已执行的任务。</small>}
+      {item.state === "uncertain" && (
+        <small role="status">
+          {t(
+            "为避免重复执行，后续消息已暂停。请先查看原会话确认是否送达，再点右上角 × 移除此待确认记录，队列才会继续。移除记录不会撤销已执行的任务。",
+          )}
+        </small>
+      )}
     </div>
   );
 }

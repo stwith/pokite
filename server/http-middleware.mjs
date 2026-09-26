@@ -1,8 +1,16 @@
 import os from "node:os";
 import { timingSafeEqual, createHash } from "node:crypto";
 import { tailscaleHttpsLink } from "./network-links.mjs";
+import { normalizeLocale, localizeResponse } from "../shared/i18n.mjs";
 
 export function installHttpProtection(app, { token, getPort, devices }) {
+  app.use((req,res,next)=>{
+    req.locale=normalizeLocale(req.headers['accept-language']);
+    res.set('Content-Language',req.locale);res.vary('Accept-Language');
+    const original=res.json.bind(res);
+    res.json=value=>original(localizeResponse(value,req.locale));
+    next();
+  });
   const localIPs = () =>
     new Set([
       "127.0.0.1",
@@ -80,6 +88,7 @@ export function installResponseHandling(app, events) {
   app.use("/api", (req, res, next) => {
     if (req.method === "GET") {
       res.json = (value) => {
+        value = localizeResponse(value, req.locale);
         const body = JSON.stringify(value);
         const tag =
           '"' + createHash("sha256").update(body).digest("base64url") + '"';

@@ -1,3 +1,4 @@
+import { locale } from "../lib/i18n.js";
 import { useEffect } from "react";
 import { getAccessToken } from "../lib/api";
 import { createRefreshLoop } from "../lib/resource-refresh";
@@ -40,7 +41,10 @@ export function useSessionSync(enabled, agent) {
       try {
         watchdog = setTimeout(() => current.abort(), 45000);
         const response = await fetch("/api/" + agent + "/events", {
-          headers: { Authorization: "Bearer " + getAccessToken() },
+          headers: {
+            "Accept-Language": locale,
+            Authorization: "Bearer " + getAccessToken(),
+          },
           signal: current.signal,
         });
         if (

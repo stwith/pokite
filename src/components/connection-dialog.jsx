@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n.js";
 import { useEffect, useRef, useState } from "react";
 import { Tabs } from "radix-ui";
 import { QrCode, Copy, Check, ExternalLink } from "lucide-react";
@@ -11,8 +12,7 @@ import {
 } from "./ui/dialog";
 import { api, getAccessToken } from "../lib/api";
 import { HomeScreenGuide } from "./home-screen-guide";
-
-function CopyLink({ url, label = "复制链接" }) {
+function CopyLink({ url, label = t("复制链接") }) {
   const [copied, setCopied] = useState(false),
     [error, setError] = useState("");
   const button = useRef(null);
@@ -35,18 +35,22 @@ function CopyLink({ url, label = "复制链接" }) {
           "position:fixed;opacity:0;width:1px;height:1px;font-size:16px";
         button.current.parentElement.append(input);
         try {
-          input.focus({ preventScroll: true });
+          input.focus({
+            preventScroll: true,
+          });
           input.select();
           input.setSelectionRange(0, url.length);
           if (!document.execCommand("copy")) throw Error("copy failed");
         } finally {
           input.remove();
-          button.current?.focus({ preventScroll: true });
+          button.current?.focus({
+            preventScroll: true,
+          });
         }
       }
       setCopied(true);
     } catch {
-      setError("复制失败，请长按内容复制");
+      setError(t("复制失败，请长按内容复制"));
     }
   }
   return (
@@ -56,13 +60,13 @@ function CopyLink({ url, label = "复制链接" }) {
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label={copied ? "已复制" : label}
+        aria-label={copied ? t("已复制") : label}
         onClick={copy}
       >
         {copied ? <Check size={16} /> : <Copy size={16} />}
       </Button>
       <span className="sr-only" role="status">
-        {copied ? "已复制链接" : ""}
+        {copied ? t("已复制链接") : ""}
       </span>
       {error && (
         <span className="connection-copy-error" role="alert">
@@ -72,7 +76,6 @@ function CopyLink({ url, label = "复制链接" }) {
     </>
   );
 }
-
 function Code({ url, label }) {
   const canvas = useRef(null);
   const [error, setError] = useState("");
@@ -85,11 +88,14 @@ function Code({ url, label }) {
             width: 264,
             margin: 4,
             errorCorrectionLevel: "M",
-            color: { dark: "#171717", light: "#ffffff" },
+            color: {
+              dark: "#171717",
+              light: "#ffffff",
+            },
           });
       })
       .catch(() => {
-        if (alive) setError("二维码生成失败，请使用下方链接");
+        if (alive) setError(t("二维码生成失败，请使用下方链接"));
       });
     return () => {
       alive = false;
@@ -116,10 +122,15 @@ export function ConnectionDialog() {
     [mode, setMode] = useState(() => {
       const host = location.hostname;
       const parts = host.split(".").map(Number);
-      if (location.protocol === "https:" && host.endsWith(".ts.net")) return "tailscaleHttps";
+      if (location.protocol === "https:" && host.endsWith(".ts.net"))
+        return "tailscaleHttps";
       return host.endsWith(".ts.net") ||
-        (parts.length === 4 && parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127)
-        ? "tailscale" : "lan";
+        (parts.length === 4 &&
+          parts[0] === 100 &&
+          parts[1] >= 64 &&
+          parts[1] <= 127)
+        ? "tailscale"
+        : "lan";
     }),
     [links, setLinks] = useState(null),
     [error, setError] = useState("");
@@ -144,7 +155,12 @@ export function ConnectionDialog() {
   const url = address
     ? address + "#token=" + encodeURIComponent(pairingToken)
     : "";
-  const label = mode === "lan" ? "局域网 HTTP" : mode === "tailscale" ? "Tailscale HTTP" : "Tailscale HTTPS";
+  const label =
+    mode === "lan"
+      ? t("局域网 HTTP")
+      : mode === "tailscale"
+        ? "Tailscale HTTP"
+        : "Tailscale HTTPS";
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -152,19 +168,27 @@ export function ConnectionDialog() {
           variant="ghost"
           size="icon-sm"
           className="connection-trigger"
-          aria-label="连接手机"
+          aria-label={t("连接手机")}
         >
           <QrCode size={18} />
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogTitle className="connection-title">连接手机或平板</DialogTitle>
+        <DialogTitle className="connection-title">
+          {t("连接手机或平板")}
+        </DialogTitle>
         <DialogDescription className="connection-description">
-          {mode === "lan" ? "手机与电脑连接同一局域网，然后扫码连接。" : mode === "tailscale" ? "开启 Tailscale 后扫码连接，无需使用 Tailscale DNS。" : "通过 HTTPS 加密访问。请开启 Tailscale，并启用“使用 Tailscale DNS”。"}
+          {mode === "lan"
+            ? t("手机与电脑连接同一局域网，然后扫码连接。")
+            : mode === "tailscale"
+              ? t("开启 Tailscale 后扫码连接，无需使用 Tailscale DNS。")
+              : t(
+                  "通过 HTTPS 加密访问。请开启 Tailscale，并启用“使用 Tailscale DNS”。",
+                )}
         </DialogDescription>
         <Tabs.Root value={mode} onValueChange={setMode}>
-          <Tabs.List className="connection-tabs" aria-label="连接网络">
-            <Tabs.Trigger value="lan">局域网 HTTP</Tabs.Trigger>
+          <Tabs.List className="connection-tabs" aria-label={t("连接网络")}>
+            <Tabs.Trigger value="lan">{t("局域网 HTTP")}</Tabs.Trigger>
             <Tabs.Trigger value="tailscale">Tailscale HTTP</Tabs.Trigger>
             <Tabs.Trigger value="tailscaleHttps">Tailscale HTTPS</Tabs.Trigger>
           </Tabs.List>
@@ -172,27 +196,44 @@ export function ConnectionDialog() {
             {error ? (
               <p role="alert">{error}</p>
             ) : !links ? (
-              <p role="status">正在读取网络地址…</p>
+              <p role="status">{t("正在读取网络地址…")}</p>
             ) : url ? (
-              <Code key={url} url={url} label={label + "连接二维码"} />
+              <Code key={url} url={url} label={label + t("连接二维码")} />
             ) : (
-              <p role="status">未检测到{label}地址</p>
+              <p role="status">
+                {t("未检测到")}
+                {label}
+                {t("地址")}
+              </p>
             )}
           </div>
         </Tabs.Root>
-        {url && <div className="connection-details">
-          <div className="connection-row">
-            <span className="connection-label">连接地址</span>
-            <a href={url} referrerPolicy="no-referrer" className="connection-link">访问链接<ExternalLink size={14} aria-hidden="true" /></a>
-            <CopyLink key={url} url={url} />
+        {url && (
+          <div className="connection-details">
+            <div className="connection-row">
+              <span className="connection-label">{t("连接地址")}</span>
+              <a
+                href={url}
+                referrerPolicy="no-referrer"
+                className="connection-link"
+              >
+                {t("访问链接")}
+                <ExternalLink size={14} aria-hidden="true" />
+              </a>
+              <CopyLink key={url} url={url} />
+            </div>
+            <div className="connection-row">
+              <span className="connection-label">{t("配对码")}</span>
+              <code className="connection-secret">{pairingToken}</code>
+              <CopyLink url={pairingToken} label={t("复制访问码")} />
+            </div>
           </div>
-          <div className="connection-row">
-            <span className="connection-label">配对码</span>
-            <code className="connection-secret">{pairingToken}</code>
-            <CopyLink url={pairingToken} label="复制访问码" />
-          </div>
-        </div>}
-        <p className="muted">配对码 10 分钟内有效，仅可使用一次。连接后每台设备使用独立凭据。</p>
+        )}
+        <p className="muted">
+          {t(
+            "配对码 10 分钟内有效，仅可使用一次。连接后每台设备使用独立凭据。",
+          )}
+        </p>
         <HomeScreenGuide />
       </DialogContent>
     </Dialog>

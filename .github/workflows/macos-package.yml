@@ -1,0 +1,60 @@
+name: Build notarized macOS package
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: macos-14
+    environment: macos-release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.0'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Import distribution credentials
+        env:
+          CERTIFICATE: ${{ secrets.DEVELOPER_ID_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          test -n "$CERTIFICATE" && test -n "$APPLE_API_KEY" && test -n "$APPLE_API_KEY_ID" && test -n "$APPLE_API_ISSUER"
+          umask 077
+          printf '%s' "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/distribution.p12"
+          printf '%s' "$APPLE_API_KEY" > "$RUNNER_TEMP/notary.p8"
+          POKITE_KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
+          security create-keychain -p "$POKITE_KEYCHAIN_PASSWORD" "$RUNNER_TEMP/pokite-signing.keychain-db"
+          security set-keychain-settings -lut 21600 "$RUNNER_TEMP/pokite-signing.keychain-db"
+          security unlock-keychain -p "$POKITE_KEYCHAIN_PASSWORD" "$RUNNER_TEMP/pokite-signing.keychain-db"
+          security import "$RUNNER_TEMP/distribution.p12" -P "$CERTIFICATE_PASSWORD" -k "$RUNNER_TEMP/pokite-signing.keychain-db" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$POKITE_KEYCHAIN_PASSWORD" "$RUNNER_TEMP/pokite-signing.keychain-db" >/dev/null
+          security list-keychains -d user -s "$RUNNER_TEMP/pokite-signing.keychain-db"
+          xcrun notarytool store-credentials pokite-notary --key "$RUNNER_TEMP/notary.p8" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" --keychain "$RUNNER_TEMP/pokite-signing.keychain-db"
+      - name: Build and verify
+        env:
+          POKITE_SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_IDENTITY }}
+        run: |
+          node scripts/macos/build.mjs --release
+          npm run mac:verify
+      - name: Notarize
+        env:
+          POKITE_NOTARY_PROFILE: pokite-notary
+          POKITE_NOTARY_KEYCHAIN: ${{ runner.temp }}/pokite-signing.keychain-db
+        run: |
+          for artifact in artifacts/macos/Pokite-0.2.0-*.dmg; do
+            npm run mac:notarize -- "$artifact"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notarized-pokite-macos
+          path: artifacts/macos/*.dmg
+      - name: Clean signing credentials
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/pokite-signing.keychain-db" || true
+          rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/notary.p8"

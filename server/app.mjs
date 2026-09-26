@@ -12,6 +12,7 @@ import { selectModelSettings } from "./model-settings.mjs";
 import { installWriteLifecycle } from "./write-lifecycle.mjs";
 import { networkLinks, tailscaleHttpsLink } from "./network-links.mjs";
 import { capabilities } from "./instances.mjs";
+import { installSetupRoutes } from "./setup-routes.mjs";
 
 // Runtime resources are injected; importing routes never starts agents or listeners.
 export function createApp({
@@ -48,6 +49,7 @@ export function createApp({
     next();
   });
   installResponseHandling(app, events);
+  installSetupRoutes(app, post);
   if (devices) {
     post("/api/auth/pair", (req, res) =>
       res.json(devices.pair(req.auth, req.body.name)),
@@ -69,6 +71,7 @@ export function createApp({
     app.get("/api/notifications/config", (req, res) => res.json(push.config()));
     post("/api/notifications/status", (req, res) => {
       const device = push.device({ endpoint: req.body.endpoint });
+      if(device && device.locale !== req.locale){device.locale=req.locale;push.save();}
       if (
         device &&
         req.auth?.id &&
@@ -86,6 +89,7 @@ export function createApp({
           req.body.subscription,
           req.pokiteOrigin,
           req.auth?.id,
+          req.locale,
         ),
       );
     });

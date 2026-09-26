@@ -1,3 +1,4 @@
+import { t } from "../../lib/i18n.js";
 import * as React from "react";
 import { Dialog as Primitive } from "radix-ui";
 import { X } from "lucide-react";
@@ -17,7 +18,7 @@ export function DialogContent({ children, ...props }) {
             variant="ghost"
             size="icon-sm"
             className="connection-close"
-            aria-label="关闭连接弹窗"
+            aria-label={t("关闭连接弹窗")}
           >
             <X size={18} />
           </Button>

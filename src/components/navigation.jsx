@@ -1,7 +1,12 @@
+import { t } from "../lib/i18n.js";
 import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-
-export function Navigation({ open, desktopOpen = true, onOpenChange, children }) {
+export function Navigation({
+  open,
+  desktopOpen = true,
+  onOpenChange,
+  children,
+}) {
   const keyboardClose = useRef(false);
   const [mobile, setMobile] = useState(
     () => matchMedia("(max-width:760px)").matches,
@@ -28,8 +33,10 @@ export function Navigation({ open, desktopOpen = true, onOpenChange, children })
           e.preventDefault();
           if (keyboardClose.current)
             document
-              .querySelector('button[aria-label="项目与会话"]')
-              ?.focus({ preventScroll: true });
+              .querySelector(t('button[aria-label="项目与会话"]'))
+              ?.focus({
+                preventScroll: true,
+              });
         }}
         onKeyDownCapture={() => {
           keyboardClose.current = true;
@@ -44,7 +51,7 @@ export function Navigation({ open, desktopOpen = true, onOpenChange, children })
           keyboardClose.current = false;
         }}
       >
-        <SheetTitle className="sr-only">项目与会话</SheetTitle>
+        <SheetTitle className="sr-only">{t("项目与会话")}</SheetTitle>
         <aside className="sidebar">{children}</aside>
       </SheetContent>
     </Sheet>

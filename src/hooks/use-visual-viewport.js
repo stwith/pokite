@@ -44,7 +44,13 @@ export function useVisualViewport() {
       until = performance.now() + 1000;
       if (!frame && !document.hidden) frame = requestAnimationFrame(sample);
     };
-    const interact=e=>{if(e.target instanceof Element&&e.target.closest('input,textarea,select,button'))update()};
+    const interact = (e) => {
+      if (
+        e.target instanceof Element &&
+        e.target.closest("input,textarea,select,button")
+      )
+        update();
+    };
     update();
     viewport?.addEventListener("resize", update);
     viewport?.addEventListener("scroll", update);
@@ -54,7 +60,7 @@ export function useVisualViewport() {
     document.addEventListener("focusin", update);
     document.addEventListener("focusout", update);
     document.addEventListener("visibilitychange", update);
-    document.addEventListener('pointerup',interact,{passive:true});
+    document.addEventListener("pointerup", interact, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
       viewport?.removeEventListener("resize", update);
@@ -63,7 +69,7 @@ export function useVisualViewport() {
       window.removeEventListener("orientationchange", update);
       window.removeEventListener("pageshow", update);
       document.removeEventListener("visibilitychange", update);
-      document.removeEventListener('pointerup',interact);
+      document.removeEventListener("pointerup", interact);
       document.removeEventListener("focusin", update);
       document.removeEventListener("focusout", update);
       document.documentElement.style.removeProperty("--viewport-height");

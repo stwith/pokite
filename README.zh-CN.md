@@ -22,7 +22,7 @@ DeepSeek Harness、PenguinHarness 和 Claude Code CLI**，
 Pokite 不运营外部中转服务器；模型推理
 仍使用各 Agent 原先配置的服务。
 
-> macOS 开发者预览版。尚无签名安装包，也未完成 Windows/Linux 和多种 Desktop 版本的兼容验收。
+> macOS 开发者预览版。已提供内置 Node 的菜单栏 App 构建方式；对外分发仍需 Developer ID 签名和 Apple 公证。Windows/Linux 和多种 Desktop 版本尚未完成兼容验收。
 
 ## 六个核心特点
 
@@ -94,6 +94,10 @@ Hermes 使用本地插件。DSH 和 Penguin 复用已有服务；Claude CLI 通�
 独立 Claude Code 会排除 Desktop 所属会话。发现已安装的 Agent 不代表它已经连接或支持发送。
 
 ## 开始使用
+
+也可以使用原生菜单栏入口，见 [macOS 打包与设置说明](docs/macos-distribution.md)。
+它包含服务启停、可选登录自启、网页接入设置和卸载操作。开发签名 DMG 尚不等于
+经过公证的公开发行版。网页界面支持中文和 English，可在语言选择框中切换。
 
 要求：macOS、Node.js 22.23.0 或更高版本（支持 `node:sqlite`），以及已安装、登录的 Agent。推荐先确认它在原客户端能正常工作。
 

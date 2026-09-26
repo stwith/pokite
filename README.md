@@ -22,7 +22,7 @@ Your projects, execution environment and model credentials stay on the computer.
 Connect over your home LAN or Tailscale. Pokite runs on that computer and does not
 operate a hosted relay. Model calls still use each agent's configured provider. See the support table before setup.
 
-> macOS developer preview. There is no signed installer yet. Windows, Linux and multiple Desktop versions have not passed compatibility acceptance.
+> macOS developer preview. A native menu-bar app with bundled Node can be built locally. Developer ID signing and Apple notarization are required before public binary distribution. Windows/Linux and multiple Desktop versions have not passed compatibility acceptance.
 
 ## Six core features
 
@@ -103,6 +103,11 @@ Claude Desktop Cowork credential bridging is disabled. The helper that exported
 the Desktop keychain secret has been retired; Claude Code CLI remains supported.
 
 ## Quick Start
+
+Prefer a menu-bar app? See [macOS packaging and setup](docs/macos-distribution.md).
+It includes service controls, optional start at login, a browser setup dialog,
+and an uninstall action. The development-signed DMG is not a notarized public release.
+The web interface supports English and 简体中文; use its language selector.
 
 Requirements: macOS, Node.js 22.23.0 or newer with `node:sqlite`, and your agent already installed and authenticated. Verify it works in its original client first.
 

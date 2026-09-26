@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import webpush from "web-push";
+import { translate, normalizeLocale } from "../shared/i18n.mjs";
 
 const bad = (text) => Object.assign(new Error(text), { status: 400 });
 export function validateSubscription(value) {
@@ -128,7 +129,7 @@ export class PushService {
       lastAttempt: d?.lastAttempt || null,
     };
   }
-  async subscribe(subscription, origin, owner) {
+  async subscribe(subscription, origin, owner, locale) {
     const clean = validateSubscription(subscription);
     if (!origin.startsWith("https://")) throw bad("请通过 HTTPS 开启通知");
     const id = keyOf(clean.endpoint);
@@ -140,6 +141,7 @@ export class PushService {
       ...old,
       subscription: clean,
       owner,
+      locale: normalizeLocale(locale),
       origin,
       scope: "all",
     };
@@ -281,7 +283,7 @@ export class PushService {
                   createdAt: now,
                   attempts: 0,
                   payload: {
-                    title: `${adapter.name || group.agent} · ${result === "failed" ? "任务失败" : "任务完成"}`,
+                    title: `${adapter.name || group.agent} · ${translate(result === "failed" ? "任务失败" : "任务完成", d.locale)}`,
                     body: notificationBody(detail, row, group),
                     tag: "pokite-" + keyOf(group.agent + row.id).slice(0, 24),
                     url: d.origin + "/?" + query,

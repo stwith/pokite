@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n.js";
 import { useState } from "react";
 import { MonitorSmartphone } from "lucide-react";
 import { Button } from "./ui/button";
@@ -25,7 +26,9 @@ export function DeviceSettings() {
   async function revoke(row) {
     setBusy(true);
     try {
-      await api("/auth/revoke", { id: row.id });
+      await api("/auth/revoke", {
+        id: row.id,
+      });
       if (row.current) location.reload();
       else await load();
     } catch (e) {
@@ -43,28 +46,35 @@ export function DeviceSettings() {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="已连接设备">
+        <Button variant="ghost" size="icon-sm" aria-label={t("已连接设备")}>
           <MonitorSmartphone size={18} />
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogTitle className="connection-title">已连接设备</DialogTitle>
+        <DialogTitle className="connection-title">
+          {t("已连接设备")}
+        </DialogTitle>
         <DialogDescription className="connection-description">
-          撤销后该设备无法继续访问。重新连接需要新的配对码。
+          {t("撤销后该设备无法继续访问。重新连接需要新的配对码。")}
         </DialogDescription>
-        <div style={{ maxHeight: "50vh", overflowY: "auto" }}>
+        <div
+          style={{
+            maxHeight: "50vh",
+            overflowY: "auto",
+          }}
+        >
           {rows.map((row) => (
             <div key={row.id} className="notification-setting">
               <span>
                 {row.name}
-                {row.current ? " · 当前设备" : ""}
+                {row.current ? t(" · 当前设备") : ""}
               </span>
               <Button
                 variant="outline"
                 disabled={busy}
                 onClick={() => revoke(row)}
               >
-                撤销
+                {t("撤销")}
               </Button>
             </div>
           ))}
