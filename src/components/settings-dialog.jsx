@@ -14,7 +14,7 @@ import { DisconnectDialog } from "./disconnect-dialog";
 import { t } from "../lib/i18n.js";
 export function SettingsDialog({ disabled }) {
   return (
-    <Dialog>
+    <Dialog defaultOpen={new URLSearchParams(location.search).has("setup")}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon-sm" aria-label={t("设置")}>
           <Settings size={18} />

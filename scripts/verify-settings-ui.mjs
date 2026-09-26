@@ -44,6 +44,11 @@ try {
     assert.deepEqual(errors,[]);
     await page.close();console.log(name+' '+mode+': compact footer, translated states, scoped action and refresh passed');
    }
+   const firstRun=await browser.newPage();
+   await firstRun.goto(`http://127.0.0.1:${server.address().port}/?setup=1#token=fixture`);
+   await firstRun.locator('.setup-results').waitFor();
+   await firstRun.close();
+   console.log(name+': first-run setup link still opens directly');
   }finally{await browser.close();}
  }
 }finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
