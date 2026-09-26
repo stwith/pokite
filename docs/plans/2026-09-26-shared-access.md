@@ -25,7 +25,7 @@ Pokite 的使用场景是用户在自己的手机、平板上继续使用自己�
 
 ## 整体重置
 
-电脑本机打开 `http://127.0.0.1:3230`，在“连接手机 → 重置访问码”中二次确认：
+电脑本机打开 `http://127.0.0.1:3230`，在“设置 → 重置访问码”中二次确认：
 
 1. 清除原来的通知订阅并原子替换保存的访问码。
 2. 所有入口立即拒绝旧码，旧事件连接随后关闭，旧二维码与旧链接一并失效。
@@ -61,7 +61,7 @@ reset; this migration retains the existing access-token file unchanged.
 - Authenticate API requests directly against the same code on LAN and Tailscale.
 - QR codes and links contain that code; browser origins save it independently.
 - Login verifies access without generating or consuming any credentials.
-- Local connection dialog offers a two-step global reset. Keep CLI reset for
+- Local settings dialog offers a two-step global reset. Keep CLI reset for
   recovery while the service is stopped.
 - Reset atomically replaces the saved code, closes old event streams, rejects old
   requests and clears notification subscriptions. Preserve agent accounts,

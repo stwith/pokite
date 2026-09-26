@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
-import { api, setAccessToken, persistAccessToken } from "../lib/api";
+import { api } from "../lib/api";
 import { HomeScreenGuide } from "./home-screen-guide";
 function CopyLink({ url, label = t("复制链接") }) {
   const [copied, setCopied] = useState(false),
@@ -118,23 +118,6 @@ function Code({ url, label }) {
   );
 }
 export function ConnectionDialog() {
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [resetting, setResetting] = useState(false);
-  async function reset() {
-    setResetting(true);
-    setError("");
-    try {
-      const result = await api("/auth/reset", {});
-      setAccessToken(result.token);
-      persistAccessToken();
-      setLinks(await api("/connection-links"));
-      setConfirmReset(false);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setResetting(false);
-    }
-  }
   const [open, setOpen] = useState(false),
     [mode, setMode] = useState(() => {
       const host = location.hostname;
@@ -246,36 +229,6 @@ export function ConnectionDialog() {
                 <code className="connection-secret">{accessCode}</code>
                 <CopyLink url={accessCode} label={t("复制访问码")} />
               </div>
-            )}
-          </div>
-        )}
-        {accessCode && (
-          <p className="muted">
-            {t("所有网络共用此访问码，长期有效，重置后旧码失效。")}
-          </p>
-        )}
-        {["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) && (
-          <div className="connection-row">
-            {confirmReset ? (
-              <>
-                <span className="muted">
-                  {t("重置后，其他页面需使用新码连接并重新开启通知。")}
-                </span>
-                <Button variant="outline" disabled={resetting} onClick={reset}>
-                  {t("确认重置")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  disabled={resetting}
-                  onClick={() => setConfirmReset(false)}
-                >
-                  {t("取消")}
-                </Button>
-              </>
-            ) : (
-              <Button variant="ghost" onClick={() => setConfirmReset(true)}>
-                {t("重置访问码")}
-              </Button>
             )}
           </div>
         )}

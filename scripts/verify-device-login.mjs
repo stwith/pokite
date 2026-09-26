@@ -54,7 +54,7 @@ try {
       );
       // Exercise the actual reset UI and its persisted new code.
       await page
-        .getByRole("button", { name: /连接手机|Connect a phone/ })
+        .getByRole("button", { name: /设置|Settings/ })
         .click();
       await page
         .getByRole("button", { name: /重置访问码|Reset access code/ })

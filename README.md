@@ -155,7 +155,7 @@ This is an explicit personal-use product decision: no automatic expiry or usage
 limit, and no code change on restart or upgrade while the state directory is
 preserved. See the [access design and maintenance rules](docs/plans/2026-09-26-shared-access.md).
 
-To invalidate all old links, open **Connect a phone → Reset access code** on the
+To invalidate all old links, open **Settings → Reset access code** on the
 computer through `http://127.0.0.1:3230`. Confirming resets access immediately;
 other pages need the new code and must enable notifications again. Agent
 accounts, sessions and accepted tasks are preserved. Integration configuration
