@@ -1,6 +1,8 @@
+import { matchesAccessToken } from "./access-token.mjs";
+import { AccessThrottle } from "./access-throttle.mjs";
 import { isLocalAdminRequest, requireLocalAdmin } from "./local-admin.mjs";
 import os from "node:os";
-import { timingSafeEqual, createHash } from "node:crypto";
+import { createHash } from "node:crypto";
 import { tailscaleHttpsLink } from "./network-links.mjs";
 import { normalizeLocale, localizeResponse } from "../shared/i18n.mjs";
 
@@ -54,18 +56,25 @@ export function installHttpProtection(
     });
     next();
   });
+  const throttle = new AccessThrottle();
   app.use("/api", (req, res, next) => {
     res.set("Cache-Control", "no-store");
     const credential = (req.headers.authorization || "").replace(
       /^Bearer /,
       "",
     );
-    const valid = () => {
-      const got = Buffer.from(credential),
-        want = Buffer.from(getToken());
-      return got.length === want.length && timingSafeEqual(got, want);
-    };
-    if (!valid()) return res.status(401).json({ error: "请输入访问码" });
+    const valid = () => matchesAccessToken(credential, getToken());
+    const peer = req.socket.remoteAddress || "unknown";
+    if (throttle.blocked(peer))
+      return res
+        .status(429)
+        .set("Retry-After", "60")
+        .json({ error: "尝试次数过多，请一分钟后重试" });
+    if (!valid()) {
+      throttle.failed(peer);
+      return res.status(401).json({ error: "请输入访问码" });
+    }
+    throttle.succeeded(peer);
     req.auth = { id: "shared" };
     if (
       (req.path.startsWith("/setup/") || req.path === "/auth/reset") &&

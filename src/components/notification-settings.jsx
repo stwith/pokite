@@ -1,18 +1,9 @@
 import { t } from "../lib/i18n.js";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { Switch } from "radix-ui";
-import { Button } from "./ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-} from "./ui/dialog";
 import { api } from "../lib/api";
-export function NotificationSettings({ menuItem = false }) {
-  const [open, setOpen] = useState(false);
+export function NotificationSettings() {
   const [subscription, setSubscription] = useState(null);
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -23,6 +14,7 @@ export function NotificationSettings({ menuItem = false }) {
   const standalone =
     navigator.standalone || matchMedia("(display-mode: standalone)").matches;
   const supported =
+    location.protocol === "https:" &&
     isSecureContext &&
     (!ios || standalone) &&
     "serviceWorker" in navigator &&
@@ -90,69 +82,41 @@ export function NotificationSettings({ menuItem = false }) {
     });
     setEnabled(result.enabled);
   }
+  useEffect(() => {
+    void run(load);
+  }, []);
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(value) => {
-        setOpen(value);
-        if (value) void run(load);
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size={menuItem ? "default" : "icon-sm"}
-          className={menuItem ? "settings-item" : undefined}
+    <div className="notification-inline">
+      <div className="settings-language notification-inline-row">
+        <label htmlFor="task-notifications">
+          <Bell size={18} />
+          {t("任务通知")}
+        </label>
+        <Switch.Root
+          id="task-notifications"
+          className="notification-switch"
+          checked={enabled}
+          disabled={busy || !supported}
+          onCheckedChange={(value) => run(() => toggle(value))}
           aria-label={t("任务通知")}
         >
-          <Bell size={18} />
-          {menuItem && t("任务通知")}
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogTitle className="connection-title">{t("任务通知")}</DialogTitle>
-        <DialogDescription className="connection-description">
-          {t("任务完成或失败时提醒你，点击通知回到对应会话。")}
-        </DialogDescription>
-        {!isSecureContext ? (
-          <p className="notification-hint">
-            {t("请通过 HTTPS 入口开启通知。")}
-          </p>
-        ) : !supported ? (
-          <p className="notification-hint">
-            {t("iPhone / iPad 请将 HTTPS 网页添加到主屏幕，再从主屏幕打开。")}
-          </p>
-        ) : (
-          <>
-            <div className="notification-setting">
-              <div>
-                <label htmlFor="task-notifications">{t("接收任务通知")}</label>
-                <p>{t("所有已接入 Agent 的项目，无需逐个关注")}</p>
-              </div>
-              <Switch.Root
-                id="task-notifications"
-                className="notification-switch"
-                checked={enabled}
-                disabled={busy}
-                onCheckedChange={(value) => run(() => toggle(value))}
-                aria-label={t("接收任务通知")}
-              >
-                <Switch.Thumb className="notification-switch-thumb" />
-              </Switch.Root>
-            </div>
-            <p className="notification-hint">
-              {t(
-                "仅控制这台设备。通知显示会话标题和项目路径，不含对话正文。电脑需保持运行并联网。",
-              )}
-            </p>
-          </>
-        )}
-        {error && (
-          <p className="notification-error" role="alert">
-            {error}
-          </p>
-        )}
-      </DialogContent>
-    </Dialog>
+          <Switch.Thumb className="notification-switch-thumb" />
+        </Switch.Root>
+      </div>
+      {!supported && (
+        <p className="notification-inline-hint">
+          {location.protocol !== "https:"
+            ? t("需使用 HTTPS")
+            : ios && !standalone
+              ? t("请从主屏幕打开")
+              : t("当前浏览器不支持通知")}
+        </p>
+      )}
+      {error && (
+        <p className="notification-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

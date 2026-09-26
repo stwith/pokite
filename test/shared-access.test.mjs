@@ -48,7 +48,7 @@ test("one persistent code supports repeated remote login; reset is local-only an
       token,
     );
     assert.equal(
-      (await request("/setup/configure", token, true, { action: "save" }))
+      (await request("/setup/toggle", token, true, { instanceId: "codex", enabled: false }))
         .status,
       403,
     );

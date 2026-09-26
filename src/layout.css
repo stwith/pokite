@@ -10,21 +10,19 @@
 .notification-switch-thumb[data-state="checked"] { transform:translateX(18px); }
 .notification-hint { font-size:12px; color:#777; line-height:1.8; margin:14px 0 0; }
 .notification-error { font-size:12px; color:#b42318; line-height:1.8; margin-top:12px; }
-.setup-actions { display:flex; justify-content:flex-end; margin-top:16px; }
 .setup-toolbar { display:flex; align-items:center; justify-content:space-between; color:#777; font-size:12px; }
 .setup-toolbar button { gap:6px; font-size:12px; }
 .setup-results { padding:0; margin:4px 0 0; list-style:none; max-height:45vh; overflow:auto; scrollbar-width:none; }
 .setup-results::-webkit-scrollbar { display:none; }
 .setup-results li { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid #eee; }
 .setup-results li:last-child { border-bottom:0; }
-.setup-agent { display:flex; align-items:center; justify-content:space-between; flex:1; min-width:0; gap:12px; font-size:13px; }
+.setup-agent { display:flex; flex-direction:column; align-items:flex-start; flex:1; min-width:0; gap:3px; font-size:13px; }
 .setup-agent > span:first-child { overflow-wrap:anywhere; }
-.setup-status { font-size:11px; color:#737373; text-align:right; flex-shrink:0; }
-.setup-results button { font-size:12px; flex-shrink:0; }
+.setup-status { font-size:11px; color:#737373; text-align:left; flex-shrink:0; }
+.setup-results [role="switch"] { flex-shrink:0; }
 .settings-items { display:flex; flex-direction:column; gap:4px; margin-top:16px; }
 .settings-item { justify-content:flex-start; width:100%; gap:10px; font-size:13px; font-weight:400; }
 .settings-language { display:flex; align-items:center; justify-content:space-between; padding:6px 12px 12px; margin-bottom:4px; border-bottom:1px solid #eee; font-size:13px; }
-@media (max-width:420px) { .setup-agent { align-items:flex-start; flex-direction:column; gap:3px; } .setup-status { text-align:left; } }
 
 html,
 body,
@@ -1156,3 +1154,7 @@ html[data-viewport-compact="true"] .navigation-sheet .brand {
   margin-bottom: 6px;
   flex-shrink: 0;
 }
+
+.notification-inline-row { border:0; margin:0; padding:10px 12px; }
+.notification-inline-row label { display:flex; align-items:center; gap:10px; }
+.notification-inline-hint { margin:0 12px 6px; color:#777; font-size:11px; }

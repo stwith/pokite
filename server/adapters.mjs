@@ -40,6 +40,7 @@ export function makeAdapters(instances = loadInstances()) {
         id: instance.id,
         provider: instance.provider,
         name: instance.name,
+        pokiteEnabled: instance.enabled !== false,
       });
       return [instance.id, adapter];
     }),

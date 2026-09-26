@@ -88,9 +88,9 @@ export function validateInstances(value) {
       return instance;
     });
 }
-export function loadInstances(file) {
+export function loadInstances(file, { includeDisabled = false } = {}) {
   const explicit =
-    arguments.length > 0 ||
+    file !== undefined ||
     process.env.POKITE_CONFIG !== undefined ||
     process.env.POCKET_CONFIG !== undefined;
   const defaultFile = instanceConfigFile();
@@ -104,7 +104,23 @@ export function loadInstances(file) {
       );
     return validateInstances(discoverMachine().instances);
   }
-  return validateInstances(JSON.parse(fs.readFileSync(file, "utf8")).instances);
+  const rows = JSON.parse(fs.readFileSync(file, "utf8")).instances;
+  if (!includeDisabled) return validateInstances(rows);
+  const providers = new Set(
+    defaultInstances().map((instance) => instance.provider),
+  );
+  // Disabled adapters remain available internally to finish accepted queue work,
+  // but are excluded from all new Pokite requests and notification polling.
+  const supported = rows.filter(
+    (instance) =>
+      instance.enabled !== false || providers.has(instance.provider),
+  );
+  return validateInstances(
+    supported.map((instance) => ({ ...instance, enabled: true })),
+  ).map((instance) => ({
+    ...instance,
+    enabled: supported.find((row) => row.id === instance.id).enabled !== false,
+  }));
 }
 
 export function capabilities(adapter) {

@@ -10,6 +10,7 @@ Pokite 的使用场景是用户在自己的手机、平板上继续使用自己�
 
 | 项目 | 设计 |
 | --- | --- |
+| 码的格式 | 10 位字母数字，避开 0/O、1/I；输入不区分大小写，可忽略空格和连字符 |
 | 访问码范围 | 每套 Pokite 服务一个码，所有自己的设备共用 |
 | 网络入口 | 局域网 HTTP、Tailscale HTTP、Tailscale HTTPS 使用完全相同的码 |
 | 有效期 | 长期有效，不按时间过期、不在使用后消耗；仅主动重置时更换 |
@@ -79,3 +80,8 @@ shared code on two origins, repeat use and the reset/reconnect UI. The running
 Mac service was restarted without restarting Codex or changing its access code.
 LAN HTTP, Tailscale HTTP and HTTPS all accepted that same code repeatedly and
 returned it in connection links; remote reset was rejected with 403.
+
+## 简化设置补充
+
+通知在设置页直接用一个开关控制，不再弹独立说明页；只有无法开启时提示 HTTPS 或主屏幕要求。
+每个 Agent 对应“在 Pokite 中启用”开关，即时控制可用入口并保存配置。关闭不停止原客户端、不卸载共享组件，已接受的任务继续处理。列表不展示文件发现等内部检测结果；只提示需要用户处理的问题。

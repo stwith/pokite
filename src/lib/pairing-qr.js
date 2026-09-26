@@ -13,7 +13,7 @@ export function parsePairingQR(value, origin) {
   )
     throw Error(t("不支持此二维码地址。"));
   const token = new URLSearchParams(url.hash.slice(1)).get("token");
-  if (!token || !/^[a-zA-Z0-9_-]{16,256}$/.test(token))
+  if (!token || !/^[a-zA-Z0-9_-]{10,256}$/.test(token))
     throw Error(t("二维码未包含有效访问码。"));
   if (url.pathname !== "/" || url.search)
     throw Error(t("不是 Pokite 首页连接。"));

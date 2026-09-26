@@ -30,7 +30,7 @@ export function SettingsDialog({ disabled }) {
             <span>{t("语言")}</span>
             <LanguageSelect />
           </div>
-          <NotificationSettings menuItem />
+          <NotificationSettings />
           <SetupDialog menuItem />
           <DisconnectDialog disabled={disabled} menuItem />
         </div>

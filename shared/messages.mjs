@@ -1,5 +1,16 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  "选择在 Pokite 中使用的 Agent，不会关闭电脑上的应用。":
+    "Choose which agents to use in Pokite. Their desktop apps keep running.",
+  "需使用 HTTPS": "Requires HTTPS",
+  请从主屏幕打开: "Open from the Home Screen",
+  当前浏览器不支持通知: "Notifications unavailable in this browser",
+  "请先启动电脑上的 Agent": "Start the agent on your computer",
+  请先在电脑上创建一个会话: "Create a session on your computer first",
+  "请等任务结束后，重新打开对应的 Desktop。":
+    "After current tasks finish, reopen the relevant Desktop app.",
+  "尝试次数过多，请一分钟后重试": "Too many attempts. Try again in one minute.",
+
   设置: "Settings",
   "管理语言、通知和 Agent 接入":
     "Manage language, notifications and Agent connections",

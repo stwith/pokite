@@ -1,3 +1,4 @@
+import { matchesAccessToken } from "./access-token.mjs";
 import express from "express";
 import fs from "node:fs/promises";
 import { presentSession } from "./read-state.mjs";
@@ -46,17 +47,22 @@ export function createApp({
   installHttpProtection(app, { token, getToken, getPort });
   app.use(express.json({ limit: "128kb" }));
   app.param("agent", (req, res, next, id) => {
-    if (!Object.hasOwn(adapters, id))
+    if (!Object.hasOwn(adapters, id) || adapters[id].pokiteEnabled === false)
       return res.status(404).json({ error: "Unknown agent" });
     req.adapter = adapters[id];
     next();
   });
   installResponseHandling(app, events);
-  installSetupRoutes(app, post);
+  installSetupRoutes(app, post, { adapters, agentNames });
   if (resetAccess)
     post("/api/auth/reset", async (req, res) => {
       // Body parsing can yield after middleware; reject a stale concurrent reset.
-      if (req.headers.authorization !== "Bearer " + getToken())
+      if (
+        !matchesAccessToken(
+          (req.headers.authorization || "").replace(/^Bearer /, ""),
+          getToken(),
+        )
+      )
         return res.status(401).json({ error: "请输入访问码" });
       res.json({ token: await resetAccess() });
     });
@@ -128,12 +134,14 @@ export function createApp({
   };
   app.get("/api/agents", (req, res) =>
     res.json(
-      Object.entries(agentNames).map(([id, name]) => ({
-        id,
-        name,
-        capabilities: capabilities(adapters[id]),
-        emptyState: adapters[id].emptyState,
-      })),
+      Object.entries(agentNames)
+        .filter(([id]) => adapters[id] && adapters[id].pokiteEnabled !== false)
+        .map(([id, name]) => ({
+          id,
+          name,
+          capabilities: capabilities(adapters[id]),
+          emptyState: adapters[id].emptyState,
+        })),
     ),
   );
   app.get("/api/connection-links", async (req, res) =>

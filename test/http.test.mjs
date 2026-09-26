@@ -191,3 +191,13 @@ test("response body and ETag share one JSON serialization", async () => {
     assert.ok(response.headers.get("etag"));
   } finally { adapter.projects = previous; }
 });
+
+test("disabled agent disappears from discovery and rejects new requests without destroying its adapter",async()=>{
+ const headers={Authorization:"Bearer "+token};
+ adapter.pokiteEnabled=false;
+ try {
+  assert.deepEqual(await(await fetch(base+"/api/agents",{headers})).json(),[]);
+  assert.equal((await fetch(base+"/api/codex/projects",{headers})).status,404);
+ }finally{adapter.pokiteEnabled=true;}
+ assert.equal((await fetch(base+"/api/codex/projects",{headers})).status,200);
+});

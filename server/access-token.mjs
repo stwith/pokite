@@ -1,11 +1,28 @@
 import fs from "node:fs";
 import path from "node:path";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 
+export function matchesAccessToken(credential, expected) {
+  if (typeof credential !== "string" || typeof expected !== "string")
+    return false;
+  const normalize = /^[A-HJ-NP-Z2-9]{10}$/.test(expected)
+    ? credential.replace(/[\s-]/g, "").toUpperCase()
+    : credential;
+  const got = Buffer.from(normalize),
+    want = Buffer.from(expected);
+  return got.length === want.length && timingSafeEqual(got, want);
+}
+export function generateAccessToken() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from(
+    { length: 10 },
+    () => alphabet[randomInt(alphabet.length)],
+  ).join("");
+}
 export function rotateAccessToken(directory) {
   const file = path.join(directory, "access-token");
   const temporary = file + "." + randomUUID();
-  const token = randomBytes(32).toString("base64url");
+  const token = generateAccessToken();
   try {
     fs.writeFileSync(temporary, token, { mode: 0o600 });
     fs.renameSync(temporary, file);

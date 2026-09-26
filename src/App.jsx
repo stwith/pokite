@@ -28,6 +28,11 @@ import {
   restoreDraft,
   clearWithdrawnSubmission,
 } from "./lib/drafts";
+const agentOrder = ["codex", "codex2", "claude", "dsh", "hermesDesktop", "penguin"];
+const compareAgents = (a, b) => {
+  const rank = id => agentOrder.includes(id) ? agentOrder.indexOf(id) : agentOrder.length;
+  return rank(a.id) - rank(b.id);
+};
 export default function App() {
   const notificationTarget = useRef(
     notificationRoute(location.href, location.origin),
@@ -164,21 +169,7 @@ export default function App() {
   async function login(credential = token, retryInitial = true) {
     setAccessToken(credential.trim());
     try {
-      const order = [
-        "codex",
-        "codex2",
-        "claude",
-        "dsh",
-        "hermesDesktop",
-        "penguin",
-      ];
-      const rank = ({ id }) => {
-        const index = order.indexOf(id);
-        return index < 0 ? order.length : index;
-      };
-      const available = (await api("/agents")).sort(
-        (a, b) => rank(a) - rank(b),
-      );
+      const available = (await api("/agents")).sort(compareAgents);
       setAgents(available);
       if (!available.some((item) => item.id === agent))
         setAgent(available[0]?.id || "");
@@ -204,6 +195,35 @@ export default function App() {
     window.addEventListener("hashchange", pairedLink);
     return () => window.removeEventListener("hashchange", pairedLink);
   }, []);
+  useEffect(() => {
+    if (!authed) return;
+    const refresh = async () => {
+      try {
+        const available = (await api("/agents")).sort(compareAgents);
+        setAgents(available);
+        if (!available.length) {
+          setProjects([]);
+          setProject(null);
+          setSessions([]);
+          setDetail(null);
+          setSid(null);
+        }
+        setAgent((current) =>
+          available.some((item) => item.id === current)
+            ? current
+            : available[0]?.id || "",
+        );
+      } catch {
+        /* Existing sync indicators handle connection loss. */
+      }
+    };
+    window.addEventListener("pokite:agents-changed", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("pokite:agents-changed", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [authed]);
   useEffect(() => {
     if (!authed || !agent) return;
     const gen = ++generation.current;

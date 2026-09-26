@@ -146,7 +146,7 @@ Trusted-LAN HTTP requires explicit `POKITE_ALLOW_LAN=true npm start` or
 clients to reach an HTTP service with powerful agent permissions; use HTTPS on
 untrusted networks. Enabling Serve requires your tailnet administrator's approval.
 
-Pokite is designed for personal use: **one persistent access code for all networks
+Pokite is designed for personal use: **one persistent 10-character access code for all networks
 and devices**, with no one-time pairing or per-device credentials. Connection QR
 codes and links contain this same code. Each browser origin stores its login
 separately, but you never need a different code for another address.
@@ -186,7 +186,7 @@ HTTP installation and standalone behavior depend on the OS/browser. A standalone
 ## Task notifications
 
 Use HTTPS; on iPhone/iPad, add Pokite to your Home Screen and launch it there.
-Open **Settings → Task notifications** in the sidebar and enable notifications for this device.
+Use the **Task notifications** switch directly in Settings.
 Completed and failed tasks are monitored on the Mac even while the browser is
 closed, including tasks started in Desktop. Tap a notification to open its
 agent/project/session. All connected agents' projects are monitored globally;

@@ -3,7 +3,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import http from "node:http";
 import net from "node:net";
-import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { makeAdapters } from "./adapters.mjs";
 import { loadInstances } from "./instances.mjs";
@@ -16,7 +15,7 @@ import os from "node:os";
 import { execFile } from "node:child_process";
 import { DesktopErrorMonitor } from "./desktop-error-monitor.mjs";
 import { PushService } from "./push.mjs";
-import { rotateAccessToken } from "./access-token.mjs";
+import { rotateAccessToken, generateAccessToken } from "./access-token.mjs";
 import { NetworkListeners } from "./network-listeners.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -30,7 +29,7 @@ const network = await fs
   });
 const allowLan =
   process.env.POKITE_ALLOW_LAN === "true" || network.allowLan === true;
-const instances = loadInstances();
+const instances = loadInstances(undefined, { includeDisabled: true });
 const release = acquireInstanceLock(local);
 process.once("exit", release);
 let shutdown;
@@ -89,7 +88,7 @@ try {
     token = (await fs.readFile(tokenFile, "utf8")).trim();
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
-    token = randomBytes(24).toString("base64url");
+    token = generateAccessToken();
     await fs.writeFile(tokenFile, token, { mode: 0o600 });
   }
   if (!token) throw Error("Access token must not be empty");

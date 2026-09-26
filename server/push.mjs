@@ -160,6 +160,7 @@ export class PushService {
     if (Date.now() < (this.discoveryAt || 0)) return;
     this.discoveryAt = Date.now() + 60000;
     for (const [agent, adapter] of Object.entries(this.adapters)) {
+      if (adapter.pokiteEnabled === false) continue;
       try {
         const projects = await adapter.projects();
         for (const project of projects) {
@@ -237,6 +238,7 @@ export class PushService {
     await this.discoverProjects();
     for (const group of Object.values(this.state.groups)) {
       const adapter = this.adapters[group.agent];
+      if (adapter?.pokiteEnabled === false) continue;
       if (!adapter) continue;
       try {
         const rows = (
