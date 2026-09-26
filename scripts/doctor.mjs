@@ -3,6 +3,10 @@ import path from "node:path";
 import { CodexReadOnly } from "../server/codex-readonly.mjs";
 import { discoverMachine } from "../server/machine-discovery.mjs";
 import { loadInstances } from "../server/instances.mjs";
+import {
+  claudeCodeDiagnostics,
+  remoteControlAccountNotice,
+} from "../server/claude-code-diagnostics.mjs";
 import { sharedProfile } from "../server/shared-config.mjs";
 import { matchesProcessGeneration } from "../server/process-identity.mjs";
 
@@ -59,6 +63,10 @@ for (const instance of loadInstances()) {
       });
       if (response.status >= 500) throw Error("Penguin service unavailable");
       note = "Existing local service reachable; no process started";
+    } else if (instance.provider === "claudeDesktopCode") {
+      const diagnostics = await claudeCodeDiagnostics();
+      status = "check-required";
+      note = [...diagnostics, remoteControlAccountNotice].join("; ");
     } else {
       await fs.access(instance.home);
       status = "configured";

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { AgentConnections } from "./agent-connections.mjs";
 import { validateInstances } from "./instances.mjs";
 
 // Disable only Pokite access. Keep adapters alive so accepted work can finish.
@@ -14,6 +15,7 @@ export class AgentAccess {
       create,
       prepare,
     });
+    this.connections = new AgentConnections(adapters);
   }
   async saved() {
     return fs
@@ -24,8 +26,22 @@ export class AgentAccess {
         throw error;
       });
   }
+  async discovery() {
+    if (this.discoveryCache && Date.now() - this.discoveryCache.time < 10000)
+      return this.discoveryCache.value;
+    if (!this.discoveryPending)
+      this.discoveryPending = this.discover()
+        .then((value) => {
+          this.discoveryCache = { time: Date.now(), value };
+          return value;
+        })
+        .finally(() => {
+          this.discoveryPending = null;
+        });
+    return this.discoveryPending;
+  }
   async report() {
-    const [report, saved] = await Promise.all([this.discover(), this.saved()]);
+    const [report, saved] = await Promise.all([this.discovery(), this.saved()]);
     const candidates = [...report.candidates];
     for (const instance of saved.instances) {
       try {
@@ -37,25 +53,25 @@ export class AgentAccess {
         candidates.push(instance);
     }
     return {
-      candidates: candidates.map((c) => ({
-        id: c.id,
-        name: c.name || c.provider,
-        enabled:
-          !!this.adapters[c.id] && this.adapters[c.id].pokiteEnabled !== false,
-        canEnable:
-          report.instances.some((i) => i.id === c.id) ||
-          saved.instances.some((i) => i.id === c.id),
-        notice:
-          c.status === "service-not-running" ||
-          c.status === "web-service-not-found"
-            ? "请先启动电脑上的 Agent"
-            : c.status === "no-native-history"
-              ? "请先在电脑上创建一个会话"
-              : "",
-      })),
+      candidates: await Promise.all(
+        candidates.map(async (c) => ({
+          id: c.id,
+          name: c.name || c.provider,
+          enabled:
+            !!this.adapters[c.id] &&
+            this.adapters[c.id].pokiteEnabled !== false,
+          canEnable:
+            report.instances.some((i) => i.id === c.id) ||
+            saved.instances.some((i) => i.id === c.id),
+          ...(await this.connections.get(
+            { ...c, ...saved.instances.find((i) => i.id === c.id) },
+            report,
+          )),
+        })),
+      ),
     };
   }
-  async toggle(id, enabled) {
+  async toggle(id, enabled, { configure = true } = {}) {
     if (typeof id !== "string" || typeof enabled !== "boolean")
       throw Object.assign(Error("Invalid agent setting"), { status: 400 });
     if (this.busy)
@@ -87,12 +103,13 @@ export class AgentAccess {
       await this.write(JSON.stringify(next, null, 2));
       let created;
       try {
-        const notice = enabled
-          ? await this.prepare(
-              instance,
-              report.candidates.find((c) => c.id === id),
-            )
-          : "";
+        const notice =
+          enabled && configure
+            ? await this.prepare(
+                instance,
+                report.candidates.find((c) => c.id === id),
+              )
+            : "";
         const previousAdapter = this.adapters[id];
         if (
           enabled &&
@@ -111,6 +128,7 @@ export class AgentAccess {
         }
         if (this.adapters[id]) this.adapters[id].pokiteEnabled = enabled;
         this.agentNames[id] = instance.name;
+        this.connections.cache.delete(id);
         return { ok: true, notice: notice || "" };
       } catch (error) {
         await created?.close?.();

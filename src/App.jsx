@@ -249,9 +249,13 @@ export default function App() {
         /* Existing sync indicators handle connection loss. */
       }
     };
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 15000);
     window.addEventListener("pokite:agents-changed", refresh);
     window.addEventListener("focus", refresh);
     return () => {
+      clearInterval(timer);
       window.removeEventListener("pokite:agents-changed", refresh);
       window.removeEventListener("focus", refresh);
     };

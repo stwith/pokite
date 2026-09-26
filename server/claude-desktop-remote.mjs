@@ -40,9 +40,11 @@ export class ClaudeDesktopRemote {
       weigh: () => 10240,
     });
     this.metadataPending = new Map();
-    this.catalog = new ClaudeCloudCatalog(this.root, this.client, {
-      now: this.now,
-    });
+    this.catalog =
+      this.client.catalog ||
+      new ClaudeCloudCatalog(this.root, this.client, {
+        now: this.now,
+      });
     this.modelSettings = new ClaudeModels(this.client, {
       now: this.now,
       surface: this.surface,
@@ -268,6 +270,10 @@ export class ClaudeDesktopRemote {
     return {
       ...visible,
       ...(await this.page(row)),
+      approvalNotice:
+        row.codeLocalId && row.status === "waiting"
+          ? "请在 Claude Desktop 中处理审批"
+          : null,
       executionIssue:
         row.status === "failed"
           ? {
@@ -469,7 +475,7 @@ export class ClaudeDesktopRemote {
     await this.client.close();
     this.pages.clear();
     this.metadata.clear();
-    this.catalog.clear();
+    if (!this.client.catalog) this.catalog.clear();
     this.modelSettings.clear();
     this.created.clear();
   }

@@ -161,8 +161,8 @@ preserved. See the [access design and maintenance rules](docs/plans/2026-09-26-s
 To invalidate all old links, open **Settings → Reset access code** on the
 computer through `http://127.0.0.1:3230`. Confirming resets access immediately;
 other pages need the new code and must enable notifications again. Agent
-accounts, sessions and accepted tasks are preserved. Integration configuration
-and access reset are restricted to authenticated direct localhost requests.
+accounts, sessions and accepted tasks are preserved. Component installation, Desktop launch configuration
+and access reset are restricted to authenticated direct localhost requests. Agent visibility switches are also available on authenticated mobile pages.
 
 For command-line recovery: `npm run stop`, `npm run rotate-token`, restart Pokite
 (`npm start` or `node scripts/start.mjs`), then `npm run open`. The CLI reset
@@ -253,3 +253,9 @@ Issues and focused pull requests are welcome. Include OS, Node and agent version
 ## License
 
 [MIT](LICENSE). Third-party dependencies retain their respective licenses.
+
+### Agent visibility and access protection
+
+Agent settings are available on phones and computers. Switches control sidebar visibility; disconnected enabled agents remain visible with a status label. Installing sharing components, changing Desktop launch configuration and resetting the access code still require authenticated direct localhost access.
+
+Access protection relies on the uniformly random 100-bit secret and keeping it private. HTTP 429 is feedback for invalid attempts, not a brute-force prevention guarantee. Valid credentials remain usable after invalid attempts so stale tabs cannot lock out recovery.

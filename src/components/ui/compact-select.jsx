@@ -47,6 +47,9 @@ export function CompactSelect({
                 className="compact-select-item"
               >
                 <SelectPrimitive.ItemText>{o.label}</SelectPrimitive.ItemText>
+                {o.status && (
+                  <span className="compact-select-status">{o.status}</span>
+                )}
                 <SelectPrimitive.ItemIndicator>
                   <Check size={14} />
                 </SelectPrimitive.ItemIndicator>

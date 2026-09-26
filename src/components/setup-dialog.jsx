@@ -18,7 +18,6 @@ export function SetupDialog({ menuItem = false }) {
   const [report, setReport] = useState(null),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
-  const local = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
   async function scan() {
     setBusy(true);
     setMessage("");
@@ -31,7 +30,7 @@ export function SetupDialog({ menuItem = false }) {
     }
   }
   useEffect(() => {
-    if (open && local) void scan();
+    if (open) void scan();
   }, [open]);
   async function toggle(instanceId, enabled) {
     setBusy(true);
@@ -47,7 +46,6 @@ export function SetupDialog({ menuItem = false }) {
       setBusy(false);
     }
   }
-  if (!local) return null;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -85,27 +83,55 @@ export function SetupDialog({ menuItem = false }) {
         )}
         {report && (
           <>
-            <ul className="setup-results">
-              {report.candidates.map((c, i) => (
-                <li key={c.id || i}>
-                  <div className="setup-agent">
-                    <span>{c.name}</span>
-                    {c.notice && (
-                      <span className="setup-status">{t(c.notice)}</span>
-                    )}
-                  </div>
-                  <Switch.Root
-                    className="notification-switch"
-                    checked={c.enabled}
-                    disabled={busy || (!c.enabled && !c.canEnable)}
-                    onCheckedChange={(enabled) => toggle(c.id, enabled)}
-                    aria-label={c.name}
-                  >
-                    <Switch.Thumb className="notification-switch-thumb" />
-                  </Switch.Root>
-                </li>
-              ))}
-            </ul>
+            <div className="setup-groups">
+              {[true, false].map((connected) => {
+                const rows = report.candidates.filter(
+                  (c) => c.connected === connected,
+                );
+                return (
+                  rows.length > 0 && (
+                    <section key={String(connected)}>
+                      <h3 className="setup-group-title">
+                        {t(connected ? "已连接" : "未连接")}
+                      </h3>
+                      <ul className="setup-results">
+                        {rows.map((c) => (
+                          <li key={c.id}>
+                            <div className="setup-agent">
+                              <span>{c.name}</span>
+                              {c.notice && (
+                                <span className="setup-status">
+                                  {t(c.notice)}
+                                </span>
+                              )}
+                              {c.diagnostics?.length > 0 && (
+                                <details className="setup-status">
+                                  <summary>{t("连接诊断")}</summary>
+                                  {c.diagnostics.map((note) => (
+                                    <p key={note}>{t(note)}</p>
+                                  ))}
+                                </details>
+                              )}
+                            </div>
+                            <Switch.Root
+                              className="notification-switch"
+                              checked={c.enabled}
+                              disabled={busy || (!c.enabled && !c.canEnable)}
+                              onCheckedChange={(enabled) =>
+                                toggle(c.id, enabled)
+                              }
+                              aria-label={c.name}
+                            >
+                              <Switch.Thumb className="notification-switch-thumb" />
+                            </Switch.Root>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )
+                );
+              })}
+            </div>
             {!report.candidates.length && (
               <p className="notification-hint">{t("未检测到支持的 Agent")}</p>
             )}

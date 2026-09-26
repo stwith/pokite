@@ -139,6 +139,11 @@ export function ConversationView({
               </div>
             </section>
           ))}
+          {detail?.approvalNotice && (
+            <p className="notification-hint" role="status">
+              {t(detail.approvalNotice)}
+            </p>
+          )}
           {detail?.executionIssue && (
             <div
               className="execution-issue"

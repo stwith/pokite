@@ -17,7 +17,7 @@ async function verifyBroker(binary) {
     timeout: 5000,
     maxBuffer: 1024,
   });
-  if (stdout.trim() !== "pokite-cowork-broker 4")
+  if (stdout.trim() !== "pokite-cowork-broker 5")
     throw fail("请在电脑上运行 npm run setup:cowork 完成 Cowork 接入");
 }
 const fail = (message, delivery = "not-sent", status = 503) =>
@@ -28,8 +28,9 @@ export class CoworkBroker {
     launch = spawn,
     verify = verifyBroker,
     timeout = 120000,
+    queueTimeout = 120000,
   } = {}) {
-    Object.assign(this, { binary, launch, timeout, verify });
+    Object.assign(this, { binary, launch, timeout, queueTimeout, verify });
     this.pending = new Map();
   }
   async start() {
@@ -68,7 +69,14 @@ export class CoworkBroker {
       }
       if (response.event === "started") {
         const entry = this.pending.get(response.id);
-        if (entry?.child === child) entry.started = true;
+        if (entry?.child === child) {
+          entry.started = true;
+          clearTimeout(entry.timer);
+          entry.timer = setTimeout(
+            () => this.stopTimedOutChild(child),
+            this.timeout,
+          );
+        }
         return;
       }
       if (response.event === "authorization") {
@@ -97,7 +105,9 @@ export class CoworkBroker {
         }
         return;
       }
+      if (this.activeId === response.id) this.activeId = null;
       const pending = this.pending.get(response.id);
+      queueMicrotask(() => this.dispatch());
       if (!pending) return;
       this.pending.delete(response.id);
       clearTimeout(pending.timer);
@@ -116,6 +126,8 @@ export class CoworkBroker {
       lines.close();
       if (this.child === child) {
         this.child = null;
+        this.activeId = null;
+        this.stopping = false;
         this.authorizationWaiting = false;
         clearTimeout(this.authorizationTimer);
       }
@@ -156,6 +168,7 @@ export class CoworkBroker {
         body,
         scope,
         retryAuthorization,
+        deadline: Date.now() + this.queueTimeout,
       });
     if (Buffer.byteLength(data) > 512 * 1024)
       throw fail("Cowork 请求过长", "not-sent", 400);
@@ -166,35 +179,45 @@ export class CoworkBroker {
         resolve,
         reject,
         started: false,
+        dispatched: false,
         retryAuthorization,
         child,
+        data,
       };
+      // Only locally queued requests can expire as definitely not-sent.
       entry.timer = setTimeout(() => {
+        if (entry.dispatched) return;
         this.pending.delete(id);
-        reject(
-          fail(
-            "Cowork 请求超时；请检查 Mac 上的授权提示或原会话",
-            entry.started && method !== "GET" ? "unknown" : "not-sent",
-          ),
-        );
-        // Detach the doomed process immediately: no new request may be queued
-        // onto it between timeout and the close event.
-        if (this.child === child) this.child = null;
-        child.kill();
-      }, this.timeout);
+        reject(fail("Cowork 请求排队超时，尚未发送"));
+      }, this.queueTimeout);
       this.pending.set(id, entry);
-      child.stdin.write(data + "\n", (error) => {
-        if (error && this.pending.delete(id)) {
-          clearTimeout(entry.timer);
-          reject(
-            fail(
-              "Cowork 请求未能完整发送",
-              entry.started && method !== "GET" ? "unknown" : "not-sent",
-            ),
-          );
-        }
-      });
+      this.dispatch();
     });
+  }
+  dispatch() {
+    if (this.activeId || !this.child || this.closed || this.stopping) return;
+    const next = [...this.pending].find(([, entry]) => !entry.dispatched);
+    if (!next) return;
+    const [id, entry] = next;
+    entry.dispatched = true;
+    entry.child = this.child;
+    this.activeId = id;
+    clearTimeout(entry.timer);
+    // A stuck/missing started receipt must not leave the transport hung forever.
+    // Classification happens only after close drains stdout, never in this timer.
+    entry.timer = setTimeout(
+      () => this.stopTimedOutChild(entry.child),
+      this.timeout,
+    );
+    entry.child.stdin.write(entry.data + "\n", (error) => {
+      if (error) this.stopTimedOutChild(entry.child);
+    });
+  }
+  stopTimedOutChild(child) {
+    // There is at most one dispatched request. Locally queued requests cannot
+    // kill it, and no follow-up can be sent while close drains its final receipt.
+    if (this.child === child) this.stopping = true;
+    child.kill();
   }
   async close() {
     this.closed = true;

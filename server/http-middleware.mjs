@@ -69,13 +69,10 @@ export function installHttpProtection(
       local = isLocalAdminRequest(req);
     if (!valid()) {
       if (!local && throttle.blocked(peer))
-        return res
-          .status(429)
-          .set("Retry-After", "60")
-          .json({
-            error: "尝试次数过多，请一分钟后重试",
-            code: "ACCESS_RATE_LIMITED",
-          });
+        return res.status(429).set("Retry-After", "60").json({
+          error: "尝试次数过多，请一分钟后重试",
+          code: "ACCESS_RATE_LIMITED",
+        });
       if (!local) throttle.failed(peer);
       return res
         .status(401)
@@ -84,7 +81,12 @@ export function installHttpProtection(
     if (!local) throttle.succeeded(peer);
     req.auth = { id: "shared" };
     if (
-      (req.path.startsWith("/setup/") || req.path === "/auth/reset") &&
+      ((req.path.startsWith("/setup/") &&
+        !(
+          (req.method === "GET" && req.path === "/setup/discovery") ||
+          (req.method === "POST" && req.path === "/setup/toggle")
+        )) ||
+        req.path === "/auth/reset") &&
       !isLocalAdminRequest(req)
     )
       return requireLocalAdmin(req, res, next);

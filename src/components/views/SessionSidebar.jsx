@@ -72,6 +72,7 @@ export function SessionSidebar({
           options={agents.map((a) => ({
             id: a.id,
             label: a.name,
+            status: a.connected === false ? t("未连接") : undefined,
           }))}
           value={agent}
           disabled={busy || !agents.length}

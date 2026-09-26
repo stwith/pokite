@@ -1,7 +1,43 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
-  "请在 Claude Desktop 的 Code 中开启会话的 Remote Control。": "Enable Remote Control for a session in Claude Desktop Code.",
-  "访问码已失效，请重新连接": "Your access code is no longer valid. Reconnect to continue.",
+  "请打开 Hermes Desktop 并确认共享插件已安装":
+    "Open Hermes Desktop and check that its sharing plugin is installed",
+  连接诊断: "Connection diagnostics",
+  "请在 Claude Desktop 中处理审批":
+    "Approve the pending request in Claude Desktop",
+  开启后检测连接: "Enable to check the connection",
+  "连接检测超时，请稍后刷新": "Connection check timed out. Refresh shortly.",
+  "连接不可用，请检查电脑上的 Agent":
+    "Unavailable. Check the agent on your computer.",
+  "请先打开 Claude Desktop": "Open Claude Desktop on your computer",
+  "请在电脑上启用 Codex 共享": "Enable Codex sharing on your computer",
+  尚未配置连接: "Connection is not configured",
+  "CLI 按需执行，无需保持终端运行":
+    "CLI runs on demand; no open terminal required",
+  "未找到 Claude Code CLI": "Claude Code CLI was not found",
+  "请先在电脑上登录 Claude Code CLI":
+    "Sign in to Claude Code CLI on your computer",
+  "Cowork 请求排队超时，尚未发送":
+    "The queued request expired before it was sent",
+  "检测到自定义 API 地址；请确认 Desktop Code 实际使用官方服务":
+    "A custom API endpoint is configured. Check that Desktop Code uses the official service.",
+  "检测到 API 凭据配置；Remote Control 需要 Desktop 使用 Claude 订阅登录":
+    "API credentials are configured. Remote Control requires a Claude subscription login in Desktop.",
+  "Claude 配置无法读取，请检查 settings.json":
+    "Cannot read Claude configuration. Check settings.json.",
+  "Claude API 地址格式无效": "Invalid Claude API endpoint",
+  "第三方云服务配置不支持 Remote Control，请核对 Desktop Code 配置":
+    "Third-party cloud settings do not support Remote Control. Check Desktop Code configuration.",
+  "若仍未连接，请在 Desktop 检查订阅、组织 Remote Control 权限和数据保留策略；本地配置无法确认这些账号条件":
+    "If still disconnected, check your subscription, organization Remote Control policy and data retention settings in Desktop. Local configuration cannot confirm account eligibility.",
+  "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC 已开启，Remote Control 可能无法建立，请在电脑上检查配置":
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC is enabled. Check your computer configuration; it can block Remote Control.",
+  "DISABLE_GROWTHBOOK 已开启，Remote Control 可能无法建立，请在电脑上检查配置":
+    "DISABLE_GROWTHBOOK is enabled. Check your computer configuration; it can block Remote Control.",
+  "请在 Claude Desktop 的 Code 中开启会话的 Remote Control。":
+    "Enable Remote Control for a session in Claude Desktop Code.",
+  "访问码已失效，请重新连接":
+    "Your access code is no longer valid. Reconnect to continue.",
   未发送: "Not sent",
   "Claude 模型列表不可用": "Claude model catalog is unavailable",
   请选择可用的云端项目: "Choose an available cloud project",
@@ -230,6 +266,7 @@ export const en = {
   "已找到此项目的远程会话关联；远程正文和发送尚未接入。":
     "Remote session references found. Remote conversation access is unavailable.",
   已连接: "Connected",
+  未连接: "Not connected",
   已连接设备: "Connected devices",
   "开启 Tailscale 后扫码连接，无需使用 Tailscale DNS。":
     "Enable Tailscale, then scan to connect. Tailscale DNS is not required.",

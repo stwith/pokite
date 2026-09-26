@@ -434,7 +434,7 @@ func selfTest() throws {
 }
 var coreLimit = rlimit(rlim_cur: 0, rlim_max: 0)
 setrlimit(RLIMIT_CORE, &coreLimit)
-if CommandLine.arguments == [CommandLine.arguments[0], "--version"] { print("pokite-cowork-broker 4");exit(0) }
+if CommandLine.arguments == [CommandLine.arguments[0], "--version"] { print("pokite-cowork-broker 5");exit(0) }
 if CommandLine.arguments == [CommandLine.arguments[0], "--self-test"] { do { try selfTest();exit(0) } catch { fputs("Broker self-test failed\n",stderr);exit(1) } }
 guard CommandLine.arguments.count == 1, isatty(STDIN_FILENO) == 0, isatty(STDOUT_FILENO) == 0 else { exit(64) }
 // Only bounded JSON requests/responses. There is deliberately no key/token export operation.
@@ -444,6 +444,10 @@ while let line = readLine() {
         guard line.utf8.count <= 512 * 1024, let data=line.data(using:.utf8), let input=try JSONSerialization.jsonObject(with:data) as? [String:Any] else { throw reject("Invalid broker input") }
         output["id"]=input["id"] as? String ?? "invalid"
         _ = try validate(input)
+        guard let deadline=input["deadline"] as? Double, deadline.isFinite,
+              deadline > Date().timeIntervalSince1970 * 1000 else {
+            throw Failure(message:"Cowork request expired before starting",status:408,delivery:"not-sent")
+        }
         let started:[String:Any] = ["event":"started","id":output["id"]!]
         let startedData = try JSONSerialization.data(withJSONObject:started)
         print(String(data:startedData,encoding:.utf8)!);fflush(stdout)

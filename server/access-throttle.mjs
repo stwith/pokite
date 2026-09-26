@@ -1,4 +1,6 @@
 import net from "node:net";
+// Invalid-attempt feedback, not an authentication barrier: valid credentials
+// remain usable. Brute-force resistance comes from the 100-bit access code.
 // Forwarded identity is trusted only after middleware verifies the loopback
 // peer and the configured Tailscale Serve host. LAN clients cannot forge it.
 export function accessPeer(req) {

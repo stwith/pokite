@@ -1,5 +1,6 @@
 import path from "node:path";
 import os from "node:os";
+import { ClaudeCloudCatalog } from "./claude-cloud-catalog.mjs";
 import { CoworkBroker } from "./cowork-broker.mjs";
 const safe = (value) =>
   typeof value === "string" && /^[A-Za-z0-9_-]+$/.test(value);
@@ -56,12 +57,14 @@ export function acquireDesktopClient(root) {
   const key = path.resolve(root);
   let entry = clients.get(key);
   if (!entry) {
-    entry = { client: new ClaudeDesktopClient(root), refs: 0 };
+    const client = new ClaudeDesktopClient(root);
+    entry = { client, catalog: new ClaudeCloudCatalog(root, client), refs: 0 };
     clients.set(key, entry);
   }
   entry.refs++;
   let closed = false;
   return {
+    catalog: entry.catalog,
     identity: (...args) => entry.client.identity(...args),
     request: (...args) => entry.client.request(...args),
     connect: (...args) => entry.client.connect(...args),
@@ -70,6 +73,7 @@ export function acquireDesktopClient(root) {
       closed = true;
       if (--entry.refs === 0) {
         clients.delete(key);
+        entry.catalog.clear();
         await entry.client.close();
       }
     },

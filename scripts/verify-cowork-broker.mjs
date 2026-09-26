@@ -43,6 +43,23 @@ try {
   const parsed = JSON.parse(result);
   if (parsed.error?.status !== 400)
     throw Error("Broker accepted an arbitrary request");
+  for (const deadline of [Date.now() - 1000, undefined]) {
+    const expired = JSON.parse(
+      execFileSync(binary, [], {
+        input:
+          JSON.stringify({
+            id: "expired",
+            method: "GET",
+            route: "/api/oauth/profile",
+            deadline,
+          }) + "\n",
+        encoding: "utf8",
+        timeout: 5000,
+      }),
+    );
+    if (expired.error?.status !== 408 || expired.error?.delivery !== "not-sent")
+      throw Error("Expired request was not rejected before native work");
+  }
   console.log(
     "Native broker route and encryption checks passed without keychain access.",
   );

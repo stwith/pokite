@@ -185,35 +185,120 @@ test("switching models reapplies the chosen effort even if the previous model us
 });
 
 test("Desktop Code selects only its own model surface, never Cowork models", () => {
-  const value = { ...bootstrap, model_selector_config: [
-    ...bootstrap.model_selector_config,
-    { id: "ccd", models: [{ id: "code-model", name: "Code model", thinking: { effort_options: [{ id: "medium", recommended: true }] } }] },
-  ] };
+  const value = {
+    ...bootstrap,
+    model_selector_config: [
+      ...bootstrap.model_selector_config,
+      {
+        id: "ccd",
+        models: [
+          {
+            id: "code-model",
+            name: "Code model",
+            thinking: { effort_options: [{ id: "medium", recommended: true }] },
+          },
+        ],
+      },
+    ],
+  };
   const code = parseClaudeModels(value, {}, "code");
-  assert.deepEqual(code.options.map(m => m.id), ["code-model"]);
+  assert.deepEqual(
+    code.options.map((m) => m.id),
+    ["code-model"],
+  );
   assert.equal(code.currentEffort, "medium");
-  assert.deepEqual(parseClaudeModels(value).options.map(m => m.id), ["model-a"]);
-  assert.throws(() => parseClaudeModels(bootstrap, {}, "code"), /模型列表不可用/);
+  assert.deepEqual(
+    parseClaudeModels(value).options.map((m) => m.id),
+    ["model-a"],
+  );
+  assert.throws(
+    () => parseClaudeModels(bootstrap, {}, "code"),
+    /模型列表不可用/,
+  );
 });
 
 test("Desktop adapters isolate project lists, direct session access and creation capability", async () => {
-  const cloud = { id: "cloud", projectId: "cloud:project", remoteId: "cse_cloud", native: { id: "cse_cloud", status: "active" } };
-  const code = { id: "code", projectId: "desktop-code:project", remoteId: "cse_code", codeLocalId: "local_one", native: { id: "cse_code", status: "active", environment_kind: "bridge", connection_status: "connected" } };
-  const snapshot = { time: Date.now(), rows: [cloud, code], projects: [
-    { id: cloud.projectId, name: "Cloud", aliases: [], canCreate: true },
-    { id: code.projectId, name: "Code · Repo", aliases: [], canCreate: false },
-  ] };
-  const client = { close: async () => {}, request: async () => { throw Error("unexpected request"); } };
+  const cloud = {
+    id: "cloud",
+    projectId: "cloud:project",
+    remoteId: "cse_cloud",
+    native: { id: "cse_cloud", status: "active" },
+  };
+  const code = {
+    id: "code",
+    projectId: "desktop-code:project",
+    remoteId: "cse_code",
+    codeLocalId: "local_one",
+    native: {
+      id: "cse_code",
+      status: "active",
+      environment_kind: "bridge",
+      connection_status: "connected",
+    },
+  };
+  const snapshot = {
+    time: Date.now(),
+    rows: [cloud, code],
+    projects: [
+      { id: cloud.projectId, name: "Cloud", aliases: [], canCreate: true },
+      {
+        id: code.projectId,
+        name: "Code · Repo",
+        aliases: [],
+        canCreate: false,
+      },
+    ],
+  };
+  const client = {
+    close: async () => {},
+    request: async () => {
+      throw Error("unexpected request");
+    },
+  };
   const cowork = new ClaudeDesktopRemote("/tmp/fixture", { client });
-  const desktopCode = new ClaudeDesktopRemote("/tmp/fixture", { client, surface: "code" });
+  const desktopCode = new ClaudeDesktopRemote("/tmp/fixture", {
+    client,
+    surface: "code",
+  });
   cowork.catalog.get = desktopCode.catalog.get = async () => snapshot;
-  assert.deepEqual((await cowork.projects()).map(p => p.id), [cloud.projectId]);
-  assert.deepEqual((await desktopCode.projects()).map(p => p.name), ["Repo"]);
-  assert.deepEqual((await cowork.raw()).map(s => s.id), ["cloud"]);
-  assert.deepEqual((await desktopCode.raw()).map(s => s.id), ["code"]);
+  assert.deepEqual(
+    (await cowork.projects()).map((p) => p.id),
+    [cloud.projectId],
+  );
+  assert.deepEqual(
+    (await desktopCode.projects()).map((p) => p.name),
+    ["Repo"],
+  );
+  assert.deepEqual(
+    (await cowork.raw()).map((s) => s.id),
+    ["cloud"],
+  );
+  assert.deepEqual(
+    (await desktopCode.raw()).map((s) => s.id),
+    ["code"],
+  );
   assert.deepEqual(await cowork.raw({ id: "code" }), []);
   assert.deepEqual(await desktopCode.raw({ id: "cloud" }), []);
   assert.equal(desktopCode.createAndSend, undefined);
   assert.equal(typeof cowork.createAndSend, "function");
-  await cowork.close(); await desktopCode.close();
+  await cowork.close();
+  await desktopCode.close();
+});
+
+test("waiting Desktop Code sessions tell mobile users where to approve", async () => {
+  const adapter = new ClaudeDesktopRemote("/tmp/fixture", {
+    surface: "code",
+    client: { close: async () => {} },
+  });
+  adapter.raw = async () => [
+    { id: "code", codeLocalId: "local_code", status: "waiting" },
+  ];
+  adapter.page = async () => ({ messages: [] });
+  try {
+    const detail = await adapter.detail("code");
+    assert.equal(detail.approvalNotice, "请在 Claude Desktop 中处理审批");
+    assert.equal(detail.executionIssue, null);
+  } finally {
+    await adapter.close();
+  }
 });

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { discoverMachineAsync } from "./discovery-async.mjs";
-import { requireLocalAdmin } from "./local-admin.mjs";
+import { isLocalAdminRequest } from "./local-admin.mjs";
 import { instanceConfigFile } from "./state-paths.mjs";
 import { makeAdapters } from "./adapters.mjs";
 import { AgentAccess } from "./agent-access.mjs";
@@ -61,13 +61,16 @@ export function installSetupRoutes(app, post, { adapters, agentNames }) {
         : "请等任务结束后，重新打开对应的 Desktop。";
     },
   });
-  app.use("/api/setup", requireLocalAdmin);
   app.get("/api/setup/discovery", async (req, res) =>
     res.json(await access.report()),
   );
   post("/api/setup/toggle", async (req, res) => {
     try {
-      res.json(await access.toggle(req.body.instanceId, req.body.enabled));
+      res.json(
+        await access.toggle(req.body.instanceId, req.body.enabled, {
+          configure: isLocalAdminRequest(req),
+        }),
+      );
     } catch (error) {
       console.error("Agent setup failed:", error.stack || error.message);
       if (error.status) throw error;
@@ -76,4 +79,5 @@ export function installSetupRoutes(app, post, { adapters, agentNames }) {
       });
     }
   });
+  return access;
 }

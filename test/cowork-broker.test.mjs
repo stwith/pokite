@@ -170,7 +170,8 @@ test("queued POST behind a blocked read is not-sent when the broker exits before
         body: {},
       })
       .catch((e) => e);
-    while (seen < 2) await new Promise((r) => setTimeout(r, 1));
+    while (broker.pending.size < 2) await new Promise((r) => setTimeout(r, 1));
+    assert.equal(seen, 1);
     child.kill();
     assert.equal((await first).delivery, "not-sent");
     assert.equal((await second).delivery, "not-sent");
@@ -217,6 +218,96 @@ test("stdout started receipt arriving after process exit is drained before class
           c.emit("close", 1);
         });
       }),
+  });
+  try {
+    await assert.rejects(
+      broker.request("/v1/code/sessions/cse_test/events", {
+        method: "POST",
+        body: {},
+      }),
+      { delivery: "unknown" },
+    );
+  } finally {
+    await broker.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("local queue expiry never kills an active POST or writes the expired message", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-isolation-"));
+  const binary = path.join(dir, "fixture");
+  await fs.writeFile(binary, "");
+  let child,
+    active,
+    kills = 0,
+    sent = 0;
+  const broker = new CoworkBroker({
+    binary,
+    verify: async () => {},
+    timeout: 1000,
+    queueTimeout: 30,
+    launch: () => {
+      child = fakeProcess((r, c) => {
+        sent++;
+        active = r;
+        assert.ok(r.deadline > Date.now());
+        c.stdout.write(JSON.stringify({ event: "started", id: r.id }) + "\n");
+      });
+      const kill = child.kill;
+      child.kill = () => {
+        kills++;
+        kill();
+      };
+      return child;
+    },
+  });
+  try {
+    const first = broker.request("/v1/code/sessions/cse_test/events", {
+      method: "POST",
+      body: {},
+    });
+    while (!active) await new Promise((r) => setTimeout(r, 1));
+    await assert.rejects(
+      broker.request("/v1/code/sessions/cse_test/events", {
+        method: "POST",
+        body: {},
+      }),
+      { delivery: "not-sent" },
+    );
+    assert.equal(sent, 1);
+    assert.equal(kills, 0);
+    child.stdout.write(
+      JSON.stringify({ id: active.id, result: { ok: true } }) + "\n",
+    );
+    assert.deepEqual(await first, { ok: true });
+  } finally {
+    await broker.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("late started receipt during timeout shutdown is unknown, not safe to resend", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-late-start-"));
+  const binary = path.join(dir, "fixture");
+  await fs.writeFile(binary, "");
+  let request;
+  const broker = new CoworkBroker({
+    binary,
+    verify: async () => {},
+    timeout: 20,
+    launch: () => {
+      const child = fakeProcess((r) => {
+        request = r;
+      });
+      child.kill = () =>
+        queueMicrotask(() => {
+          child.stdout.write(
+            JSON.stringify({ event: "started", id: request.id }) + "\n",
+          );
+          child.emit("close", 0);
+        });
+      return child;
+    },
   });
   try {
     await assert.rejects(

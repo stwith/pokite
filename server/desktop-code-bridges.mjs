@@ -12,14 +12,21 @@ export async function desktopCodeBridges(root, account, organization) {
   for (const item of await fs
     .readdir(directory, { withFileTypes: true })
     .catch((e) => {
-      if (e.code === "ENOENT") return [];
-      throw e;
+      // This optional index must never take the cloud Cowork catalog down.
+      return [];
     })) {
     if (!item.isFile() || !/^local_[A-Za-z0-9-]+\.json$/.test(item.name))
       continue;
-    const row = JSON.parse(
-      await fs.readFile(path.join(directory, item.name), "utf8"),
-    );
+    let row;
+    try {
+      row = JSON.parse(
+        await fs.readFile(path.join(directory, item.name), "utf8"),
+      );
+    } catch {
+      // Desktop may be replacing a record; retry it on the next catalog refresh.
+      continue;
+    }
+    if (!row || typeof row !== "object") continue;
     if (row.isArchived || typeof row.sessionId !== "string") continue;
     const ids = [
       ...(Array.isArray(row.bridgeSessionIds) ? row.bridgeSessionIds : []),

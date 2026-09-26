@@ -192,3 +192,44 @@ test("only same-account Desktop-owned bridges appear as Code projects", async ()
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+test("partially written Desktop Code records do not hide cloud sessions or valid bridges", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pokite-code-corrupt-"));
+  try {
+    const dir = path.join(root, "claude-code-sessions/a/o");
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, "local_broken.json"), '{"sessionId":');
+    await fs.writeFile(path.join(dir, "local_null.json"), "null");
+    await fs.writeFile(
+      path.join(dir, "local_valid.json"),
+      JSON.stringify({
+        sessionId: "local_valid",
+        originCwd: "/repo",
+        bridgeSessionIds: ["cse_valid"],
+      }),
+    );
+    const client = {
+      identity: async () => ({ account: "a", organization: "o" }),
+      request: async (route) =>
+        route.includes("projects_v2")
+          ? { data: [], pagination: { has_more: false } }
+          : {
+              data: [
+                cloud("cse_cloud"),
+                {
+                  id: "cse_valid",
+                  environment_kind: "bridge",
+                  status: "active",
+                },
+              ],
+            },
+    };
+    const result = await new ClaudeCloudCatalog(root, client).get();
+    assert.deepEqual(result.rows.map((row) => row.remoteId).sort(), [
+      "cse_cloud",
+      "cse_valid",
+    ]);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

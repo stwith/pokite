@@ -53,7 +53,7 @@ export function createApp({
     next();
   });
   installResponseHandling(app, events);
-  installSetupRoutes(app, post, { adapters, agentNames });
+  const agentAccess = installSetupRoutes(app, post, { adapters, agentNames });
   if (resetAccess)
     post("/api/auth/reset", async (req, res) => {
       // Body parsing can yield after middleware; reject a stale concurrent reset.
@@ -134,18 +134,22 @@ export function createApp({
       throw Object.assign(Error("消息为空或过长"), { status: 400 });
     return t.trim();
   };
-  app.get("/api/agents", (req, res) =>
+  app.get("/api/agents", async (req, res) => {
+    const report = await agentAccess.report();
+    const states = new Map(report.candidates.map((row) => [row.id, row]));
     res.json(
       Object.entries(agentNames)
         .filter(([id]) => adapters[id] && adapters[id].pokiteEnabled !== false)
         .map(([id, name]) => ({
           id,
           name,
+          connected: states.get(id)?.connected === true,
+          connectionNotice: states.get(id)?.notice || "",
           capabilities: capabilities(adapters[id]),
           emptyState: adapters[id].emptyState,
         })),
-    ),
-  );
+    );
+  });
   app.get("/api/connection-links", async (req, res) =>
     res.json({
       ...networkLinks(
