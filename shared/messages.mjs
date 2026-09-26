@@ -1,5 +1,10 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  检测失败: "Detection failed",
+  打开会话以确认连接: "Open a session to confirm the connection",
+  "请在电脑上添加此 Agent 接入": "Add this agent on your computer first",
+  "本机连接中断，尚未发送":
+    "Local connection interrupted; the message was not sent",
   "请打开 Hermes Desktop 并确认共享插件已安装":
     "Open Hermes Desktop and check that its sharing plugin is installed",
   连接诊断: "Connection diagnostics",

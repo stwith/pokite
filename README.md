@@ -256,6 +256,6 @@ Issues and focused pull requests are welcome. Include OS, Node and agent version
 
 ### Agent visibility and access protection
 
-Agent settings are available on phones and computers. Switches control sidebar visibility; disconnected enabled agents remain visible with a status label. Installing sharing components, changing Desktop launch configuration and resetting the access code still require authenticated direct localhost access.
+Agent settings are available on phones and computers. Switches control sidebar visibility for already-configured agents; disconnected enabled agents remain visible with a status label. Installing sharing components, changing Desktop launch configuration and resetting the access code still require authenticated direct localhost access.
 
 Access protection relies on the uniformly random 100-bit secret and keeping it private. HTTP 429 is feedback for invalid attempts, not a brute-force prevention guarantee. Valid credentials remain usable after invalid attempts so stale tabs cannot lock out recovery.

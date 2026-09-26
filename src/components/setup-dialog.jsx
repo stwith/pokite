@@ -85,8 +85,8 @@ export function SetupDialog({ menuItem = false }) {
           <>
             <div className="setup-groups">
               {[true, false].map((connected) => {
-                const rows = report.candidates.filter(
-                  (c) => c.connected === connected,
+                const rows = report.candidates.filter((c) =>
+                  connected ? c.connected === true : c.connected !== true,
                 );
                 return (
                   rows.length > 0 && (
@@ -99,6 +99,11 @@ export function SetupDialog({ menuItem = false }) {
                           <li key={c.id}>
                             <div className="setup-agent">
                               <span>{c.name}</span>
+                              {report.canConfigure === false && !c.saved && (
+                                <span className="setup-status">
+                                  {t("请在电脑上添加此 Agent 接入")}
+                                </span>
+                              )}
                               {c.notice && (
                                 <span className="setup-status">
                                   {t(c.notice)}
@@ -116,7 +121,11 @@ export function SetupDialog({ menuItem = false }) {
                             <Switch.Root
                               className="notification-switch"
                               checked={c.enabled}
-                              disabled={busy || (!c.enabled && !c.canEnable)}
+                              disabled={
+                                busy ||
+                                (!c.enabled && !c.canEnable) ||
+                                (report.canConfigure === false && !c.saved)
+                              }
                               onCheckedChange={(enabled) =>
                                 toggle(c.id, enabled)
                               }

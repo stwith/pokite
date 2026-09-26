@@ -74,6 +74,16 @@ export class SessionEvents {
       if (!group.listeners.size) this.release(agent, group);
     }, 250);
   }
+  broadcast(type) {
+    for (const group of this.groups.values())
+      for (const listener of [...group.listeners]) {
+        try {
+          listener(type);
+        } catch {
+          group.listeners.delete(listener);
+        }
+      }
+  }
   close() {
     for (const [agent, group] of this.groups) {
       this.release(agent, group);

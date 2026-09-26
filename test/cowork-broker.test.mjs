@@ -47,7 +47,7 @@ test("broker client correlates requests and never needs a Desktop master key", a
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
-test("lost broker response after a write is unknown and is never retried", async () => {
+test("lost broker response after a submitted write is unknown and is never retried", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-broker-test-"));
   const binary = path.join(dir, "fixture");
   await fs.writeFile(binary, "");
@@ -59,7 +59,9 @@ test("lost broker response after a write is unknown and is never retried", async
     launch: () =>
       fakeProcess((r, c) => {
         sent++;
-        c.stdout.write(JSON.stringify({ event: "started", id: r.id }) + "\n");
+        c.stdout.write(
+          JSON.stringify({ event: "submitting", id: r.id }) + "\n",
+        );
       }),
   });
   try {
@@ -180,7 +182,7 @@ test("queued POST behind a blocked read is not-sent when the broker exits before
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
-test("unstarted POST times out as not-sent, while a started POST remains unknown", async () => {
+test("unstarted POST times out as not-sent", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-started-"));
   const binary = path.join(dir, "fixture");
   await fs.writeFile(binary, "");
@@ -203,7 +205,7 @@ test("unstarted POST times out as not-sent, while a started POST remains unknown
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
-test("stdout started receipt arriving after process exit is drained before classifying a POST", async () => {
+test("stdout submitting receipt arriving after process exit is drained before classifying a POST", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-drain-"));
   const binary = path.join(dir, "fixture");
   await fs.writeFile(binary, "");
@@ -214,7 +216,9 @@ test("stdout started receipt arriving after process exit is drained before class
       fakeProcess((r, c) => {
         queueMicrotask(() => {
           c.emit("exit", 1);
-          c.stdout.write(JSON.stringify({ event: "started", id: r.id }) + "\n");
+          c.stdout.write(
+            JSON.stringify({ event: "submitting", id: r.id }) + "\n",
+          );
           c.emit("close", 1);
         });
       }),
@@ -286,7 +290,7 @@ test("local queue expiry never kills an active POST or writes the expired messag
   }
 });
 
-test("late started receipt during timeout shutdown is unknown, not safe to resend", async () => {
+test("late submitting receipt during timeout shutdown is unknown, not safe to resend", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-late-start-"));
   const binary = path.join(dir, "fixture");
   await fs.writeFile(binary, "");
@@ -302,7 +306,7 @@ test("late started receipt during timeout shutdown is unknown, not safe to resen
       child.kill = () =>
         queueMicrotask(() => {
           child.stdout.write(
-            JSON.stringify({ event: "started", id: request.id }) + "\n",
+            JSON.stringify({ event: "submitting", id: request.id }) + "\n",
           );
           child.emit("close", 0);
         });
@@ -316,6 +320,37 @@ test("late started receipt during timeout shutdown is unknown, not safe to resen
         body: {},
       }),
       { delivery: "unknown" },
+    );
+  } finally {
+    await broker.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("keychain preflight timeout after started but before submitting remains not-sent", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cowork-preflight-"));
+  const binary = path.join(dir, "fixture");
+  await fs.writeFile(binary, "");
+  const broker = new CoworkBroker({
+    binary,
+    verify: async () => {},
+    timeout: 30,
+    launch: () =>
+      fakeProcess((r, c) => {
+        c.stdout.write(JSON.stringify({ event: "started", id: r.id }) + "\n");
+        c.stdout.write(
+          JSON.stringify({ event: "authorization", waiting: true }) + "\n",
+        );
+      }),
+  });
+  try {
+    await assert.rejects(
+      broker.request("/v1/code/sessions/cse_test/events", {
+        method: "POST",
+        body: {},
+      }),
+      (e) =>
+        e.delivery === "not-sent" && e.message === "本机连接中断，尚未发送",
     );
   } finally {
     await broker.close();

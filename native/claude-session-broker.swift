@@ -195,6 +195,15 @@ sessionConfig.httpShouldSetCookies = false
 sessionConfig.timeoutIntervalForRequest = 20
 sessionConfig.timeoutIntervalForResource = 25
 let network = URLSession(configuration: sessionConfig, delegate: NoRedirect(), delegateQueue: nil)
+var currentRequestID = ""
+func submittingEvent(_ method: String, _ id: String) -> [String:String]? {
+    method == "POST" ? ["event":"submitting", "id":id] : nil
+}
+func emitSubmitting(_ method: String) throws {
+    guard let event=submittingEvent(method,currentRequestID) else {return}
+    let data=try JSONSerialization.data(withJSONObject:event)
+    print(String(data:data,encoding:.utf8)!);fflush(stdout)
+}
 var requestDeadline = Date.distantFuture
 func perform(_ route: String, _ method: String, _ body: [String: Any]?, _ owner: Identity, _ token: String, web: Bool = false) throws -> Any {
     let remaining = requestDeadline.timeIntervalSinceNow
@@ -207,7 +216,9 @@ func perform(_ route: String, _ method: String, _ body: [String: Any]?, _ owner:
     if let body { request.httpBody = try JSONSerialization.data(withJSONObject: body) }
     let done = DispatchSemaphore(value: 0)
     var data: Data?, response: URLResponse?, problem: Error?
-    network.dataTask(with: request) { d,r,e in data=d;response=r;problem=e;done.signal() }.resume()
+    let task = network.dataTask(with: request) { d,r,e in data=d;response=r;problem=e;done.signal() }
+    try emitSubmitting(method)
+    task.resume()
     done.wait()
     let delivery = method == "GET" ? "not-sent" : "unknown"
     guard problem == nil, let http = response as? HTTPURLResponse else { throw Failure(message:"Claude connection interrupted",status:503,delivery:delivery) }
@@ -386,6 +397,8 @@ func handle(_ input: [String: Any]) throws -> Any {
     return sanitize(result)
 }
 func selfTest() throws {
+    guard submittingEvent("GET","preflight") == nil,
+          submittingEvent("POST","write") == ["event":"submitting","id":"write"] else {throw reject("Invalid submission boundary",500)}
     let decoded = try decrypt("djEwND+7ZYxMA8JSlgHMhaByTlX6C9zP7I4Jg3dDfJ5s3LU=", password: Data("fixture-password".utf8))
     guard decoded["fixture"] as? String == "decoded" else { throw reject("Self-test failed credential decoding",500) }
     let valid: [String:Any] = ["id":"fixture","method":"GET","route":"/v1/code/sessions/cse_example/events?limit=100","scope":"account:org"]
@@ -434,7 +447,7 @@ func selfTest() throws {
 }
 var coreLimit = rlimit(rlim_cur: 0, rlim_max: 0)
 setrlimit(RLIMIT_CORE, &coreLimit)
-if CommandLine.arguments == [CommandLine.arguments[0], "--version"] { print("pokite-cowork-broker 5");exit(0) }
+if CommandLine.arguments == [CommandLine.arguments[0], "--version"] { print("pokite-cowork-broker 6");exit(0) }
 if CommandLine.arguments == [CommandLine.arguments[0], "--self-test"] { do { try selfTest();exit(0) } catch { fputs("Broker self-test failed\n",stderr);exit(1) } }
 guard CommandLine.arguments.count == 1, isatty(STDIN_FILENO) == 0, isatty(STDOUT_FILENO) == 0 else { exit(64) }
 // Only bounded JSON requests/responses. There is deliberately no key/token export operation.
@@ -451,6 +464,7 @@ while let line = readLine() {
         let started:[String:Any] = ["event":"started","id":output["id"]!]
         let startedData = try JSONSerialization.data(withJSONObject:started)
         print(String(data:startedData,encoding:.utf8)!);fflush(stdout)
+        currentRequestID = output["id"] as? String ?? ""
         requestDeadline = Date(timeIntervalSinceNow:50)
         output["result"]=try handle(input)
     } catch let error as Failure {

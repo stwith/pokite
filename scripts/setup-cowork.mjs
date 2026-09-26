@@ -26,7 +26,7 @@ const previous = await fs
   .catch(() => null);
 if (
   previous?.sourceHash === sourceHash &&
-  previous.protocol === "claude-cloud-broker-v5"
+  previous.protocol === "claude-cloud-broker-v6"
 ) {
   try {
     run("/usr/bin/codesign", ["--verify", "--strict", binary]);
@@ -82,7 +82,7 @@ try {
   await fs.writeFile(
     manifest,
     JSON.stringify(
-      { sourceHash, binaryHash, identity, protocol: "claude-cloud-broker-v5" },
+      { sourceHash, binaryHash, identity, protocol: "claude-cloud-broker-v6" },
       null,
       2,
     ),

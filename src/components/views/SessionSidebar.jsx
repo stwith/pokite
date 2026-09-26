@@ -72,7 +72,16 @@ export function SessionSidebar({
           options={agents.map((a) => ({
             id: a.id,
             label: a.name,
-            status: a.connected === false ? t("未连接") : undefined,
+            status:
+              a.connected === false
+                ? t("未连接")
+                : a.connected === null
+                  ? t(
+                      a.connectionNotice === "检测失败"
+                        ? "检测失败"
+                        : "检测中…",
+                    )
+                  : undefined,
           }))}
           value={agent}
           disabled={busy || !agents.length}

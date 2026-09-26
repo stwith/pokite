@@ -251,7 +251,7 @@ export default function App() {
     };
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") void refresh();
-    }, 15000);
+    }, 60000);
     window.addEventListener("pokite:agents-changed", refresh);
     window.addEventListener("focus", refresh);
     return () => {

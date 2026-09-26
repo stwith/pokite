@@ -54,7 +54,7 @@ test("one persistent code supports repeated remote login; reset is local-only an
           enabled: false,
         })
       ).status,
-      404,
+      403,
     );
     assert.equal((await request("/auth/reset", token, true, {})).status, 403);
     assert.equal((await request("/auth/pair", token, true, {})).status, 404);

@@ -6,7 +6,16 @@ import { validateInstances } from "./instances.mjs";
 
 // Disable only Pokite access. Keep adapters alive so accepted work can finish.
 export class AgentAccess {
-  constructor({ adapters, agentNames, file, discover, create, prepare }) {
+  constructor({
+    adapters,
+    agentNames,
+    file,
+    discover,
+    create,
+    prepare,
+    onChange = () => {},
+    now = Date.now,
+  }) {
     Object.assign(this, {
       adapters,
       agentNames,
@@ -14,8 +23,11 @@ export class AgentAccess {
       discover,
       create,
       prepare,
+      onChange,
+      now,
     });
     this.connections = new AgentConnections(adapters);
+    this.snapshot = new Map();
   }
   async saved() {
     return fs
@@ -27,12 +39,13 @@ export class AgentAccess {
       });
   }
   async discovery() {
-    if (this.discoveryCache && Date.now() - this.discoveryCache.time < 10000)
+    if (this.discoveryCache && this.now() - this.discoveryCache.time < 45000)
       return this.discoveryCache.value;
     if (!this.discoveryPending)
-      this.discoveryPending = this.discover()
+      this.discoveryPending = Promise.resolve()
+        .then(() => this.discover())
         .then((value) => {
-          this.discoveryCache = { time: Date.now(), value };
+          this.discoveryCache = { time: this.now(), value };
           return value;
         })
         .finally(() => {
@@ -40,8 +53,54 @@ export class AgentAccess {
         });
     return this.discoveryPending;
   }
+  cached(id) {
+    return this.snapshot.get(id) || { connected: null, notice: "检测中…" };
+  }
+  refreshBackground() {
+    if (
+      this.closed ||
+      this.refreshPending ||
+      this.now() < (this.nextRefresh || 0)
+    )
+      return;
+    this.nextRefresh = this.now() + 45000;
+    this.refreshPending = this.report()
+      .then((report) => {
+        if (this.closed) return;
+        const next = new Map(report.candidates.map((row) => [row.id, row]));
+        const changed =
+          JSON.stringify([...next]) !== JSON.stringify([...this.snapshot]);
+        this.snapshot = next;
+        if (changed) this.onChange();
+      })
+      .catch(() => {
+        for (const id of Object.keys(this.adapters))
+          this.snapshot.set(id, { connected: null, notice: "检测失败" });
+        if (!this.closed) this.onChange();
+      })
+      .finally(() => {
+        this.refreshPending = null;
+        if (!this.closed) {
+          this.timer = setTimeout(() => this.refreshBackground(), 45000);
+          this.timer.unref?.();
+        }
+      });
+  }
+  close() {
+    this.closed = true;
+    clearTimeout(this.timer);
+  }
   async report() {
-    const [report, saved] = await Promise.all([this.discovery(), this.saved()]);
+    const [discovery, stored] = await Promise.allSettled([
+      this.discovery(),
+      this.saved(),
+    ]);
+    const saved =
+      stored.status === "fulfilled" ? stored.value : { instances: [] };
+    const failed = discovery.status === "rejected";
+    const report = failed
+      ? { candidates: [], instances: [], apps: [], tools: {} }
+      : discovery.value;
     const candidates = [...report.candidates];
     for (const instance of saved.instances) {
       try {
@@ -60,13 +119,16 @@ export class AgentAccess {
           enabled:
             !!this.adapters[c.id] &&
             this.adapters[c.id].pokiteEnabled !== false,
+          saved: saved.instances.some((i) => i.id === c.id),
           canEnable:
             report.instances.some((i) => i.id === c.id) ||
             saved.instances.some((i) => i.id === c.id),
-          ...(await this.connections.get(
-            { ...c, ...saved.instances.find((i) => i.id === c.id) },
-            report,
-          )),
+          ...(failed
+            ? { connected: null, notice: "检测失败" }
+            : await this.connections.get(
+                { ...c, ...saved.instances.find((i) => i.id === c.id) },
+                report,
+              )),
         })),
       ),
     };
@@ -80,13 +142,20 @@ export class AgentAccess {
       });
     this.busy = true;
     try {
-      const [report, saved] = await Promise.all([
-        this.discover(),
-        this.saved(),
-      ]);
-      const source =
-        saved.instances.find((i) => i.id === id) ||
-        report.instances.find((i) => i.id === id);
+      const saved = await this.saved();
+      const existing = saved.instances.find((i) => i.id === id);
+      if (!configure && !existing)
+        throw Object.assign(Error("请在电脑上添加此 Agent 接入"), {
+          status: 403,
+        });
+      const report =
+        configure && enabled
+          ? await this.discovery().catch(() => ({
+              instances: [],
+              candidates: [],
+            }))
+          : { instances: [], candidates: [] };
+      const source = existing || report.instances.find((i) => i.id === id);
       if (!source) throw Object.assign(Error("Unknown agent"), { status: 404 });
       const instance = validateInstances([{ ...source, enabled: true }])[0];
       const previous = await fs.readFile(this.file, "utf8").catch((e) => {
@@ -129,6 +198,7 @@ export class AgentAccess {
         if (this.adapters[id]) this.adapters[id].pokiteEnabled = enabled;
         this.agentNames[id] = instance.name;
         this.connections.cache.delete(id);
+        this.onChange();
         return { ok: true, notice: notice || "" };
       } catch (error) {
         await created?.close?.();

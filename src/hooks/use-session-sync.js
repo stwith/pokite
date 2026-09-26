@@ -84,9 +84,12 @@ export function useSessionSync(enabled, agent) {
             if (event.type === "heartbeat") backoff.reset();
             if (event.type === "ready") {
               setConnected(agent, true);
+              window.dispatchEvent(new Event("pokite:agents-changed"));
               notify();
             }
             if (event.type === "change") notify();
+            if (event.type === "agents-change")
+              window.dispatchEvent(new Event("pokite:agents-changed"));
           }
         }
       } catch {

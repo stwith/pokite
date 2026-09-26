@@ -29,7 +29,7 @@ export class AgentConnections {
   }
   async get(instance, report) {
     const cached = this.cache.get(instance.id);
-    const ttl = instance.provider === "claude" ? 60000 : 10000;
+    const ttl = 45000;
     if (cached && this.now() - cached.time < ttl) return cached.value;
     let work = this.pending.get(instance.id);
     if (!work) {
@@ -132,12 +132,29 @@ export class AgentConnections {
         )
           return disconnected("请先打开 Claude Desktop");
         if (!adapter) return disconnected("开启后检测连接");
-        if (instance.provider === "claudeDesktop") {
-          await adapter.catalog.get();
-          return { connected: true };
-        }
-        const rows = await adapter.raw();
-        if (rows.some((row) => !row.offline && !row.readOnly))
+        // Status must not enqueue profile/catalog requests behind real messages.
+        // The normal project/session reader owns cloud refresh and authorization.
+        const catalog = adapter.catalog.cached;
+        let account;
+        try {
+          account = JSON.parse(
+            await fs.readFile(path.join(instance.home, "config.json"), "utf8"),
+          ).lastKnownAccountUuid;
+        } catch {}
+        if (
+          !catalog ||
+          !account ||
+          !catalog.scope.startsWith(account + ":") ||
+          this.now() - catalog.time > 120000
+        )
+          return { connected: null, notice: "打开会话以确认连接" };
+        if (instance.provider === "claudeDesktop") return { connected: true };
+        if (
+          catalog.rows.some(
+            (row) =>
+              row.codeLocalId && row.native?.connection_status === "connected",
+          )
+        )
           return { connected: true };
         const notes = await claudeCodeDiagnostics();
         return {

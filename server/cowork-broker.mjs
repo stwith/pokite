@@ -17,7 +17,7 @@ async function verifyBroker(binary) {
     timeout: 5000,
     maxBuffer: 1024,
   });
-  if (stdout.trim() !== "pokite-cowork-broker 5")
+  if (stdout.trim() !== "pokite-cowork-broker 6")
     throw fail("请在电脑上运行 npm run setup:cowork 完成 Cowork 接入");
 }
 const fail = (message, delivery = "not-sent", status = 503) =>
@@ -79,6 +79,16 @@ export class CoworkBroker {
         }
         return;
       }
+      if (response.event === "submitting") {
+        const entry = this.pending.get(response.id);
+        if (
+          entry?.child === child &&
+          entry.dispatched &&
+          entry.method === "POST"
+        )
+          entry.submitting = true;
+        return;
+      }
       if (response.event === "authorization") {
         this.authorizationWaiting = response.waiting === true;
         clearTimeout(this.authorizationTimer);
@@ -136,8 +146,10 @@ export class CoworkBroker {
         clearTimeout(pending.timer);
         pending.reject(
           fail(
-            "Cowork 本机连接中断，请核对原会话",
-            pending.started && pending.method !== "GET"
+            pending.submitting
+              ? "Cowork 本机连接中断，请核对原会话"
+              : "本机连接中断，尚未发送",
+            pending.submitting && pending.method !== "GET"
               ? "unknown"
               : "not-sent",
           ),
@@ -179,6 +191,7 @@ export class CoworkBroker {
         resolve,
         reject,
         started: false,
+        submitting: false,
         dispatched: false,
         retryAuthorization,
         child,

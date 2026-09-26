@@ -30,7 +30,7 @@ test("connection cache shares in-flight probes and never removes disconnected en
   assert.equal(result[0].connected, false);
   online = true;
   assert.equal((await states.get(instance, {})).connected, false);
-  time = 11000;
+  time = 46000;
   assert.equal((await states.get(instance, {})).connected, true);
   assert.equal(calls, 2);
 });
@@ -78,4 +78,57 @@ test("Desktop client leases share catalog loads and keep the remaining lease ali
   a.catalog.client = original;
   await b.close();
   assert.equal(b.catalog.cached, null);
+});
+
+test("Claude status probes never fetch profiles or cloud catalogs", async () => {
+  const home = await fs.mkdtemp(
+    path.join(os.tmpdir(), "pokite-passive-status-"),
+  );
+  try {
+    await fs.writeFile(
+      path.join(home, "config.json"),
+      JSON.stringify({ lastKnownAccountUuid: "a" }),
+    );
+    const adapter = {
+      catalog: {
+        cached: {
+          scope: "a:o",
+          time: Date.now(),
+          rows: [
+            {
+              codeLocalId: "local",
+              native: { connection_status: "connected" },
+            },
+          ],
+        },
+        get: () => assert.fail("status must not fetch"),
+      },
+      raw: () => assert.fail("status must not fetch"),
+    };
+    const connections = new AgentConnections({
+      code: adapter,
+      cowork: adapter,
+    });
+    const report = { apps: [{ provider: "claudeDesktop", running: true }] };
+    assert.equal(
+      (
+        await connections.get(
+          { id: "code", provider: "claudeDesktopCode", home },
+          report,
+        )
+      ).connected,
+      true,
+    );
+    assert.equal(
+      (
+        await connections.get(
+          { id: "cowork", provider: "claudeDesktop", home },
+          report,
+        )
+      ).connected,
+      true,
+    );
+  } finally {
+    await fs.rm(home, { recursive: true, force: true });
+  }
 });

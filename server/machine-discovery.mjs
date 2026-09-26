@@ -385,7 +385,7 @@ export function discoverMachine({
             exists(path.join(base, name)) &&
             JSON.parse(
               fs.readFileSync(path.join(base, "installation.json"), "utf8"),
-            ).protocol === "claude-cloud-broker-v5"
+            ).protocol === "claude-cloud-broker-v6"
           );
         } catch {
           return false;

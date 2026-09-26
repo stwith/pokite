@@ -30,7 +30,9 @@ export function serveEventStream(req, res, events) {
     close();
     return;
   }
-  unsubscribe = events.subscribe(req.params.agent, () => write("change"));
+  unsubscribe = events.subscribe(req.params.agent, (type = "change") =>
+    write(type),
+  );
   heartbeat = setInterval(() => write("heartbeat"), 15000);
   write("ready");
 }

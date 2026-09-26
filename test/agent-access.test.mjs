@@ -138,6 +138,10 @@ test("mobile visibility changes never run privileged installation", async () => 
     prepare: async () => assert.fail("remote toggle must not run setup"),
   });
   try {
+    await fs.writeFile(
+      path.join(dir, "instances.json"),
+      JSON.stringify({ instances: [instance] }),
+    );
     await access.toggle(instance.id, true, { configure: false });
     assert.equal(adapters[instance.id].pokiteEnabled, true);
     await access.toggle(instance.id, false, { configure: false });

@@ -10,8 +10,13 @@ import { makeAdapters } from "./adapters.mjs";
 import { AgentAccess } from "./agent-access.mjs";
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL("../", import.meta.url));
-export function installSetupRoutes(app, post, { adapters, agentNames }) {
+export function installSetupRoutes(
+  app,
+  post,
+  { adapters, agentNames, onChange, accessOptions = {} },
+) {
   const access = new AgentAccess({
+    onChange,
     adapters,
     agentNames,
     file: instanceConfigFile(),
@@ -60,9 +65,13 @@ export function installSetupRoutes(app, post, { adapters, agentNames }) {
         ? "首次连接时，请在 Mac 上允许 Cowork 的钥匙串访问。"
         : "请等任务结束后，重新打开对应的 Desktop。";
     },
+    ...accessOptions,
   });
   app.get("/api/setup/discovery", async (req, res) =>
-    res.json(await access.report()),
+    res.json({
+      ...(await access.report()),
+      canConfigure: isLocalAdminRequest(req),
+    }),
   );
   post("/api/setup/toggle", async (req, res) => {
     try {

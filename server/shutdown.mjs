@@ -5,6 +5,7 @@ export async function shutdownServer({
   adapters,
   flushReads,
 }) {
+  app.locals.agentAccess?.close();
   app.locals.beginShutdown();
   server.close();
   const drained = await Promise.allSettled([

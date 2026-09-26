@@ -20,13 +20,29 @@ Official requirements: https://code.claude.com/docs/en/remote-control . Check fe
 
 ## Delivered and verified
 
-- Connection settings are available through authenticated LAN/Tailscale requests. Only visibility toggles are exposed remotely; `prepare` (installation / Desktop environment changes) is never invoked by remote toggles. Reset remains local-only.
-- UI groups connected and disconnected entries. Enabled disconnected entries stay selectable and are marked on the right. Disabling preserves existing tasks and hides the entry. Visible pages refresh the agent list every 15 seconds. Provider probes share pending work; connection results cache for 10 seconds (CLI login checks for 60 seconds).
-- Native broker protocol v5 rejects missing/expired deadlines before keychain or network work. Node serializes native dispatch, expires queued work locally, starts processing timeout on `started`, and classifies interrupted writes only after stdout has drained. A separate pre-start watchdog prevents a broken broker from hanging forever.
+- Connection settings are available through authenticated LAN/Tailscale requests. Only visibility toggles for already-saved instances are exposed remotely; `prepare` (installation / Desktop environment changes) is never invoked by remote toggles. Reset remains local-only.
+- UI groups connected and disconnected entries. Enabled disconnected entries stay selectable and are marked on the right. Disabling preserves existing tasks and hides the entry. Login reads the in-memory enabled list immediately. One server-owned background cycle performs detection every 45 seconds, broadcasts status changes over existing session streams, and all pages share the result. A 60-second client poll is a lightweight fallback. Cowork/Code status only observes catalog cache; it never requests cloud data.
+- Native broker protocol v6 rejects missing/expired deadlines before keychain or network work. Node serializes native dispatch, expires queued work locally, starts processing timeout on `started`, and classifies interrupted writes only after stdout has drained. Only the `submitting` receipt, emitted immediately before resuming the POST URLSession task, makes an interrupted request unknown; `started` covers preflight work only. A separate pre-start watchdog prevents a broken broker from hanging forever.
 - Invalid or unreadable Code records are skipped individually; directory failure yields no local bridge associations without failing Cowork. The two adapters share one reference-counted client and catalog.
 - Code waiting-for-approval messages identify Desktop as the approval location. No approval-response permissions were added.
 - `npm run doctor` reports local feature-flag, gateway and third-party configuration hints without exposing secrets or modifying configuration. Account-only prerequisites are explicitly not certified by local checks.
-- All 176 Node tests pass. Production build passes without bundle-size warnings.
-- Native self-tests include expired and missing deadlines and pass without keychain access. Regression tests cover late started receipts, queued expiry while another POST succeeds, shared catalog leases, corrupt records and remote visibility toggles.
+- All 181 Node tests pass. Production build passes without bundle-size warnings.
+- Native self-tests include expired and missing deadlines and pass without keychain access. Regression tests cover late submitting receipts, queued expiry while another POST succeeds, shared catalog leases, corrupt records and remote visibility toggles.
 - Chromium and WebKit mobile tests pass for non-local hostname access, both status groups, disconnected picker text and hiding a disabled agent. Live Tailscale HTTP discovery returns 200.
 - The deployed broker update requires macOS Safe Storage authorization; until granted the two Claude Desktop entries show disconnected with a specific authorization notice. Other agent checks remain usable.
+
+## Follow-up regression review
+
+Discovery failure and indefinitely pending discovery were reproduced with an injected discover function. HTTP `/api/agents` stays 200 in both cases, with the enabled adapter present and an unknown/detecting state. The saved-instance report falls back to detection-failed rows. Repeated login requests share a single background attempt.
+
+An interrupted POST during keychain preflight now stays not-sent even after `started`; a submitting receipt arriving during process teardown is drained and remains unknown. The not-sent message does not ask users to verify a conversation and does not promise automatic retry for non-queued operations.
+
+Mobile toggles do not run discovery or create previously unsaved instances. They can re-enable an already-configured adapter; adding a discovered instance requires the local computer.
+
+Live deployment verification: after restarting only Pokite, the first authenticated
+`/api/agents` request returned 200 with seven enabled adapters in 19 ms; subsequent
+requests took 2 ms. Initial states were detecting while discovery ran separately.
+The 181 Node regressions, native broker self-test, production build, mobile settings
+checks and expired-token polling/SSE checks all passed. Both Chromium and WebKit
+were exercised. The newly compiled v6 broker is waiting for macOS Safe Storage
+permission; no claim of post-upgrade live Claude write acceptance is made yet.

@@ -31,7 +31,12 @@ app.get("/api/agents", (_, res) =>
       .map((r) => ({ ...r, capabilities: { read: true, reply: true } })),
   ),
 );
-app.get("/api/setup/discovery", (_, res) => res.json({ candidates: rows }));
+app.get("/api/setup/discovery", (_, res) =>
+  res.json({
+    candidates: rows.map((row) => ({ ...row, saved: true })),
+    canConfigure: false,
+  }),
+);
 app.post("/api/setup/toggle", (req, res) => {
   rows.find((r) => r.id === req.body.instanceId).enabled = req.body.enabled;
   res.json({ ok: true });
