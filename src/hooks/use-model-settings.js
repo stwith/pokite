@@ -4,7 +4,7 @@ import { browserStorage as storage } from "../lib/browser-storage.js";
 import { readDraft } from "../lib/drafts.js";
 import { watchResource } from "./use-session-sync";
 
-export function useModelSettings({ agent, project, sid }) {
+export function useModelSettings({ agent, project, sid, modelRevision }) {
   const [effort, setEffort] = useState("");
   const [modelCatalog, setModelCatalog] = useState(null),
     [modelChoice, setModelChoice] = useState(""),
@@ -68,7 +68,7 @@ export function useModelSettings({ agent, project, sid }) {
       alive = false;
       stopRefresh();
     };
-  }, [agent, project?.id, sid, modelRefresh]);
+  }, [agent, project?.id, sid, modelRefresh, modelRevision]);
   return {
     modelCatalog,
     modelChoice,

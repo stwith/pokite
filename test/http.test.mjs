@@ -182,22 +182,90 @@ test("HTTP readers share overlapping detail calls but read acknowledgements reva
 test("response body and ETag share one JSON serialization", async () => {
   const previous = adapter.projects;
   let serializations = 0;
-  adapter.projects = async () => ({ toJSON() { serializations++; return [{ id: "snapshot" }]; } });
+  adapter.projects = async () => ({
+    toJSON() {
+      serializations++;
+      return [{ id: "snapshot" }];
+    },
+  });
   try {
-    const response = await fetch(base + "/api/codex/projects", { headers: { Authorization: "Bearer " + token } });
+    const response = await fetch(base + "/api/codex/projects", {
+      headers: { Authorization: "Bearer " + token },
+    });
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), [{ id: "snapshot" }]);
     assert.equal(serializations, 1);
     assert.ok(response.headers.get("etag"));
-  } finally { adapter.projects = previous; }
+  } finally {
+    adapter.projects = previous;
+  }
 });
 
-test("disabled agent disappears from discovery and rejects new requests without destroying its adapter",async()=>{
- const headers={Authorization:"Bearer "+token};
- adapter.pokiteEnabled=false;
- try {
-  assert.deepEqual(await(await fetch(base+"/api/agents",{headers})).json(),[]);
-  assert.equal((await fetch(base+"/api/codex/projects",{headers})).status,404);
- }finally{adapter.pokiteEnabled=true;}
- assert.equal((await fetch(base+"/api/codex/projects",{headers})).status,200);
+test("disabled agent disappears from discovery and rejects new requests without destroying its adapter", async () => {
+  const headers = { Authorization: "Bearer " + token };
+  adapter.pokiteEnabled = false;
+  try {
+    assert.deepEqual(
+      await (await fetch(base + "/api/agents", { headers })).json(),
+      [],
+    );
+    assert.equal(
+      (await fetch(base + "/api/codex/projects", { headers })).status,
+      404,
+    );
+  } finally {
+    adapter.pokiteEnabled = true;
+  }
+  assert.equal(
+    (await fetch(base + "/api/codex/projects", { headers })).status,
+    200,
+  );
+});
+
+test("atomic cloud creation does not send the initial message a second time", async () => {
+  const originalProject = adapter.projects;
+  const savedCreate = adapter.create;
+  const savedSend = adapter.send;
+  let calls = 0,
+    sends = 0;
+  adapter.projects = async () => [
+    { id: "project", path: directory, canCreate: true },
+  ];
+  adapter.createAndSend = async (p, text) => {
+    calls++;
+    return { id: "created-cloud", projectId: p.id, title: text };
+  };
+  adapter.send = async () => {
+    sends++;
+  };
+  try {
+    const headers = {
+      Authorization: "Bearer " + token,
+      "Content-Type": "application/json",
+    };
+    const body = JSON.stringify({
+      projectId: "project",
+      text: "first instruction",
+      requestId: "atomic-create-request-123",
+    });
+    const first = await fetch(base + "/api/codex/sessions", {
+      method: "POST",
+      headers,
+      body,
+    });
+    assert.equal(first.status, 200);
+    const repeat = await fetch(base + "/api/codex/sessions", {
+      method: "POST",
+      headers,
+      body,
+    });
+    assert.equal(repeat.status, 200);
+    assert.equal(calls, 1);
+    assert.equal(sends, 0);
+  } finally {
+    delete adapter.createAndSend;
+    adapter.projects = originalProject;
+    adapter.create = savedCreate;
+    adapter.send = savedSend;
+  }
 });

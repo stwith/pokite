@@ -64,9 +64,31 @@ and cloud session IDs must be established by an authenticated catalog. Short
 catalog grants expire and are refreshed before use. Desktop Code sessions do not
 become writable merely because they appear in the global session response.
 
-Only a validated single user-message event may be posted. Worker registration,
-execution-session replacement, project mutations and credential export remain
-unavailable. Accepted-but-unconfirmed writes are not automatically resent.
+Native protocol v3 also permits creation in an existing cloud project and only
+two settings controls: `set_model` and `apply_flag_settings` containing
+`effortLevel`. Other flags, permission changes, worker registration, project
+mutations and credential export remain unavailable. Model and effort values are
+checked against the account's live model selector. The bootstrap response is
+reduced to model information before it leaves the broker.
+
+## New sessions and model settings
+
+Use the existing project's new-session button and send the first instruction.
+Creation and that instruction are submitted in one provider request, with a
+stable message UUID. The durable operation ledger prevents a lost response from
+automatically creating another session. New sessions use Claude's cloud execution;
+local file/tool access still follows Claude's existing permission and device rules.
+
+The model and effort menus use the account's available options. Selections apply
+to the next sent message (or queued message when its turn arrives). For an existing
+session, Pokite waits for setting-control acknowledgements before posting the
+message. A failed/unconfirmed change leaves the text marked **Not sent**, with
+withdraw/edit available. It does not silently send on the previous model.
+
+Projects and models have longer scoped caches than live session metadata. Opening
+a conversation reuses fresh list metadata and fetches the latest history first.
+After writes, session state is invalidated without discarding the stable project
+catalog. Identity checks are retained for cached reads and native requests.
 
 This is a same-user integration, not protection against an attacker already
 running arbitrary code as the Mac owner. Private upstream APIs and Desktop

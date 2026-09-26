@@ -118,7 +118,7 @@ export class MessageQueue {
     const item = this.items.find(
       (x) => x.agent === agent && x.id === id && x.requestId === requestId,
     );
-    if (!item || !["queued", "withdrawn"].includes(item.state))
+    if (!item || !["queued", "blocked", "withdrawn"].includes(item.state))
       throw Object.assign(Error("消息已提交或状态待确认，无法撤回编辑"), {
         status: 409,
       });
@@ -231,11 +231,14 @@ export class MessageQueue {
             item.state = "sent";
             item.finishedAt = Date.now();
           } catch (e) {
-            if (e.retrySafe === true || e.delivery === "not-sent") {
+            if (e.blocked === true && e.delivery === "not-sent") {
+              item.state = "blocked";
+              item.error = e.message;
+            } else if (e.retrySafe === true || e.delivery === "not-sent") {
               item.state = "queued";
               item.error =
                 e.delivery === "not-sent"
-                  ? "等待桌面连接"
+                  ? e.message || "等待原会话恢复"
                   : e.retrySafe
                     ? e.message
                     : "等待原客户端释放当前轮次";

@@ -1,5 +1,12 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  未发送: "Not sent",
+  "Claude 模型列表不可用": "Claude model catalog is unavailable",
+  请选择可用的云端项目: "Choose an available cloud project",
+  "新会话创建结果未确认，请刷新列表核对，不会自动重建。":
+    "Session creation is unconfirmed. Check the session list; it will not be created again automatically.",
+  "模型或强度切换尚未确认，消息未发送，请核对原会话后重试。":
+    "The model or effort change is unconfirmed. Your message was not sent; check the original session before retrying.",
   "当前账号暂无可读取的云端会话。":
     "No readable cloud sessions for this account.",
   "Claude 云端项目格式不兼容": "Unsupported Claude cloud project format",

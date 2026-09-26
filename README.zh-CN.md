@@ -89,7 +89,7 @@ Hermes 使用本地插件。DSH 和 Penguin 复用已有服务；Claude CLI 通�
 | DeepSeek Harness | 已有项目与会话 | 复用原生 Web API | 原服务需运行 |
 | PenguinHarness | 已有项目与会话 | 复用本地服务 | 已有会话不支持切换模型 |
 | Claude Code CLI | 本地 CLI 会话 | Agent SDK 恢复执行 | 不共享 Desktop；不要与外部 CLI 同时写同一会话 |
-| Claude Desktop — Chat / Cowork | 云端项目及统一会话 | 通过本机请求代理向原云端会话回复 | 实验性；首次可能需要 Mac 授权；支持已有 CSE 会话 |
+| Claude Desktop — Chat / Cowork | 云端项目及统一会话 | 新建、继续云端会话，切换模型与推理强度 | 实验性；首次可能需要 Mac 授权；统一 CSE 会话 |
 | Claude Desktop Code | 不提供 | 不支持 | 相关实验接入已关闭 |
 
 独立 **Claude Code CLI** 会排除 Desktop 所属会话，不代表已接通 Desktop Code。

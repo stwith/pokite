@@ -99,7 +99,10 @@ export function ChatComposer({
                 disabled={busy || !modelCatalog?.canSwitch}
                 onChange={(value) => {
                   setModelChoice(value);
-                  setEffort("");
+                  setEffort(
+                    modelCatalog?.options.find((m) => m.id === value)
+                      ?.defaultEffort || "",
+                  );
                 }}
                 placeholder={
                   modelCatalog?.options.find(

@@ -21,7 +21,7 @@ async function verifyBroker(binary) {
     timeout: 5000,
     maxBuffer: 1024,
   });
-  if (stdout.trim() !== "pokite-cowork-broker 2")
+  if (stdout.trim() !== "pokite-cowork-broker 3")
     throw fail("请在电脑上运行 npm run setup:cowork 完成 Cowork 接入");
 }
 const fail = (message, delivery = "not-sent", status = 503) =>

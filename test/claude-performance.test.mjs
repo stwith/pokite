@@ -41,6 +41,7 @@ test("cloud lists load metadata only and warm reads share one non-blocking refre
           ],
           next_cursor: "earlier",
         };
+      if (route.includes('/api/bootstrap/')) return {model_selector_config:[{id:'cowork',models:[{id:'fixture',name:'Fixture'}]}],model_selector_state:[{id:'cowork',model:'fixture'}]};
       if (blocked) await gate;
       if (route.includes("projects_v2"))
         return { data: [], pagination: { has_more: false } };
@@ -62,7 +63,7 @@ test("cloud lists load metadata only and warm reads share one non-blocking refre
     await Promise.all([a.detail(id), a.models(projects[0], id)]);
     assert.equal(
       calls.filter((r) => r === "/v1/code/sessions/cse_one").length,
-      1,
+      0,
     );
     assert.equal(calls.filter((r) => r.includes("/events")).length, 1);
     now = 6000;
@@ -75,6 +76,7 @@ test("cloud lists load metadata only and warm reads share one non-blocking refre
     await pending;
     assert.equal((await a.sessions(projects[0].id))[0].title, "Title 1");
     assert.equal(calls.filter((r) => r.includes("/sessions?")).length, 2);
+    assert.equal(calls.filter(r=>r.includes("projects_v2")).length,1);
   } finally {
     release();
     await a.close();

@@ -130,7 +130,13 @@ export default function App() {
     setModelRefresh,
     effort,
     setEffort,
-  } = useModelSettings({ agent, project, sid });
+  } = useModelSettings({
+    agent,
+    project,
+    sid,
+    modelRevision:
+      detail?.id === sid ? `${detail.model || ""}:${detail.effort || ""}` : "",
+  });
   const generation = useRef(0),
     active = useRef({
       agent,

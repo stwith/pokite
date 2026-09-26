@@ -24,11 +24,13 @@ export function QueuedMessage({ item, onAction, canEdit }) {
               : t("排队中")
             : item.state === "sending"
               ? t("提交中")
-              : t("待确认")}
+              : item.state === "blocked"
+                ? t("未发送")
+                : t("待确认")}
         </span>
         {!item.native && (
           <div className="queued-message-actions">
-            {item.state === "queued" && (
+            {["queued", "blocked"].includes(item.state) && (
               <Button
                 type="button"
                 variant="ghost"

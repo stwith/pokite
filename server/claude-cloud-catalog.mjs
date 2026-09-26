@@ -61,34 +61,18 @@ export class ClaudeCloudCatalog {
   async load(owner) {
     const scope = owner.account + ":" + owner.organization;
     const request = (route) => this.client.request(route, { scope });
-    const projectsWork = (async () => {
-      const rows = [];
-      let offset = 0;
-      for (let page = 0; page < 100; page++) {
-        const result = await request(
-          "/api/organizations/" +
-            owner.organization +
-            "/projects_v2?limit=100&offset=" +
-            offset,
-        );
-        if (!Array.isArray(result.data))
-          throw failure("Claude 云端项目格式不兼容");
-        rows.push(...result.data);
-        if (result.pagination?.has_more !== true) return rows;
-        if (!result.data.length) throw failure("Claude 项目分页未推进");
-        const step = result.pagination?.limit ?? 100;
-        if (
-          !Number.isInteger(step) ||
-          step < 1 ||
-          step > 100 ||
-          (result.pagination?.offset !== undefined &&
-            result.pagination.offset !== offset)
-        )
-          throw failure("Claude 项目分页未推进");
-        offset += step;
-      }
-      throw failure("Claude 项目过多，目录未完整读取");
-    })();
+    const loadProjects = async (force = false) => {
+      if (
+        !force &&
+        this.projectCache?.scope === scope &&
+        this.now() - this.projectCache.time < 60000
+      )
+        return this.projectCache.rows;
+      const rows = await this.fetchProjects(owner, request);
+      this.projectCache = { scope, rows, time: this.now() };
+      return rows;
+    };
+    const projectsWork = loadProjects();
     const sessionsWork = (async () => {
       const rows = [],
         seen = new Set();
@@ -138,7 +122,19 @@ export class ClaudeCloudCatalog {
     ]);
     const failed = settled.find((x) => x.status === "rejected");
     if (failed) throw failed.reason;
-    const [cloudProjects, cloudRows, local] = settled.map((x) => x.value);
+    let [cloudProjects, cloudRows, local] = settled.map((x) => x.value);
+    const known = new Set(
+      cloudProjects.flatMap((p) => [p.uuid, cloudProjectAlias(p.uuid)]),
+    );
+    if (
+      cloudRows.some(
+        (row) =>
+          unifiedCloudSession(row) &&
+          row.chat_project_id &&
+          !known.has(row.chat_project_id),
+      )
+    )
+      cloudProjects = await loadProjects(true);
     const entries = new Map(
       (local.entries || []).map((e) => [
         canonicalDesktopSessionId(e.sessionId),
@@ -154,8 +150,8 @@ export class ClaudeCloudCatalog {
         cloudId: cloudProjectAlias(p.uuid),
         uuid: p.uuid,
         virtual: true,
-        canCreate: false,
-        readOnly: true,
+        canCreate: true,
+        readOnly: false,
         aliases: [],
       }));
     const byCloud = new Map(
@@ -169,8 +165,8 @@ export class ClaudeCloudCatalog {
       name: "未分组",
       path: "",
       virtual: true,
-      canCreate: false,
-      readOnly: true,
+      canCreate: true,
+      readOnly: false,
       aliases: [],
     };
     const rows = [];
@@ -228,7 +224,36 @@ export class ClaudeCloudCatalog {
       });
     return { scope, time: this.now(), projects, rows };
   }
+  async fetchProjects(owner, request) {
+    const rows = [];
+    let offset = 0;
+    for (let page = 0; page < 100; page++) {
+      const result = await request(
+        "/api/organizations/" +
+          owner.organization +
+          "/projects_v2?limit=100&offset=" +
+          offset,
+      );
+      if (!Array.isArray(result.data))
+        throw failure("Claude 云端项目格式不兼容");
+      rows.push(...result.data);
+      if (result.pagination?.has_more !== true) return rows;
+      if (!result.data.length) throw failure("Claude 项目分页未推进");
+      const step = result.pagination?.limit ?? 100;
+      if (
+        !Number.isInteger(step) ||
+        step < 1 ||
+        step > 100 ||
+        (result.pagination?.offset !== undefined &&
+          result.pagination.offset !== offset)
+      )
+        throw failure("Claude 项目分页未推进");
+      offset += step;
+    }
+    throw failure("Claude 项目过多，目录未完整读取");
+  }
   clear() {
     this.cached = null;
+    this.projectCache = null;
   }
 }

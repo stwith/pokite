@@ -259,6 +259,8 @@ export function createApp({
       throw Object.assign(Error("请先选择已有项目"), { status: 400 });
     const model = await selectModelSettings(req.adapter, p, null, req.body);
     const result = await mutate(req, async () => {
+      if (req.adapter.createAndSend)
+        return req.adapter.createAndSend(p, text, req.body.requestId, model);
       const s = await req.adapter.create(p, model);
       try {
         await req.adapter.send(s.id, text, req.body.requestId, model);

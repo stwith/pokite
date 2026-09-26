@@ -36,8 +36,21 @@ func validate(_ input: [String: Any]) throws -> Request {
        matches(route, "^/v1/code/sessions\\?limit=100&include_trigger_sessions=true&exclude_tags=-(&cursor=[A-Za-z0-9_%:-]{1,540})?$") || matches(route, "^/api/organizations/[A-Za-z0-9_-]+/projects(_v2)?(\\?limit=100&offset=[0-9]{1,6})?$") {
         return Request(id:id, method:method, route:route, scope:scope, session:nil, body:nil)
     }
+    if method == "GET" && matches(route,"^/api/bootstrap/[A-Za-z0-9_-]+/app_start\\?statsig_hashing_algorithm=djb2&growthbook_format=sdk&include_system_prompts=false$") && input["body"] == nil {
+        return Request(id:id,method:method,route:route,scope:scope,session:nil,body:nil)
+    }
+    if method == "POST", let scope, matches(scope,"^[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$"),
+       matches(route,"^/api/organizations/[A-Za-z0-9_-]+/cowork/sessions$"), let body=input["body"] as? [String:Any] {
+        let permitted:Set<String>=["message","message_uuid","project_uuid","model","effort_level"]
+        guard Set(body.keys).isSubset(of:permitted),let text=body["message"] as? String,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty,text.utf16.count<=50000,
+              let uuid=body["message_uuid"] as? String,matches(uuid,"^[a-fA-F0-9-]{36}$") else { throw reject("Invalid session creation") }
+        if let project=body["project_uuid"] { guard let p=project as? String,matches(p,"^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$") else { throw reject("Invalid project") } }
+        if let model=body["model"] { guard let m=model as? String,matches(m,"^[A-Za-z0-9_.\\[\\]-]{1,120}$") else { throw reject("Invalid model") } }
+        if let effort=body["effort_level"] { guard let e=effort as? String,matches(e,"^[a-z_]{1,30}$") else { throw reject("Invalid effort") } }
+        return Request(id:id,method:method,route:route,scope:scope,session:nil,body:body)
+    }
     guard let scope, matches(scope, "^[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$"),
-          matches(route, "^/v1/code/sessions/cse_(staging_)?[A-Za-z0-9]{1,64}(/events(\\?limit=100(&cursor=[A-Za-z0-9_%:-]{1,540})?)?)?$") else { throw reject("Unsupported Cowork route") }
+          matches(route, "^/v1/code/sessions/cse_(staging_)?[A-Za-z0-9]{1,64}(/events(\\?limit=100(&sort_order=desc)?(&cursor=[A-Za-z0-9_%:-]{1,540})?)?)?$") else { throw reject("Unsupported Cowork route") }
     let withoutQuery = String(route.split(separator: "?", maxSplits: 1)[0])
     let parts = withoutQuery.split(separator: "/").map(String.init)
     guard let session = canonical(parts[3]) else { throw reject("Invalid session") }
@@ -45,15 +58,28 @@ func validate(_ input: [String: Any]) throws -> Request {
         return Request(id: id, method: method, route: route, scope: scope, session: session, body: nil)
     }
     guard method == "POST", route == "/v1/code/sessions/\(session)/events",
-          let body = input["body"] as? [String: Any], Set(body.keys) == Set(["session_id", "events"]), body["session_id"] as? String == session,
-          let events = body["events"] as? [[String: Any]], events.count == 1, Set(events[0].keys) == Set(["payload"]),
-          let payload = events[0]["payload"] as? [String: Any], Set(payload.keys) == Set(["uuid", "type", "message"]), payload["type"] as? String == "user",
-          let uuid = payload["uuid"] as? String, matches(uuid, "^[a-fA-F0-9-]{36}$"),
-          let message = payload["message"] as? [String: Any], Set(message.keys) == Set(["role", "content"]), message["role"] as? String == "user",
-          let blocks = message["content"] as? [[String: Any]], blocks.count == 1,
-          Set(blocks[0].keys) == Set(["type", "text"]), blocks[0]["type"] as? String == "text",
-          let text = blocks[0]["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.utf16.count <= 50000
-    else { throw reject("Only a single user message may be submitted") }
+          let body=input["body"] as? [String:Any],Set(body.keys)==Set(["session_id","events"]),body["session_id"] as? String==session,
+          let events=body["events"] as? [[String:Any]],!events.isEmpty,events.count<=2 else {throw reject("Invalid event envelope")}
+    var controlTypes = Set<String>()
+    for event in events {
+        guard Set(event.keys)==Set(["payload"]),let payload=event["payload"] as? [String:Any] else {throw reject("Invalid event")}
+        if payload["type"] as? String == "user" {
+            guard events.count==1,Set(payload.keys)==Set(["uuid","type","message"]),let uuid=payload["uuid"] as? String,matches(uuid,"^[a-fA-F0-9-]{36}$"),
+                  let message=payload["message"] as? [String:Any],Set(message.keys)==Set(["role","content"]),message["role"] as? String=="user",
+                  let blocks=message["content"] as? [[String:Any]],blocks.count==1,Set(blocks[0].keys)==Set(["type","text"]),blocks[0]["type"] as? String=="text",
+                  let text=blocks[0]["text"] as? String,!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty,text.utf16.count<=50000 else {throw reject("Invalid user message")}
+        } else {
+            guard payload["type"] as? String=="control_request",Set(payload.keys)==Set(["type","request_id","request"]),let requestId=payload["request_id"] as? String,matches(requestId,"^[A-Za-z0-9_-]{1,100}$"),let control=payload["request"] as? [String:Any] else {throw reject("Invalid control request")}
+            guard let subtype=control["subtype"] as? String,!controlTypes.contains(subtype) else {throw reject("Duplicate setting control")}
+            if subtype=="set_model" && controlTypes.contains("apply_flag_settings") {throw reject("Model must be set before effort")}
+            controlTypes.insert(subtype)
+            if control["subtype"] as? String=="set_model" {
+                guard Set(control.keys)==Set(["subtype","model"]),let model=control["model"] as? String,matches(model,"^[A-Za-z0-9_.\\[\\]-]{1,120}$") else {throw reject("Invalid model control")}
+            } else {
+                guard control["subtype"] as? String=="apply_flag_settings",Set(control.keys)==Set(["subtype","settings"]),let settings=control["settings"] as? [String:Any],Set(settings.keys)==Set(["effortLevel"]),let effort=settings["effortLevel"] as? String,matches(effort,"^[a-z_]{1,30}$") else {throw reject("Only model and effort controls are permitted")}
+            }
+        }
+    }
     return Request(id: id, method: method, route: route, scope: scope, session: session, body: body)
 }
 let desktopRoot = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Claude")
@@ -95,6 +121,7 @@ var catalogSessions: [String:Set<String>] = [:]
 var catalogTimes: [String:Date] = [:]
 func allow(_ request: Request, _ owner: Identity, checkSession: Bool = true) throws {
     if let scope = request.scope, scope != owner.scope { throw reject("Claude account changed; refresh the session", 409) }
+    if request.route.hasPrefix("/api/bootstrap/") && !request.route.hasPrefix("/api/bootstrap/" + owner.organization + "/") { throw reject("Cross-organization request rejected",403) }
     if request.route.hasPrefix("/api/organizations/") && !request.route.hasPrefix("/api/organizations/" + owner.organization + "/") { throw reject("Cross-organization request rejected",403) }
     if checkSession, let session = request.session, !owner.sessions.contains(session) && !((catalogTimes[owner.scope]?.timeIntervalSinceNow ?? -1000) > -60 && (catalogSessions[owner.scope]?.contains(session) ?? false)) { throw reject("Session is not a locally associated Cowork session", 403) }
 }
@@ -225,13 +252,62 @@ func desktopCookie(name: String) throws -> String {
     guard values.count == 1 else { throw reject("No unique Desktop web session",409) }
     return values.first!
 }
+var verifiedWebCookie = "", verifiedWebAccount = "", verifiedWebAt = Date.distantPast
+var modelCatalogCache: [String:([String:Any],Date)] = [:]
+func bootstrapRoute(_ owner: Identity) -> String { "/api/bootstrap/" + owner.organization + "/app_start?statsig_hashing_algorithm=djb2&growthbook_format=sdk&include_system_prompts=false" }
+func modelCatalog(_ owner: Identity) throws -> [String:Any] {
+    if let cached=modelCatalogCache[owner.scope],cached.1.timeIntervalSinceNow > -60 {return cached.0}
+    guard let result=try webCatalog(Request(id:"models",method:"GET",route:bootstrapRoute(owner),scope:owner.scope,session:nil,body:nil),owner) as? [String:Any] else {throw reject("Model catalog unavailable",503)}
+    return result
+}
+func modelEntry(_ owner: Identity, _ model: String?, _ effort: String?) throws {
+    let catalog=try modelCatalog(owner)
+    let entries=catalog["model_selector_config"] as? [[String:Any]] ?? []
+    guard let surface=entries.first(where:{$0["id"] as? String=="cowork"}) ?? entries.first(where:{$0["id"] as? String=="chat"}),let models=surface["models"] as? [[String:Any]] else {throw reject("Model catalog unavailable",503)}
+    guard let model,let selected=models.first(where:{$0["id"] as? String==model && $0["disabled"] as? Bool != true && $0["section"] as? String != "deprecated"}) else {throw reject("Model is not available for this account")}
+    if let effort {
+        let thinking=selected["thinking"] as? [String:Any] ?? [:]
+        guard (thinking["effort_options"] as? [[String:Any]] ?? []).contains(where:{$0["id"] as? String==effort && $0["disabled"] as? Bool != true}) else {throw reject("Effort is not available for this model")}
+    }
+}
 func webCatalog(_ request: Request, _ owner: Identity) throws -> Any {
-    let cookie = try desktopCookie(name:"sessionKey")
-    guard let account = try perform("/api/account", "GET", nil, owner, cookie, web:true) as? [String:Any],
-          (account["uuid"] as? String ?? (account["account"] as? [String:Any])?["uuid"] as? String) == owner.account else { throw reject("Desktop web account mismatch",409) }
-    let result = try perform(request.route, "GET", nil, owner, cookie, web:true)
-    guard try identity().scope == owner.scope else { throw reject("Desktop account changed",409) }
-    return sanitize(result)
+    let cookie=try desktopCookie(name:"sessionKey")
+    if verifiedWebCookie != cookie || verifiedWebAccount != owner.account || verifiedWebAt.timeIntervalSinceNow < -300 {
+        guard let account=try perform("/api/account","GET",nil,owner,cookie,web:true) as? [String:Any],
+              (account["uuid"] as? String ?? (account["account"] as? [String:Any])?["uuid"] as? String)==owner.account else {throw reject("Desktop web account mismatch",409)}
+        verifiedWebCookie=cookie;verifiedWebAccount=owner.account;verifiedWebAt=Date()
+    }
+    if request.method == "POST" {
+        try modelEntry(owner,request.body?["model"] as? String,request.body?["effort_level"] as? String)
+        if let project=request.body?["project_uuid"] as? String {
+            guard let detail=try perform("/api/organizations/"+owner.organization+"/projects/"+project,"GET",nil,owner,cookie,web:true) as? [String:Any],detail["uuid"] as? String==project,detail["archived_at"] == nil || detail["archived_at"] is NSNull else {throw reject("Project is unavailable",403)}
+        }
+    }
+    guard try identity().scope==owner.scope else {throw reject("Desktop account changed",409)}
+    let result=try perform(request.route,request.method,request.body,owner,cookie,web:true)
+    do {
+        guard try identity().scope==owner.scope else {throw reject("Desktop account changed",409)}
+        if request.route.hasPrefix("/api/bootstrap/"),let object=result as? [String:Any] {
+            let configs=object["model_selector_config"] as? [[String:Any]] ?? []
+            let selected=configs.first(where:{$0["id"] as? String=="cowork"}) ?? configs.first(where:{$0["id"] as? String=="chat"})
+            let surface=selected?["id"] as? String
+            let states=(object["model_selector_state"] as? [[String:Any]] ?? []).filter{$0["id"] as? String==surface}
+            let filtered:[String:Any]=["model_selector_config":sanitize(selected.map{[$0]} ?? []),"model_selector_state":sanitize(states)]
+            modelCatalogCache=[owner.scope:(filtered,Date())];return filtered
+        }
+        if request.method == "POST" {
+            guard let object=result as? [String:Any],let session=object["session"] as? [String:Any],let raw=session["id"] as? String,let id=canonical(raw) else {throw reject("Session creation result could not be confirmed",503)}
+            catalogSessions[owner.scope,default:[]].insert(id);catalogTimes[owner.scope]=Date()
+            var visible:[String:Any]=[:]
+            for key in ["id","title","status","worker_status","created_at","updated_at","environment_kind","chat_project_id","tags"] {visible[key]=session[key]}
+            if let config=session["config"] as? [String:Any] {visible["config"]=config.filter{["model","effort_level","origin"].contains($0.key)}}
+            return ["session":visible]
+        }
+        return sanitize(result)
+    } catch {
+        if request.method != "GET" {throw Failure(message:"Session creation result could not be confirmed",status:503,delivery:"unknown")}
+        throw error
+    }
 }
 func rememberCatalog(_ object: [String:Any], _ owner: Identity, _ first: Bool) {
     let rows = object["data"] as? [[String:Any]] ?? []
@@ -250,7 +326,7 @@ func handle(_ input: [String: Any]) throws -> Any {
     if request.route == "/api/oauth/profile" && input["retryAuthorization"] as? Bool == true { keychainDenied = nil }
     let owner = try identity()
     try allow(request, owner, checkSession:false)
-    if request.route.hasPrefix("/api/organizations/") { return try webCatalog(request,owner) }
+    if request.route.hasPrefix("/api/organizations/") || request.route.hasPrefix("/api/bootstrap/") { return try webCatalog(request,owner) }
     let token = try bearer(owner)
     if verifiedBearer != token || verifiedScope != owner.scope {
         guard let profile = try perform("/api/oauth/profile", "GET", nil, owner, token) as? [String:Any] else { throw reject("Invalid profile response",503) }
@@ -269,6 +345,20 @@ func handle(_ input: [String: Any]) throws -> Any {
             guard matches(next,"^[A-Za-z0-9_:-]{1,180}$"), !seen.contains(next) else { throw reject("Invalid catalog cursor",503) }
             seen.insert(next);cursor=next
         }
+    }
+    if request.method == "POST",let events=request.body?["events"] as? [[String:Any]],events.contains(where:{($0["payload"] as? [String:Any])?["type"] as? String=="control_request"}) {
+        var selectedModel: String?,selectedEffort:String?
+        for event in events {
+            let control=(event["payload"] as? [String:Any])?["request"] as? [String:Any] ?? [:]
+            if control["subtype"] as? String=="set_model" {selectedModel=control["model"] as? String}
+            if control["subtype"] as? String=="apply_flag_settings" {selectedEffort=(control["settings"] as? [String:Any])?["effortLevel"] as? String}
+        }
+        if selectedModel == nil,let id=request.session {
+            let response=try perform("/v1/code/sessions/"+id,"GET",nil,owner,token) as? [String:Any] ?? [:]
+            let session=response["session"] as? [String:Any] ?? response["response_shape"] as? [String:Any] ?? [:]
+            selectedModel=(session["config"] as? [String:Any])?["model"] as? String
+        }
+        try modelEntry(owner,selectedModel,selectedEffort)
     }
     let before = try identity(); try allow(request,before)
     guard before.scope == owner.scope else { throw reject("Claude account changed",409) }
@@ -309,13 +399,22 @@ func selfTest() throws {
     catalogTimes[cloudOwner.scope]=Date(timeIntervalSinceNow:-61)
     do { try allow(validate(cloudRequest),cloudOwner);throw reject("Self-test allowed expired catalog grant",500) } catch let e as Failure { if e.status == 500 { throw e } }
     catalogSessions.removeAll();catalogTimes.removeAll()
+    let create:[String:Any]=["id":"create","method":"POST","route":"/api/organizations/org/cowork/sessions","scope":"account:org","body":["message":"fixture","message_uuid":"00000000-0000-4000-8000-000000000000","model":"fixture-model","effort_level":"low"]]
+    _ = try validate(create)
+    var unsafeCreate=create;var unsafeBody=create["body"] as! [String:Any];unsafeBody["permission_mode"]="bypassPermissions";unsafeCreate["body"]=unsafeBody
+    do { _ = try validate(unsafeCreate);throw reject("Self-test allowed arbitrary creation permission",500) } catch let e as Failure {if e.status==500 {throw e}}
+    var settings=post
+    settings["body"]=["session_id":"cse_example","events":[["payload":["type":"control_request","request_id":"model-fixture","request":["subtype":"set_model","model":"fixture-model"]]],["payload":["type":"control_request","request_id":"effort-fixture","request":["subtype":"apply_flag_settings","settings":["effortLevel":"low"]]]]]]
+    _ = try validate(settings)
+    settings["body"]=["session_id":"cse_example","events":[["payload":["type":"control_request","request_id":"unsafe","request":["subtype":"apply_flag_settings","settings":["permissionMode":"bypassPermissions"]]]]]]
+    do { _ = try validate(settings);throw reject("Self-test allowed arbitrary flag settings",500) } catch let e as Failure {if e.status==500 {throw e}}
     let clean=sanitize(["access_token":"secret","nested":["authorization":"secret","text":"content"]]) as! [String:Any]
     guard clean["access_token"] == nil, (clean["nested"] as? [String:Any])?["authorization"] == nil else { throw reject("Self-test failed sanitization",500) }
     print("cowork-broker self-test passed")
 }
 var coreLimit = rlimit(rlim_cur: 0, rlim_max: 0)
 setrlimit(RLIMIT_CORE, &coreLimit)
-if CommandLine.arguments == [CommandLine.arguments[0], "--version"] { print("pokite-cowork-broker 2");exit(0) }
+if CommandLine.arguments == [CommandLine.arguments[0], "--version"] { print("pokite-cowork-broker 3");exit(0) }
 if CommandLine.arguments == [CommandLine.arguments[0], "--self-test"] { do { try selfTest();exit(0) } catch { fputs("Broker self-test failed\n",stderr);exit(1) } }
 guard CommandLine.arguments.count == 1, isatty(STDIN_FILENO) == 0, isatty(STDOUT_FILENO) == 0 else { exit(64) }
 // Only bounded JSON requests/responses. There is deliberately no key/token export operation.

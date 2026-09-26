@@ -87,7 +87,7 @@ try {
   await fs.writeFile(
     manifest,
     JSON.stringify(
-      { sourceHash, binaryHash, identity, protocol: "claude-cloud-broker-v2" },
+      { sourceHash, binaryHash, identity, protocol: "claude-cloud-broker-v3" },
       null,
       2,
     ),

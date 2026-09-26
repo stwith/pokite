@@ -134,7 +134,7 @@ export function capabilities(adapter) {
   return {
     read: true,
     connect: typeof adapter.connect === "function",
-    create: writable && !!adapter.create,
+    create: writable && !!(adapter.create || adapter.createAndSend),
     reply: writable,
     approvals: writable && !!adapter.answer,
     modelSelection: writable && !!adapter.models,

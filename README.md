@@ -91,7 +91,7 @@ universal plug-and-play access to every installed AI app.
 | DeepSeek Harness | Existing projects and sessions | Native web API | Existing service must be running |
 | PenguinHarness | Existing projects and sessions | Existing local service | Cannot change the model of an existing session |
 | Claude Code CLI | Local CLI history | Agent SDK session resume | Not Desktop sharing; do not write concurrently with an external CLI |
-| Claude Desktop — Chat / Cowork | Cloud projects and unified conversations | Replies to the original cloud session via a native request broker | Experimental; may require first Mac authorization; existing CSE sessions |
+| Claude Desktop — Chat / Cowork | Cloud projects and unified conversations | Create and continue cloud sessions; model and effort selection | Experimental; may require first Mac authorization; unified CSE sessions |
 | Claude Desktop Code | Not exposed | Unsupported | Experimental transports are disabled |
 
 The independent **Claude Code CLI** integration excludes Desktop-owned sessions.

@@ -7,6 +7,11 @@ import {
   userEvent,
   nativeRequestId,
 } from "./claude-desktop-events.mjs";
+import {
+  ClaudeModels,
+  settingEvents,
+  controlResult,
+} from "./claude-models.mjs";
 import { ClaudeCloudCatalog } from "./claude-cloud-catalog.mjs";
 import { WeightedCache } from "./weighted-cache.mjs";
 
@@ -36,6 +41,8 @@ export class ClaudeDesktopRemote {
     this.catalog = new ClaudeCloudCatalog(this.root, this.client, {
       now: this.now,
     });
+    this.modelSettings = new ClaudeModels(this.client, { now: this.now });
+    this.created = new Map();
     this.emptyState = "当前账号暂无可读取的云端会话。";
   }
   async connect() {
@@ -106,6 +113,7 @@ export class ClaudeDesktopRemote {
       nativeUnread:
         typeof metadata.unread === "boolean" ? metadata.unread : undefined,
       model: metadata.config?.model,
+      effort: metadata.config?.effort_level,
       readOnly: metadata.status === "archived",
       canReply: metadata.status !== "archived",
       readOnlyReason:
@@ -125,13 +133,33 @@ export class ClaudeDesktopRemote {
       (p) =>
         p.id === selection.projectId || p.aliases.includes(selection.projectId),
     );
-    const selected = catalog.rows.filter(
+    const sources = [...catalog.rows];
+    for (const [id, row] of this.created) {
+      if (row.scope !== catalog.scope || sources.some((s) => s.id === id))
+        this.created.delete(id);
+      else sources.push(row);
+    }
+    const selected = sources.filter(
       (row) =>
         (!selection.id || row.id === selection.id) &&
         (!selection.projectId ||
           row.projectId === (project?.id || selection.projectId)),
     );
-    if (selection.id && !selected.length && !selection.fresh) return this.raw({...selection,fresh:true});
+    if (selection.id && !selected.length && !selection.refreshCatalog)
+      return this.raw({ ...selection, refreshCatalog: true });
+    if (
+      selection.id &&
+      selected.length &&
+      !selection.fresh &&
+      this.now() - catalog.time < 2500
+    ) {
+      const newer = this.metadata.get(selected[0].id);
+      return [
+        newer && newer.time > catalog.time
+          ? newer.row
+          : this.row(selected[0].native, selected[0]),
+      ];
+    }
     if (selection.id && selected.length) {
       const source = selected[0];
       return [
@@ -177,7 +205,7 @@ export class ClaudeDesktopRemote {
       const response = await this.client.request(
         "/v1/code/sessions/" +
           row.remoteId +
-          "/events?limit=100" +
+          "/events?limit=100&sort_order=desc" +
           (next ? "&cursor=" + encodeURIComponent(next) : ""),
         { scope: row.scope },
       );
@@ -234,7 +262,7 @@ export class ClaudeDesktopRemote {
       });
     return this.page(row, cursor);
   }
-  async send(id, text, requestId) {
+  async send(id, text, requestId, model) {
     let row;
     try {
       row = (await this.raw({ id, fresh: true })).find((s) => s.id === id);
@@ -253,6 +281,17 @@ export class ClaudeDesktopRemote {
       throw Object.assign(Error("等待 Claude 原会话恢复。"), {
         delivery: "not-sent",
       });
+    if (model) {
+      try {
+        await this.applySettings(row, model, requestId);
+      } catch (error) {
+        this.metadata.clear();
+        if (this.catalog.cached) this.catalog.cached.time = this.now() - 5001;
+        error.delivery = "not-sent";
+        error.blocked = true;
+        throw error;
+      }
+    }
     // The controller sends an event; it never registers or replaces a worker.
     const receipt = await this.client.request(
       "/v1/code/sessions/" + row.remoteId + "/events",
@@ -264,6 +303,7 @@ export class ClaudeDesktopRemote {
     );
     this.pages.clear();
     this.metadata.clear();
+    if (this.catalog.cached) this.catalog.cached.time = this.now() - 5001;
     this.onChange?.();
     return { accepted: true, requestId, receiptAvailable: receipt != null };
   }
@@ -271,17 +311,138 @@ export class ClaudeDesktopRemote {
     const row = sessionId
       ? (await this.raw({ id: sessionId })).find((s) => s.id === sessionId)
       : null;
-    return {
-      options: row?.model ? [{ id: row.model, label: row.model }] : [],
-      current: row?.model || null,
-      canSwitch: false,
-      reason: "沿用 Claude Desktop 当前会话模型",
-    };
+    const result = await this.modelSettings.get({
+      model: row?.model,
+      effort: row?.effort,
+    });
+    return { ...result, canSwitch: !row?.readOnly };
+  }
+  async createAndSend(project, text, requestId, selected) {
+    let submitted = false;
+    try {
+      const catalog = await this.catalog.get();
+      const current = catalog.projects.find((p) => p.id === project.id);
+      if (!current || !current.canCreate)
+        throw Object.assign(Error("请选择可用的云端项目"), {
+          status: 400,
+          delivery: "not-sent",
+        });
+      const models = await this.modelSettings.get();
+      const model =
+        selected || models.options.find((m) => m.id === models.current);
+      const owner = await this.client.identity(),
+        scope = owner.account + ":" + owner.organization;
+      if (scope !== catalog.scope)
+        throw Object.assign(Error("Claude 账号已切换，请刷新会话。"), {
+          status: 409,
+          delivery: "not-sent",
+        });
+      submitted = true;
+      const result = await this.client.request(
+        "/api/organizations/" + owner.organization + "/cowork/sessions",
+        {
+          method: "POST",
+          scope,
+          body: {
+            message: text,
+            message_uuid: nativeRequestId(requestId),
+            ...(current.uuid ? { project_uuid: current.uuid } : {}),
+            ...(model ? { model: model.id } : {}),
+            ...(model?.effort || model?.defaultEffort
+              ? { effort_level: model.effort || model.defaultEffort }
+              : {}),
+          },
+        },
+      );
+      const native = result.session,
+        remoteId = canonicalDesktopSessionId(native?.id);
+      if (!remoteId)
+        throw Object.assign(
+          Error("新会话创建结果未确认，请刷新列表核对，不会自动重建。"),
+          { status: 503, delivery: "unknown" },
+        );
+      const source = {
+        native: {
+          ...native,
+          config: native.config || {
+            model: model?.id,
+            effort_level: model?.effort || model?.defaultEffort,
+          },
+        },
+        id: "remote:" + scope + ":" + remoteId,
+        scope,
+        remoteId,
+        projectId: current.id,
+        projectName: current.name,
+        workspace: "",
+      };
+      this.created.set(source.id, source);
+      while (this.created.size > 50)
+        this.created.delete(this.created.keys().next().value);
+      this.catalog.cached = null;
+      this.onChange?.();
+      return {
+        id: source.id,
+        projectId: current.id,
+        title: native.title || "新会话",
+        accepted: true,
+      };
+    } catch (error) {
+      if (!submitted) error.delivery = "not-sent";
+      throw error;
+    }
+  }
+  async applySettings(row, model, requestId) {
+    const targetModel = model.id !== row.model ? model.id : undefined;
+    const targetEffort =
+      model.effort || (targetModel ? model.defaultEffort : undefined);
+    const desiredEffort =
+      targetModel || targetEffort !== row.effort ? targetEffort : undefined;
+    const body = settingEvents(
+      row.remoteId,
+      nativeRequestId(requestId),
+      targetModel,
+      desiredEffort,
+    );
+    if (!body.events.length) return;
+    await this.client.request("/v1/code/sessions/" + row.remoteId + "/events", {
+      method: "POST",
+      scope: row.scope,
+      body,
+    });
+    const ids = body.events.map((e) => e.payload.request_id);
+    const deadline = Date.now() + 20000;
+    while (Date.now() < deadline) {
+      const events = await this.client.request(
+        "/v1/code/sessions/" +
+          row.remoteId +
+          "/events?limit=100&sort_order=desc",
+        { scope: row.scope },
+      );
+      const result = controlResult(events.data || [], ids);
+      if (result.error)
+        throw Object.assign(Error(result.error), {
+          status: 409,
+          delivery: "not-sent",
+        });
+      if (result.complete) {
+        this.metadata.clear();
+        this.pages.clear();
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    throw Object.assign(
+      Error("模型或强度切换尚未确认，消息未发送，请核对原会话后重试。"),
+      { status: 409, delivery: "not-sent" },
+    );
   }
   async close() {
     await this.client.close();
     this.pages.clear();
     this.metadata.clear();
     this.catalog.clear();
+    this.modelSettings.clear();
+    this.created.clear();
   }
 }
