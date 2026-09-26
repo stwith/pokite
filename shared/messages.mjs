@@ -1,5 +1,32 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  设置: "Settings",
+  "管理语言、通知和 Agent 接入":
+    "Manage language, notifications and Agent connections",
+  语言: "Language",
+  "Agent 接入": "Agent connections",
+  "查看电脑上的 Agent，按需开启共享。":
+    "View agents on your computer and enable sharing when needed.",
+  "本机 Agent": "On this computer",
+  "检测中…": "Checking\u2026",
+  重新检测: "Refresh",
+  "正在检测本机 Agent…": "Looking for agents\u2026",
+  暂无检测结果: "No scan results yet",
+  开启共享: "Enable sharing",
+  安装插件: "Install plugin",
+  "未检测到支持的 Agent": "No supported agents found",
+  "添加到 Pokite": "Add to Pokite",
+  共享已配置: "Sharing configured",
+  待开启共享: "Sharing not configured",
+  暂无会话: "No sessions yet",
+  已找到服务地址: "Service address found",
+  未找到服务: "Service not found",
+  已找到服务记录: "Service record found",
+  服务未启动: "Service not started",
+  已找到会话: "Sessions found",
+  已找到桌面会话: "Desktop sessions found",
+  共享插件已安装: "Sharing plugin installed",
+
   "所有网络共用此访问码，长期有效，重置后旧码失效。":
     "One persistent access code for all networks. Resetting invalidates the old code.",
   "重置后，其他页面需使用新码连接并重新开启通知。":

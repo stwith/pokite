@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { api } from "../lib/api";
-export function NotificationSettings() {
+export function NotificationSettings({ menuItem = false }) {
   const [open, setOpen] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [enabled, setEnabled] = useState(false);
@@ -99,8 +99,14 @@ export function NotificationSettings() {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={t("任务通知")}>
+        <Button
+          variant="ghost"
+          size={menuItem ? "default" : "icon-sm"}
+          className={menuItem ? "settings-item" : undefined}
+          aria-label={t("任务通知")}
+        >
           <Bell size={18} />
+          {menuItem && t("任务通知")}
         </Button>
       </DialogTrigger>
       <DialogContent>

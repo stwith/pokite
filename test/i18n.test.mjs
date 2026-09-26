@@ -76,3 +76,9 @@ test("every explicit UI translation has an English catalog entry", () => {
   scan("src");
   assert.deepEqual(missing, []);
 });
+
+// Discovery status codes must never leak into the product's translated list.
+test("setup discovery states all have readable English labels", async () => {
+  const { setupStatuses } = await import("../src/lib/setup-status.js");
+  for (const label of Object.values(setupStatuses)) assert.ok(en[label], label);
+});

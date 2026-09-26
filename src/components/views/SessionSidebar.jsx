@@ -1,5 +1,4 @@
-import { LanguageSelect } from "../language-select";
-import { SetupDialog } from "../setup-dialog";
+import { SettingsDialog } from "../settings-dialog";
 import { t } from "../../lib/i18n.js";
 import { Navigation } from "../navigation";
 import { IconButton, SessionStatus } from "../chat/controls";
@@ -13,8 +12,6 @@ import { statuses } from "../../lib/session";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ConnectionDialog } from "../connection-dialog";
-import { NotificationSettings } from "../notification-settings";
-import { DisconnectDialog } from "../disconnect-dialog";
 export function SessionSidebar({
   nav,
   desktopNav,
@@ -214,7 +211,6 @@ export function SessionSidebar({
           </div>
         )}
       </nav>
-      <LanguageSelect />
       <Separator />
       <footer>
         <span
@@ -226,11 +222,8 @@ export function SessionSidebar({
         {online && !Object.keys(syncErrors).length
           ? t("已连接")
           : t("正在重连")}
-        <span className="host">Mac mini</span>
-        <SetupDialog />
         <ConnectionDialog />
-        <NotificationSettings />
-        <DisconnectDialog disabled={busy} />
+        <SettingsDialog disabled={busy} />
       </footer>
     </Navigation>
   );

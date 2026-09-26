@@ -15,9 +15,44 @@ export function installSetupRoutes(app, post) {
   app.use("/api/setup", requireLocalAdmin);
   app.get("/api/setup/discovery", async (req, res) => {
     const report = await discoverMachineAsync();
+    const saved = await fs
+      .readFile(instanceConfigFile(), "utf8")
+      .then(JSON.parse)
+      .catch((error) => {
+        if (error.code === "ENOENT") return { instances: [] };
+        throw error;
+      });
+    const candidates = await Promise.all(
+      report.candidates.map(async (candidate) => {
+        if (
+          candidate.provider === "codex" &&
+          candidate.status === "needs-desktop-connection"
+        )
+          return { ...candidate, setupAction: "codex" };
+        if (candidate.provider === "hermesDesktop") {
+          const installed = await fs
+            .access(path.join(candidate.home, "plugins/pokite/plugin.yaml"))
+            .then(
+              () => true,
+              () => false,
+            );
+          return {
+            ...candidate,
+            ...(installed
+              ? { status: "plugin-installed" }
+              : { setupAction: "hermes" }),
+          };
+        }
+        return candidate;
+      }),
+    );
     res.json({
-      candidates: report.candidates,
+      candidates,
       instances: report.instances,
+      needsSave: report.instances.some(
+        (instance) =>
+          !saved.instances.some((current) => current.id === instance.id),
+      ),
     });
   });
   post("/api/setup/configure", async (req, res) => {
@@ -25,11 +60,19 @@ export function installSetupRoutes(app, post) {
       throw Object.assign(Error("配置操作正在进行，请稍后重试"), {
         status: 409,
       });
-    const { action } = req.body;
+    const { action, instanceId } = req.body;
     if (!["save", "codex", "hermes"].includes(action))
       throw Object.assign(Error("Invalid setup action"), { status: 400 });
     work = (async () => {
       const report = await discoverMachineAsync();
+      if (
+        action === "codex" &&
+        !report.instances.some(
+          (instance) =>
+            instance.id === instanceId && instance.provider === "codex",
+        )
+      )
+        throw Object.assign(Error("Unknown Codex instance"), { status: 400 });
       const file = instanceConfigFile();
       const current = await fs
         .readFile(file, "utf8")
@@ -52,7 +95,12 @@ export function installSetupRoutes(app, post) {
       if (action === "codex")
         await exec(
           process.execPath,
-          [path.join(root, "scripts/setup-codex-sharing.mjs"), "--enable"],
+          [
+            path.join(root, "scripts/setup-codex-sharing.mjs"),
+            "--enable",
+            "--instance",
+            instanceId,
+          ],
           { timeout: 60000, maxBuffer: 1024 * 1024 },
         );
       if (action === "hermes")

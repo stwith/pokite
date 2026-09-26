@@ -11,7 +11,7 @@ import {
 } from "./ui/dialog";
 import { browserStorage } from "../lib/browser-storage";
 import { setAccessToken } from "../lib/api";
-export function DisconnectDialog({ disabled }) {
+export function DisconnectDialog({ disabled, menuItem = false }) {
   const [open, setOpen] = useState(false),
     [error, setError] = useState("");
   function disconnect() {
@@ -27,11 +27,13 @@ export function DisconnectDialog({ disabled }) {
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          size="icon-sm"
+          size={menuItem ? "default" : "icon-sm"}
+          className={menuItem ? "settings-item" : undefined}
           disabled={disabled}
           aria-label={t("退出连接")}
         >
           <LogOut size={18} />
+          {menuItem && t("退出连接")}
         </Button>
       </DialogTrigger>
       <DialogContent>
