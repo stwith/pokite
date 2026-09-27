@@ -56,18 +56,35 @@ export class AgentAccess {
   cached(id) {
     return this.snapshot.get(id) || { connected: null, notice: "检测中…" };
   }
-  refreshBackground() {
+  refreshBackground({ requested = true, force = false } = {}) {
+    if (requested) this.lastActivity = this.now();
+    if (force) {
+      this.nextRefresh = 0;
+      this.refreshAgain = !!this.refreshPending;
+    }
+    if (
+      this.lastActivity === undefined ||
+      this.now() - this.lastActivity >= 600000
+    ) {
+      clearTimeout(this.timer);
+      return;
+    }
     if (
       this.closed ||
       this.refreshPending ||
       this.now() < (this.nextRefresh || 0)
     )
       return;
+    clearTimeout(this.timer);
     this.nextRefresh = this.now() + 45000;
     this.refreshPending = this.report()
       .then((report) => {
         if (this.closed) return;
         const next = new Map(report.candidates.map((row) => [row.id, row]));
+        for (const [id, adapter] of Object.entries(this.adapters)) {
+          if (adapter.pokiteEnabled !== false && !next.has(id))
+            next.set(id, { connected: null, notice: "检测失败" });
+        }
         const changed =
           JSON.stringify([...next]) !== JSON.stringify([...this.snapshot]);
         this.snapshot = next;
@@ -80,8 +97,16 @@ export class AgentAccess {
       })
       .finally(() => {
         this.refreshPending = null;
-        if (!this.closed) {
-          this.timer = setTimeout(() => this.refreshBackground(), 45000);
+        if (!this.closed && this.refreshAgain) {
+          this.refreshAgain = false;
+          // The previous round may have repopulated invalidated probe caches.
+          this.connections.cache.clear();
+          this.refreshBackground({ requested: false, force: true });
+        } else if (!this.closed) {
+          this.timer = setTimeout(
+            () => this.refreshBackground({ requested: false }),
+            45000,
+          );
           this.timer.unref?.();
         }
       });
@@ -198,6 +223,8 @@ export class AgentAccess {
         if (this.adapters[id]) this.adapters[id].pokiteEnabled = enabled;
         this.agentNames[id] = instance.name;
         this.connections.cache.delete(id);
+        this.snapshot.delete(id);
+        this.refreshBackground({ force: true });
         this.onChange();
         return { ok: true, notice: notice || "" };
       } catch (error) {

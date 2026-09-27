@@ -75,7 +75,7 @@ export class SessionEvents {
     }, 250);
   }
   broadcast(type) {
-    for (const group of this.groups.values())
+    for (const [agent, group] of [...this.groups]) {
       for (const listener of [...group.listeners]) {
         try {
           listener(type);
@@ -83,6 +83,8 @@ export class SessionEvents {
           group.listeners.delete(listener);
         }
       }
+      if (!group.listeners.size) this.release(agent, group);
+    }
   }
   close() {
     for (const [agent, group] of this.groups) {

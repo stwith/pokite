@@ -46,3 +46,20 @@ The 181 Node regressions, native broker self-test, production build, mobile sett
 checks and expired-token polling/SSE checks all passed. Both Chromium and WebKit
 were exercised. The newly compiled v6 broker is waiting for macOS Safe Storage
 permission; no claim of post-upgrade live Claude write acceptance is made yet.
+
+## 2026-09-27 lifecycle follow-up
+
+Completed detection rounds now fill every missing enabled adapter with a
+`detection failed` state, including adapters absent from the saved configuration.
+Visibility toggles invalidate the snapshot and request an immediate refresh. If a
+round is already running, exactly one follow-up runs after it settles, clearing
+probe results that the old round may have repopulated.
+
+Background refresh stops after ten minutes without agent-list requests or a
+visibility toggle. Timer ticks do not renew activity; the next request resumes
+refresh without delaying login. Broadcast removes and releases empty listener
+groups, including provider subscriptions, timers and filesystem watchers.
+
+Regression tests cover missing unsaved adapters, inactivity/resume, immediate
+switch refresh, a switch during in-flight detection, and throwing listeners.
+This change does not modify the native broker or its keychain authorization.

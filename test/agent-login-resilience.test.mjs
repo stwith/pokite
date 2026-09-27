@@ -108,3 +108,89 @@ test("remote toggles cannot register discovered but unsaved instances", async ()
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test("completed discovery fills missing enabled adapters and pauses after inactivity", async () => {
+  let time = 0,
+    calls = 0;
+  const access = new AgentAccess({
+    adapters: { unsaved: {}, disabled: { pokiteEnabled: false } },
+    now: () => time,
+  });
+  access.report = async () => {
+    calls++;
+    return { candidates: [] };
+  };
+  try {
+    access.refreshBackground();
+    await access.refreshPending;
+    assert.equal(access.cached("unsaved").notice, "检测失败");
+    assert.equal(access.snapshot.has("disabled"), false);
+    time = 600001;
+    access.refreshBackground({ requested: false });
+    assert.equal(calls, 1);
+    access.refreshBackground();
+    await access.refreshPending;
+    assert.equal(calls, 2);
+  } finally {
+    access.close();
+  }
+});
+
+test("force refresh during an active round schedules an immediate follow-up", async () => {
+  let calls = 0,
+    release;
+  const gate = new Promise((r) => {
+    release = r;
+  });
+  const access = new AgentAccess({ adapters: { a: {} }, now: () => 0 });
+  access.report = async () => {
+    calls++;
+    if (calls === 1) await gate;
+    return { candidates: [{ id: "a", connected: calls > 1 }] };
+  };
+  try {
+    access.refreshBackground();
+    const first = access.refreshPending;
+    access.refreshBackground({ force: true });
+    release();
+    await first;
+    await access.refreshPending;
+    assert.equal(calls, 2);
+    assert.equal(access.cached("a").connected, true);
+  } finally {
+    access.close();
+  }
+});
+
+test("saved mobile toggle refreshes immediately despite the previous refresh deadline", async () => {
+  const dir = await fs.mkdtemp(
+    path.join(os.tmpdir(), "pokite-toggle-refresh-"),
+  );
+  const file = path.join(dir, "instances.json");
+  const instance = { id: "claude", provider: "claude", name: "Claude" };
+  await fs.writeFile(file, JSON.stringify({ instances: [instance] }));
+  const adapter = { pokiteEnabled: false };
+  let calls = 0;
+  const access = new AgentAccess({
+    adapters: { claude: adapter },
+    agentNames: {},
+    file,
+    now: () => 0,
+  });
+  access.report = async () => {
+    calls++;
+    return { candidates: [{ id: "claude", connected: adapter.pokiteEnabled }] };
+  };
+  try {
+    access.refreshBackground();
+    await access.refreshPending;
+    assert.equal(calls, 1);
+    await access.toggle("claude", true, { configure: false });
+    await access.refreshPending;
+    assert.equal(calls, 2);
+    assert.equal(access.cached("claude").connected, true);
+  } finally {
+    access.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
