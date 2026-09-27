@@ -1168,3 +1168,4 @@ html[data-viewport-compact="true"] .navigation-sheet .brand {
 
 .message-meta .message-copy { margin-left:auto; color:#999; }
 .message-meta .message-copy:hover { color:#444; }
+.message-meta .message-copy svg { width:12px; height:12px; }
