@@ -1,4 +1,6 @@
 import path from "node:path";
+import { getSessionMessages } from "@anthropic-ai/claude-agent-sdk";
+import { userFacingText } from "./messages.mjs";
 import { acquireDesktopClient } from "./claude-desktop-client.mjs";
 import { canonicalDesktopSessionId } from "./cowork-session-id.mjs";
 import {
@@ -106,6 +108,23 @@ export class ClaudeDesktopRemote {
     return work;
   }
   row(metadata, source) {
+    if (source.codeLocalId && !source.remoteId)
+      return {
+        ...source,
+        native: undefined,
+        title: metadata.title || "未命名会话",
+        updatedAt: Date.parse(metadata.updated_at) || 0,
+        revision: metadata.updated_at,
+        model: metadata.config?.model,
+        effort: metadata.config?.effort_level,
+        status: "unknown",
+        offline: true,
+        readOnly: true,
+        canReply: false,
+        pending: [],
+        readOnlyReason:
+          "此 Desktop Code 会话尚未连接 Remote Control，请在 Desktop 中开启后回复",
+      };
     if (canonicalDesktopSessionId(metadata.id) !== source.remoteId)
       throw Error("Claude 会话身份不一致。");
     return {
@@ -143,7 +162,19 @@ export class ClaudeDesktopRemote {
       (p) =>
         p.id === selection.projectId || p.aliases.includes(selection.projectId),
     );
-    const sources = catalog.rows.filter((row) => this.accepts(row));
+    const sources = catalog.rows
+      .filter((row) => this.accepts(row))
+      .map((row) =>
+        row.codeLocalId &&
+        selection.id ===
+          [
+            "desktop-local",
+            ...(row.scope || "").split(":"),
+            row.codeLocalId,
+          ].join(":")
+          ? { ...row, id: selection.id }
+          : row,
+      );
     for (const [id, row] of this.created) {
       if (row.scope !== catalog.scope || sources.some((s) => s.id === id))
         this.created.delete(id);
@@ -172,6 +203,7 @@ export class ClaudeDesktopRemote {
     }
     if (selection.id && selected.length) {
       const source = selected[0];
+      if (!source.remoteId) return [this.row(source.native, source)];
       return [
         await this.cachedMetadata(
           source.id,
@@ -208,6 +240,7 @@ export class ClaudeDesktopRemote {
       }));
   }
   async page(row, cursor) {
+    if (row.codeLocalId && !row.remoteId) return this.localPage(row, cursor);
     if (
       cursor !== undefined &&
       (typeof cursor !== "string" || !/^[a-zA-Z0-9_:-]{1,180}$/.test(cursor))
@@ -250,6 +283,49 @@ export class ClaudeDesktopRemote {
     this.pages.set(key, result);
     return result;
   }
+  async localPage(row, cursor) {
+    if (!/^[0-9a-f-]{36}$/i.test(row.cliSessionId || ""))
+      throw Object.assign(Error("Desktop Code 本地对话记录暂不可用"), {
+        status: 503,
+      });
+    const key = "local:" + row.id;
+    let cached = this.pages.get(key);
+    if (!cached || this.now() - cached.time > 2500) {
+      const raw = await getSessionMessages(row.cliSessionId, {
+        dir: row.transcriptCwd,
+      });
+      const messages = raw
+        .filter(
+          (m) =>
+            ["user", "assistant"].includes(m.type) && !m.parent_tool_use_id,
+        )
+        .flatMap((m) => {
+          const content = m.message?.content;
+          const plain =
+            typeof content === "string"
+              ? content
+              : Array.isArray(content)
+                ? content
+                    .filter((b) => b.type === "text")
+                    .map((b) => b.text || "")
+                    .join("\n")
+                : "";
+          const text = m.type === "user" ? userFacingText(plain) : plain;
+          return text
+            ? [{ id: m.uuid, role: m.type, text, time: m.timestamp }]
+            : [];
+        });
+      cached = { messages, time: this.now() };
+      this.pages.set(key, cached);
+    }
+    const end = cursor
+      ? cached.messages.findIndex((m) => m.id === cursor)
+      : cached.messages.length;
+    if (end < 0)
+      throw Object.assign(Error("History cursor expired"), { status: 400 });
+    const messages = cached.messages.slice(Math.max(0, end - 80), end);
+    return { messages, hasMore: end > 80, historyCursor: messages[0]?.id };
+  }
   async detail(id) {
     const row = (await this.raw({ id })).find((s) => s.id === id);
     if (!row)
@@ -286,7 +362,7 @@ export class ClaudeDesktopRemote {
   }
   async history(id, cursor) {
     const row = (await this.raw({ id })).find((s) => s.id === id);
-    if (!row?.remoteId)
+    if (!row)
       throw Object.assign(Error("Claude 会话不存在或账号已切换。"), {
         status: 404,
       });
@@ -343,6 +419,8 @@ export class ClaudeDesktopRemote {
     const row = sessionId
       ? (await this.raw({ id: sessionId })).find((s) => s.id === sessionId)
       : null;
+    if (row?.readOnly)
+      return { options: [], current: row.model, canSwitch: false };
     const result = await this.modelSettings.get({
       model: row?.model,
       effort: row?.effort,

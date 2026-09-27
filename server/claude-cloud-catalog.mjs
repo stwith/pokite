@@ -1,4 +1,4 @@
-import { desktopCodeBridges } from "./desktop-code-bridges.mjs";
+import { desktopCodeInventory } from "./desktop-code-bridges.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { canonicalDesktopSessionId } from "./cowork-session-id.mjs";
@@ -120,11 +120,11 @@ export class ClaudeCloudCatalog {
       projectsWork,
       sessionsWork,
       localWork,
-      desktopCodeBridges(this.root, owner.account, owner.organization),
+      desktopCodeInventory(this.root, owner.account, owner.organization),
     ]);
     const failed = settled.find((x) => x.status === "rejected");
     if (failed) throw failed.reason;
-    let [cloudProjects, cloudRows, local, codeBridges] = settled.map(
+    let [cloudProjects, cloudRows, local, codeInventory] = settled.map(
       (x) => x.value,
     );
     const known = new Set(
@@ -174,6 +174,7 @@ export class ClaudeCloudCatalog {
       aliases: [],
     };
     const rows = [];
+    const codeBridges = codeInventory.bridges;
     for (const row of cloudRows) {
       const id = canonicalDesktopSessionId(row.id),
         entry = entries.get(id),
@@ -246,6 +247,47 @@ export class ClaudeCloudCatalog {
         projectId: project.id,
         projectName: project.name,
         workspace: project.path,
+      });
+    }
+    // Project visibility comes from Desktop ownership, not Remote Control enrollment.
+    for (const session of codeInventory.sessions) {
+      if (rows.some((row) => row.codeLocalId === session.localId)) continue;
+      const projectId =
+        "desktop-code:" + scope + ":" + encodeURIComponent(session.workspace);
+      const projectName = session.workspace.startsWith(
+        path.join(this.root, "scratch-workspaces") + path.sep,
+      )
+        ? "未分组"
+        : "Code · " + path.basename(session.workspace);
+      if (!projects.some((project) => project.id === projectId))
+        projects.push({
+          id: projectId,
+          name: projectName,
+          path: session.workspace,
+          virtual: true,
+          canCreate: false,
+          readOnly: false,
+          aliases: [],
+        });
+      rows.push({
+        id: [
+          "desktop-local",
+          owner.account,
+          owner.organization,
+          session.localId,
+        ].join(":"),
+        scope,
+        projectId,
+        projectName,
+        workspace: session.workspace,
+        codeLocalId: session.localId,
+        cliSessionId: session.cliSessionId,
+        transcriptCwd: session.transcriptCwd,
+        native: {
+          title: session.title,
+          updated_at: new Date(session.updatedAt).toISOString(),
+          config: { model: session.model, effort_level: session.effort },
+        },
       });
     }
     const after = await this.client.identity();

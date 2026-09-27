@@ -233,3 +233,36 @@ test("partially written Desktop Code records do not hide cloud sessions or valid
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+test("Desktop projects include unbridged local sessions without exposing them as Cowork", async () => {
+  const root = await fs.mkdtemp(
+    path.join(os.tmpdir(), "pokite-local-project-"),
+  );
+  try {
+    const dir = path.join(root, "claude-code-sessions/a/o");
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(
+      path.join(dir, "local_pokite.json"),
+      JSON.stringify({
+        sessionId: "local_pokite",
+        cliSessionId: "11111111-1111-4111-8111-111111111111",
+        originCwd: "/projects/pokite",
+        title: "Local work",
+        lastActivityAt: 1000,
+      }),
+    );
+    const client = {
+      identity: async () => ({ account: "a", organization: "o" }),
+      request: async (route) =>
+        route.includes("projects_v2")
+          ? { data: [], pagination: { has_more: false } }
+          : { data: [] },
+    };
+    const result = await new ClaudeCloudCatalog(root, client).get();
+    assert.equal(result.projects[0].name, "Code · pokite");
+    assert.equal(result.rows[0].codeLocalId, "local_pokite");
+    assert.equal(result.rows[0].remoteId, undefined);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

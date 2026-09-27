@@ -72,3 +72,17 @@ Next viable step: once Desktop exposes and enables its native receiver for this
 installation, restrict creation to its registered existing project environments,
 submit once with delivery tracking, and require original Desktop local-session
 ownership plus a bridge echo before reporting success.
+
+## 2026-09-27: local project visibility
+
+Desktop Code project discovery now includes every non-archived local session in
+its current account/org, even without a Remote Control bridge. Previously, a
+project existed only if a matching cloud bridge appeared, which hid the local
+`pokite` project. Unbridged sessions are explicitly read-only; history is read
+through the SDK's filesystem reader, never by resuming or starting an executor.
+Scratch workspaces are labeled ungrouped. Connected bridges continue using the
+existing write path, and a local-session URL resolves to its bridge after enrollment.
+
+Live verification found `pokite / 产品宣传视频` and read 78 messages. This session
+has no bridge, so replies remain unavailable until Remote Control is enabled in
+Desktop. All 187 Node tests and the production build passed.

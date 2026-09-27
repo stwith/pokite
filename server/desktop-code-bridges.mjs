@@ -1,14 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { canonicalDesktopSessionId } from "./cowork-session-id.mjs";
-export async function desktopCodeBridges(root, account, organization) {
+export async function desktopCodeInventory(root, account, organization) {
   const directory = path.join(
       root,
       "claude-code-sessions",
       account,
       organization,
     ),
-    rows = new Map();
+    rows = new Map(),
+    sessions = [];
   for (const item of await fs
     .readdir(directory, { withFileTypes: true })
     .catch((e) => {
@@ -36,13 +37,26 @@ export async function desktopCodeBridges(root, account, organization) {
       .filter(Boolean);
     const workspace = row.originCwd || row.cwd;
     if (typeof workspace !== "string" || !path.isAbsolute(workspace)) continue;
-    for (const id of ids)
-      rows.set(id, {
-        localId: row.sessionId,
-        cliSessionId: row.cliSessionId,
-        workspace,
-        title: row.title,
-      });
+    const session = {
+      localId: row.sessionId,
+      cliSessionId: row.cliSessionId,
+      workspace,
+      transcriptCwd: row.cwd || workspace,
+      title: row.title,
+      updatedAt: Number.isFinite(row.lastActivityAt)
+        ? row.lastActivityAt
+        : Number.isFinite(row.createdAt)
+          ? row.createdAt
+          : 0,
+      model: row.model,
+      effort: row.effort,
+    };
+    sessions.push(session);
+    for (const id of ids) rows.set(id, session);
   }
-  return rows;
+  return { bridges: rows, sessions };
+}
+
+export async function desktopCodeBridges(root, account, organization) {
+  return (await desktopCodeInventory(root, account, organization)).bridges;
 }

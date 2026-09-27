@@ -1,5 +1,9 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  "此 Desktop Code 会话尚未连接 Remote Control，请在 Desktop 中开启后回复":
+    "Enable Remote Control for this session in Desktop to reply",
+  "Desktop Code 本地对话记录暂不可用":
+    "Desktop Code local conversation is unavailable",
   "Desktop Code 新建会话尚未接通，已有会话仍可回复":
     "Desktop Code session creation is not connected; existing sessions remain usable",
   "当前 Claude Desktop 的远程新建功能未开放；已有会话仍可回复":
