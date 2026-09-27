@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { desktopCodeCreationStatus } from "./desktop-code-creation.mjs";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -155,7 +156,18 @@ export class AgentConnections {
               row.codeLocalId && row.native?.connection_status === "connected",
           )
         )
-          return { connected: true };
+          return {
+            connected: true,
+            diagnostics: [
+              (
+                await desktopCodeCreationStatus(instance.home, {
+                  organization: catalog.scope.slice(
+                    catalog.scope.indexOf(":") + 1,
+                  ),
+                })
+              ).notice,
+            ],
+          };
         const notes = await claudeCodeDiagnostics();
         return {
           ...disconnected(

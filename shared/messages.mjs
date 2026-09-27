@@ -1,5 +1,11 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  "Desktop Code 新建会话尚未接通，已有会话仍可回复":
+    "Desktop Code session creation is not connected; existing sessions remain usable",
+  "当前 Claude Desktop 的远程新建功能未开放；已有会话仍可回复":
+    "Remote session creation is not enabled in this Claude Desktop; existing sessions remain usable",
+  "检测到 Desktop 原生远程新建功能，仍需验证接收环境和创建接口":
+    "Native Desktop remote creation was detected; its environment and creation endpoint still need verification",
   复制消息: "Copy message",
   检测失败: "Detection failed",
   打开会话以确认连接: "Open a session to confirm the connection",
