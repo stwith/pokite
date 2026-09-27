@@ -1,5 +1,6 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  复制消息: "Copy message",
   检测失败: "Detection failed",
   打开会话以确认连接: "Open a session to confirm the connection",
   "请在电脑上添加此 Agent 接入": "Add this agent on your computer first",

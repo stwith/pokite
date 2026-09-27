@@ -1,4 +1,6 @@
 import React, { lazy, Suspense } from "react";
+import { CopyButton } from "../copy-button";
+import { t } from "@/lib/i18n.js";
 import { stamp } from "@/lib/session";
 
 const MarkdownContent = lazy(() => import("./markdown-content"));
@@ -24,6 +26,7 @@ export const MessageBubble = React.memo(function MessageBubble({
     >
       <div className="message-meta">
         <time>{stamp(time)}</time>
+        <CopyButton url={text || ""} label={t("复制消息")} className="message-copy" />
       </div>
       <MessageContent text={text} />
     </article>

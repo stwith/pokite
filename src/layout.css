@@ -1165,3 +1165,6 @@ html[data-viewport-compact="true"] .navigation-sheet .brand {
 .setup-groups .setup-results { max-height:none; overflow:visible; }
 .setup-group-title { margin:14px 0 2px; font-size:12px; font-weight:500; color:var(--muted-foreground); }
 .compact-select-status { margin-left:auto; padding-left:12px; font-size:11px; color:var(--muted-foreground); white-space:nowrap; }
+
+.message-meta .message-copy { margin-left:auto; color:#999; }
+.message-meta .message-copy:hover { color:#444; }
