@@ -76,11 +76,10 @@ export function SessionSidebar({
               a.connected === false
                 ? t("未连接")
                 : a.connected === null
-                  ? t(
-                      a.connectionNotice === "检测失败"
-                        ? "检测失败"
-                        : "检测中…",
-                    )
+                  ? // A notice means the check finished without a verdict
+                    // (e.g. Claude Desktop needs an opened session); only
+                    // an unanswered check is still "checking".
+                    t(a.connectionNotice || "检测中…")
                   : undefined,
           }))}
           value={agent}
