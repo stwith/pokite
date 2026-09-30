@@ -274,3 +274,49 @@ test("shared transport only intercepts its Desktop app, not Chrome native hosts"
   assert.equal(isDesktopAppCaller("/Applications/Other.app/Contents/MacOS/ChatGPT", binary), false);
   assert.equal(isDesktopAppCaller("/Portable/Work Tools.app/Contents/MacOS/Codex", "/Portable/Work Tools.app/Contents/Resources/codex"), true);
 });
+
+test("Codex Desktop 26.924+ bundle layout (Resources/codex-cli/bin/codex) is discovered and stale paths relocate", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pocket-codex-cli-layout-"));
+  try {
+    const app = path.join(root, "ChatGPT.app"),
+      legacy = path.join(app, "Contents/Resources/codex"),
+      binary = path.join(app, "Contents/Resources/codex-cli/bin/codex");
+    file(binary, "#!/bin/sh\nexit 0\n", 0o700);
+    file(
+      path.join(app, "Contents/Info.plist"),
+      JSON.stringify({ CFBundleIdentifier: "com.openai.codex", CFBundleExecutable: "ChatGPT" }),
+    );
+    const apps = discoverDesktopApps({ appRoots: [root], running: [] });
+    assert.equal(apps.length, 1);
+    assert.equal(apps[0].binary, binary);
+    // A profile saved before the app update still points at the removed legacy path.
+    assert.equal(resolveCodexDesktopBinary({ explicit: legacy, apps }), binary);
+    assert.throws(
+      () => resolveCodexDesktopBinary({ explicit: path.join(root, "missing/codex"), apps }),
+      /not executable/,
+    );
+    assert.equal(isDesktopAppCaller(path.join(app, "Contents/MacOS/ChatGPT"), binary), true);
+    assert.equal(isDesktopAppCaller(path.join(app, "Contents/Resources/codex-cli/MacOS/x"), binary), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("launcher fallback survives the bundled backend moving within the app", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pocket-launcher-fallback-"));
+  try {
+    const app = path.join(root, "My 'Chat.app"),
+      legacy = path.join(app, "Contents/Resources/codex"),
+      moved = path.join(app, "Contents/Resources/codex-cli/bin/codex"),
+      launcher = path.join(root, "launcher");
+    file(moved, "#!/bin/sh\necho \"moved:${CODEX_CLI_PATH-unset}:$1\"\n", 0o700);
+    file(launcher, renderDesktopLauncher(path.join(root, "no-node"), path.join(root, "no-proxy.mjs"), path.join(root, "c.json"), legacy), 0o700);
+    const out = execFileSync(launcher, ["a b"], {
+      encoding: "utf8",
+      env: { ...process.env, CODEX_CLI_PATH: launcher },
+    });
+    assert.equal(out.trim(), "moved:unset:a b");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

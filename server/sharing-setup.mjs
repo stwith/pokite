@@ -4,7 +4,10 @@ import net from "node:net";
 import os from "node:os";
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { resolveCodexDesktopBinary } from "./machine-discovery.mjs";
+import {
+  bundledCodexCandidates,
+  resolveCodexDesktopBinary,
+} from "./machine-discovery.mjs";
 
 export function probeDesktopTransport(binary) {
   const options = { encoding: "utf8", timeout: 5000, maxBuffer: 128 * 1024 };
@@ -94,9 +97,9 @@ export function renderDesktopLauncher(node, proxy, config, fallback = "") {
         quote(node) +
         " " +
         quote(proxy) +
-        " --pokite-preflight >/dev/null 2>&1; then\n  unset CODEX_CLI_PATH\n  exec " +
-        quote(fallback) +
-        ' "$@"\nfi\n'
+        " --pokite-preflight >/dev/null 2>&1; then\n  unset CODEX_CLI_PATH\n  for bin in " +
+        bundledCodexCandidates(fallback).map(quote).join(" ") +
+        '; do\n    [ -x "$bin" ] && exec "$bin" "$@"\n  done\n  echo "pokite: Codex Desktop backend not found" >&2\n  exit 127\nfi\n'
       : "\n") +
     "exec " +
     quote(node) +

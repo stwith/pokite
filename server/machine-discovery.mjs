@@ -68,6 +68,31 @@ function processRows(field) {
     return [];
   }
 }
+// Codex Desktop 26.924 moved the backend from Resources/codex to
+// Resources/codex-cli/bin/codex; newest layout first.
+export const BUNDLED_CODEX_PATHS = [
+  "Contents/Resources/codex-cli/bin/codex",
+  "Contents/Resources/codex",
+];
+function appBundleOf(file) {
+  const end = file.lastIndexOf(".app/Contents/");
+  return end >= 0 ? file.slice(0, end + 4) : null;
+}
+// The given backend path followed by every known layout of its app bundle.
+export function bundledCodexCandidates(file) {
+  const app = appBundleOf(file);
+  return [
+    ...new Set([
+      file,
+      ...(app ? BUNDLED_CODEX_PATHS.map((x) => path.join(app, x)) : []),
+    ]),
+  ];
+}
+function bundledCodexBinary(app) {
+  return (
+    BUNDLED_CODEX_PATHS.map((x) => path.join(app, x)).find(executable) ?? null
+  );
+}
 export function discoverDesktopApps({
   home = os.homedir(),
   appRoots = ["/Applications", path.join(home, "Applications")],
@@ -86,8 +111,8 @@ export function discoverDesktopApps({
   }
   const apps = [];
   for (const app of candidates) {
-    const binary = path.join(app, "Contents/Resources/codex");
-    const isCodex = executable(binary);
+    const binary = bundledCodexBinary(app);
+    const isCodex = binary != null;
     if (!isCodex && !/claude|penguin/i.test(path.basename(app))) continue;
     let info = {};
     const plist = path.join(app, "Contents/Info.plist");
@@ -139,10 +164,13 @@ export function discoverDesktopApps({
 // CODEX_CLI_PATH is inherited by Chrome native hosts and CLI clients too.
 // Only the owning Desktop process should create the shared transport.
 export function isDesktopAppCaller(parentExecutable, binary) {
+  const app = appBundleOf(binary);
   return (
     Boolean(parentExecutable) &&
     path.dirname(parentExecutable) ===
-      path.resolve(path.dirname(binary), "../MacOS")
+      (app
+        ? path.join(app, "Contents/MacOS")
+        : path.resolve(path.dirname(binary), "../MacOS"))
   );
 }
 
@@ -152,7 +180,15 @@ export function resolveCodexDesktopBinary({
   parentExecutable,
   ...options
 } = {}) {
-  if (explicit) return findExecutable("codex", { ...options, explicit });
+  if (explicit) {
+    // Saved profiles keep the path from setup time; follow the backend if an
+    // app update moved it within the same bundle.
+    const file = expand(explicit, options.home ?? os.homedir());
+    const app = executable(file) ? null : appBundleOf(file);
+    const moved = app && bundledCodexBinary(app);
+    if (moved) return moved;
+    return findExecutable("codex", { ...options, explicit });
+  }
   const candidates = (apps || discoverDesktopApps(options)).filter(
     (app) => app.provider === "codex",
   );
