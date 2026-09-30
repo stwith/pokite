@@ -320,3 +320,29 @@ test("launcher fallback survives the bundled backend moving within the app", () 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("an unknown future backend location inside the Codex bundle is found by searching Resources", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pocket-codex-search-"));
+  try {
+    const app = path.join(root, "ChatGPT.app"),
+      binary = path.join(app, "Contents/Resources/agent/runtime/bin/codex");
+    file(binary, "#!/bin/sh\nexit 0\n", 0o700);
+    // Deeper and dependency copies must not win over the real backend.
+    file(path.join(app, "Contents/Resources/agent/runtime/Codex.app/Contents/MacOS/codex"), "", 0o700);
+    file(path.join(app, "Contents/Resources/node_modules/x/bin/codex"), "", 0o700);
+    file(
+      path.join(app, "Contents/Info.plist"),
+      JSON.stringify({ CFBundleIdentifier: "com.openai.codex", CFBundleExecutable: "ChatGPT" }),
+    );
+    // Unrelated apps are not searched.
+    file(path.join(root, "Other.app/Contents/Resources/tools/codex"), "#!/bin/sh\n", 0o700);
+    const apps = discoverDesktopApps({ appRoots: [root], running: [] });
+    assert.deepEqual(apps.map((x) => x.binary), [binary]);
+    assert.equal(
+      resolveCodexDesktopBinary({ explicit: path.join(app, "Contents/Resources/codex"), apps }),
+      binary,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -88,9 +88,40 @@ export function bundledCodexCandidates(file) {
     ]),
   ];
 }
-function bundledCodexBinary(app) {
+// Breadth-first so the shallowest `codex` wins over nested helper app copies.
+function searchBundledCodex(app, maxDepth = 5) {
+  let level = [path.join(app, "Contents/Resources")];
+  for (let depth = 0; depth <= maxDepth && level.length; depth++) {
+    const next = [];
+    for (const directory of level) {
+      let dirents;
+      try {
+        dirents = fs
+          .readdirSync(directory, { withFileTypes: true })
+          .sort((a, b) => a.name.localeCompare(b.name));
+      } catch {
+        continue;
+      }
+      for (const entry of dirents) {
+        const file = path.join(directory, entry.name);
+        if (entry.name === "codex" && !entry.isDirectory() && executable(file))
+          return file;
+        if (
+          entry.isDirectory() &&
+          entry.name !== "node_modules" &&
+          !entry.name.endsWith(".asar.unpacked")
+        )
+          next.push(file);
+      }
+    }
+    level = next;
+  }
+  return null;
+}
+export function bundledCodexBinary(app, { search = true } = {}) {
   return (
-    BUNDLED_CODEX_PATHS.map((x) => path.join(app, x)).find(executable) ?? null
+    BUNDLED_CODEX_PATHS.map((x) => path.join(app, x)).find(executable) ??
+    (search ? searchBundledCodex(app) : null)
   );
 }
 export function discoverDesktopApps({
@@ -111,7 +142,10 @@ export function discoverDesktopApps({
   }
   const apps = [];
   for (const app of candidates) {
-    const binary = bundledCodexBinary(app);
+    // Only Codex-named bundles are searched; the bundle id check below confirms.
+    const binary = bundledCodexBinary(app, {
+      search: /codex|chatgpt/i.test(path.basename(app)),
+    });
     const isCodex = binary != null;
     if (!isCodex && !/claude|penguin/i.test(path.basename(app))) continue;
     let info = {};
@@ -160,6 +194,11 @@ export function discoverDesktopApps({
     });
   }
   return apps;
+}
+// The backend bundled with the Desktop app that launched the caller, if any.
+export function desktopBackendForCaller(parentExecutable) {
+  const app = parentExecutable ? appBundleOf(parentExecutable) : null;
+  return app ? bundledCodexBinary(app) : null;
 }
 // CODEX_CLI_PATH is inherited by Chrome native hosts and CLI clients too.
 // Only the owning Desktop process should create the shared transport.
