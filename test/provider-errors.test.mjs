@@ -4,7 +4,7 @@ import { Dsh } from "../server/dsh.mjs";
 import { Penguin } from "../server/penguin.mjs";
 test("DeepSeek exposes error details and does not let old failure override active execution",async()=>{
  let running=false;
- const a={projects:async()=>[{id:"p",sessionIds:["s"]}],call:async method=>method==="session.list"?{items:[{sessionId:"s",running}]}:{events:[{event:{type:"turn/error",data:{message:"Gateway 502"}}}]},row:()=>({status:running?"running":"idle"}),messages:()=>[],endStatus:Dsh.prototype.endStatus,tail(){return this.call("session.history")},sessionList(){return this.call("session.list")}};
+ const a={projects:async()=>[{id:"p",sessionIds:["s"]}],call:async method=>method==="session.list"?{items:[{sessionId:"s",running}]}:{events:[{event:{type:"turn/error",data:{message:"Gateway 502"}}}]},row:()=>({status:running?"running":"idle",pending:[]}),messages:()=>[],endStatus:Dsh.prototype.endStatus,tail(){return this.call("session.history")},sessionList(){return this.call("session.list")}};
  assert.equal((await Dsh.prototype.detail.call(a,"s")).executionIssue.message,"Gateway 502");
  running=true;
  assert.equal((await Dsh.prototype.detail.call(a,"s")).executionIssue,undefined);

@@ -141,6 +141,71 @@ export class Dsh {
       },
     );
   }
+  // dsh 0.2 forwards approval and question requests to every live client
+  // over $events and cancels them once any client (or the Desktop app)
+  // settles them. Unanswered requests keep the tool waiting, as in dsh's UI.
+  watchEvents() {
+    if (this.eventsCancel) return;
+    const clear = () => {
+      for (const [id, p] of this.pending)
+        if (p.eventId) this.pending.delete(id);
+    };
+    this.eventsCancel = this.remote.stream(
+      "$events",
+      {},
+      {
+        item: (frame) => {
+          if (frame.type === "ready") this.eventsClient = frame.clientId;
+          else if (frame.type === "cancel") this.pending.delete(frame.eventId);
+          else if (frame.type !== "waterfall") return;
+          else if (frame.event === "approval/request")
+            this.pending.set(frame.eventId, {
+              id: frame.eventId,
+              eventId: frame.eventId,
+              sessionId: frame.agentId,
+              kind: "approval",
+              title: frame.request.toolName,
+              detail:
+                frame.request.displayReason?.["zh-CN"] ??
+                frame.request.displayReason?.zh ??
+                frame.request.reason,
+            });
+          else if (frame.event === "user-questions/request")
+            this.pending.set(frame.eventId, {
+              id: frame.eventId,
+              eventId: frame.eventId,
+              sessionId: frame.agentId,
+              kind: "question",
+              questions: frame.request.questions,
+              callId: frame.request.wait?.callId,
+            });
+          else return;
+          this.onChange?.();
+        },
+        end: () => {
+          clear();
+          this.eventsCancel = null;
+          this.eventsClient = null;
+        },
+      },
+    );
+  }
+  // Questions whose tool call already returned stay answerable through
+  // userQuestions/answer; open ones arrive over $events instead.
+  syncContinuedQuestions(sessionId, view) {
+    for (const [id, p] of this.pending)
+      if (p.sessionId === sessionId && p.continued) this.pending.delete(id);
+    for (const q of view?.active || [])
+      if (q.state === "continued")
+        this.pending.set("question:" + q.callId, {
+          id: "question:" + q.callId,
+          sessionId,
+          kind: "question",
+          questions: q.questions,
+          callId: q.callId,
+          continued: true,
+        });
+  }
   async sessionList() {
     return (await this.version()) === 2
       ? this.rpc("session/list", { _request: {} })
@@ -171,6 +236,7 @@ export class Dsh {
       events: page.records,
       hasMore: page.hasMore,
       cursor: baseline.asOfSeq,
+      projections: baseline.values,
     };
   }
   headers(extra = {}) {
@@ -275,6 +341,7 @@ export class Dsh {
   async projects() {
     if ((await this.version()) === 2) {
       this.watchControl();
+      this.watchEvents();
       const { items, order, archived } = await this.workspaces();
       return order
         .map((id) => items.get(id))
@@ -398,6 +465,8 @@ export class Dsh {
     ]);
     const s = list.items.find((s) => s.sessionId === id);
     if (!s) throw Error("Session missing");
+    if (h.projections)
+      this.syncContinuedQuestions(id, h.projections.userQuestions);
     const row = this.row(s, p.id);
     row.messages = this.messages(h);
     for (const { event: e } of h.events) {
@@ -407,6 +476,8 @@ export class Dsh {
       if (!s.running && e.type === "turn/end") row.status = this.endStatus(e);
       if (e.type === "turn/error" && !s.running) row.status = "failed";
     }
+    // A pending approval or question outranks whatever the history implies.
+    if (row.pending.length) row.status = "waiting";
     row.hasMore = h.hasMore;
     row.historyCursor = h.events[0]?.event?.seq;
     if (row.status === "failed") {
@@ -543,14 +614,42 @@ export class Dsh {
     return { accepted: true };
   }
   async answer(id, pid, body) {
-    if ((await this.version()) === 2)
-      throw Object.assign(
-        Error("DeepSeek Harness 0.2 的审批和提问请在 DeepSeek Harness 中处理"),
-        { status: 409 },
-      );
     const p = this.pending.get(pid);
     if (!p || p.sessionId !== id)
       throw Object.assign(Error("审批已失效"), { status: 409 });
+    if ((await this.version()) === 2) {
+      // An option label counts as a selection; anything else is free text.
+      const answer = {
+        answers: (p.questions || []).map((q) => {
+          const text = String(body.answers?.[q.id] || "");
+          return q.options?.some((o) => o.label === text)
+            ? { id: q.id, selected: [text] }
+            : { id: q.id, selected: [], ...(text ? { custom: text } : {}) };
+        }),
+      };
+      if (p.continued)
+        await this.rpc("userQuestions/answer", {
+          agentId: id,
+          callId: p.callId,
+          answer,
+        });
+      else
+        await this.rpc("$events/result", {
+          clientId: this.eventsClient,
+          eventId: p.eventId,
+          outcome: {
+            kind: "result",
+            value:
+              p.kind === "approval"
+                ? body.allow === true
+                  ? "allowed-once"
+                  : "rejected"
+                : answer,
+          },
+        });
+      this.pending.delete(pid);
+      return { accepted: true };
+    }
     const value =
       p.kind === "approval"
         ? {

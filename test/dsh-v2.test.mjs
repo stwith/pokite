@@ -30,7 +30,7 @@ const records = [
 // Mirrors the dsh 0.2 web wire protocol verified against 0.2.0-rc.2:
 // POST /api/<ns>/<method> with payload.args, and every stream multiplexed
 // over the /api/remote.mux WebSocket as {type:"item",streamId,value}.
-async function fakeDsh2() {
+async function fakeDsh2({ events = false } = {}) {
   const calls = [];
   const streams = [];
   const rpc = {
@@ -105,8 +105,24 @@ async function fakeDsh2() {
             reasoningEffort: "high",
           },
         },
+        ...(events
+          ? {
+              userQuestions: {
+                active: [
+                  {
+                    callId: "call-continued",
+                    questions: [{ id: "qc", question: "还要继续吗？" }],
+                    state: "continued",
+                  },
+                ],
+                settled: [],
+              },
+            }
+          : {}),
       },
     }),
+    "$events/result": () => undefined,
+    "userQuestions/answer": () => true,
     "session/create": ({ request }) => ({
       sessionId: "session-new-" + request.workspaceId,
     }),
@@ -180,6 +196,44 @@ async function fakeDsh2() {
         });
       if (m.endpoint === "session/control")
         send({ type: "baseline", value: { projections: {} } });
+      // Approval and question requests forwarded to every live client, as
+      // dsh 0.2 does over the $events stream.
+      if (m.endpoint === "$events") {
+        send({ type: "ready", clientId: "client-1", host: { home: "/h" } });
+        if (!events) return;
+        send({
+          type: "waterfall",
+          event: "approval/request",
+          eventId: "ev-approval",
+          agentId: S,
+          request: { toolName: "bash", reason: "rm -rf build" },
+        });
+        send({
+          type: "waterfall",
+          event: "user-questions/request",
+          eventId: "ev-question",
+          agentId: S,
+          request: {
+            questions: [
+              {
+                id: "q1",
+                question: "选哪个？",
+                options: [{ label: "A" }, { label: "B" }],
+              },
+              { id: "q2", question: "备注？" },
+            ],
+            wait: { callId: "call-open" },
+          },
+        });
+        send({
+          type: "waterfall",
+          event: "approval/request",
+          eventId: "ev-cancelled",
+          agentId: S,
+          request: { toolName: "edit" },
+        });
+        send({ type: "cancel", eventId: "ev-cancelled" });
+      }
     }),
   );
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -195,8 +249,8 @@ async function fakeDsh2() {
     },
   };
 }
-async function withDsh(run) {
-  const server = await fakeDsh2();
+async function withDsh(run, options) {
+  const server = await fakeDsh2(options);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokite-dsh2-"));
   const dsh = new Dsh(server.base, { authFile: path.join(dir, "auth.json") });
   try {
@@ -421,3 +475,80 @@ test("0.2: a retried send with an accepted request id is not re-submitted", () =
       2,
     );
   }));
+
+async function pendingOf(dsh, id) {
+  await dsh.projects();
+  for (let i = 0; i < 50; i++) {
+    const d = await dsh.detail(id);
+    if (d.pending.length >= 3) return d;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return dsh.detail(id);
+}
+
+test("0.2: forwarded approvals and questions show as pending, cancellations drop them", () =>
+  withDsh(
+    async (dsh) => {
+      const d = await pendingOf(dsh, S);
+      assert.equal(d.status, "waiting");
+      assert.equal(d.canReply, false);
+      assert.deepEqual(d.pending.map((p) => [p.id, p.kind]).sort(), [
+        ["ev-approval", "approval"],
+        ["ev-question", "question"],
+        ["question:call-continued", "question"],
+      ]);
+      const approval = d.pending.find((p) => p.id === "ev-approval");
+      assert.equal(approval.title, "bash");
+      assert.equal(approval.detail, "rm -rf build");
+    },
+    { events: true },
+  ));
+
+test("0.2: answers go back through $events or userQuestions/answer", () =>
+  withDsh(
+    async (dsh, server) => {
+      await pendingOf(dsh, S);
+      await dsh.answer(S, "ev-approval", { allow: true });
+      await dsh.answer(S, "ev-question", {
+        answers: { q1: "B", q2: "周五前" },
+      });
+      await dsh.answer(S, "question:call-continued", {
+        answers: { qc: "继续" },
+      });
+      const results = server.calls
+        .filter((c) => c.method === "$events/result")
+        .map((c) => c.args);
+      assert.deepEqual(results, [
+        {
+          clientId: "client-1",
+          eventId: "ev-approval",
+          outcome: { kind: "result", value: "allowed-once" },
+        },
+        {
+          clientId: "client-1",
+          eventId: "ev-question",
+          outcome: {
+            kind: "result",
+            value: {
+              answers: [
+                { id: "q1", selected: ["B"] },
+                { id: "q2", selected: [], custom: "周五前" },
+              ],
+            },
+          },
+        },
+      ]);
+      assert.deepEqual(
+        server.calls.find((c) => c.method === "userQuestions/answer").args,
+        {
+          agentId: S,
+          callId: "call-continued",
+          answer: { answers: [{ id: "qc", selected: [], custom: "继续" }] },
+        },
+      );
+      await assert.rejects(dsh.answer(S, "ev-approval", { allow: false }), {
+        status: 409,
+      });
+    },
+    { events: true },
+  ));
