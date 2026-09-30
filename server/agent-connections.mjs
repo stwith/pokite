@@ -143,23 +143,28 @@ export class AgentConnections {
         )
           return disconnected("请先打开 Claude Desktop");
         if (!adapter) return disconnected("开启后检测连接");
-        // Status must not enqueue profile/catalog requests behind real messages.
-        // The normal project/session reader owns cloud refresh and authorization.
-        const catalog = adapter.catalog.cached;
+        // Status must not enqueue profile/catalog requests behind real
+        // messages in the single broker lane, so it reports what real reads
+        // last saw. With nothing known to be wrong the agent counts as
+        // connected: only problems are shown.
+        const { cached: catalog, failure } = adapter.catalog;
+        if (failure && failure.time >= (catalog?.time ?? 0))
+          return disconnected(failure.message);
+        if (instance.provider === "claudeDesktop") return { connected: true };
         let account;
         try {
           account = JSON.parse(
             await fs.readFile(path.join(instance.home, "config.json"), "utf8"),
           ).lastKnownAccountUuid;
         } catch {}
+        // Remote Control state is only known from a recent session list.
         if (
           !catalog ||
           !account ||
           !catalog.scope.startsWith(account + ":") ||
-          this.now() - catalog.time > 120000
+          this.now() - catalog.time > 30 * 60000
         )
-          return { connected: null, notice: "打开会话以确认连接" };
-        if (instance.provider === "claudeDesktop") return { connected: true };
+          return { connected: true };
         if (
           catalog.rows.some(
             (row) =>

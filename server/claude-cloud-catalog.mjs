@@ -31,9 +31,20 @@ export class ClaudeCloudCatalog {
   constructor(root, client, { now = Date.now } = {}) {
     Object.assign(this, { root, client, now });
   }
+  // The latest failed read (identity, keychain or cloud), cleared by the next
+  // success. Connection status reports it instead of probing on its own.
+  recordFailure(error) {
+    this.failure = { time: this.now(), message: error.message };
+  }
   async get({ fresh = false, stale = false } = {}) {
-    const owner = await this.client.identity(),
-      scope = owner.account + ":" + owner.organization;
+    let owner;
+    try {
+      owner = await this.client.identity();
+    } catch (error) {
+      this.recordFailure(error);
+      throw error;
+    }
+    const scope = owner.account + ":" + owner.organization;
     if (this.cached?.scope !== scope) this.cached = null;
     if (!fresh && this.cached && this.now() - this.cached.time < 5000)
       return this.cached;
@@ -41,7 +52,12 @@ export class ClaudeCloudCatalog {
       const work = this.load(owner)
         .then((result) => {
           this.cached = result;
+          this.failure = null;
           return result;
+        })
+        .catch((error) => {
+          this.recordFailure(error);
+          throw error;
         })
         .finally(() => {
           if (this.pending?.work === work) this.pending = null;
