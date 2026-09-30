@@ -1,6 +1,6 @@
 import { sharingConfigFile } from "./state-paths.mjs";
 import fs from "node:fs";
-export const sharedConfigFile = sharingConfigFile();
+const sharedConfigFile = sharingConfigFile();
 export function sharedProfile(id) {
   try {
     const config = JSON.parse(fs.readFileSync(sharedConfigFile, "utf8"));

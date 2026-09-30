@@ -70,7 +70,7 @@ function processRows(field) {
 }
 // Codex Desktop 26.924 moved the backend from Resources/codex to
 // Resources/codex-cli/bin/codex; newest layout first.
-export const BUNDLED_CODEX_PATHS = [
+const BUNDLED_CODEX_PATHS = [
   "Contents/Resources/codex-cli/bin/codex",
   "Contents/Resources/codex",
 ];
@@ -118,7 +118,7 @@ function searchBundledCodex(app, maxDepth = 5) {
   }
   return null;
 }
-export function bundledCodexBinary(app, { search = true } = {}) {
+function bundledCodexBinary(app, { search = true } = {}) {
   return (
     BUNDLED_CODEX_PATHS.map((x) => path.join(app, x)).find(executable) ??
     (search ? searchBundledCodex(app) : null)

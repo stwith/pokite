@@ -4,13 +4,13 @@ import {
   listSessions,
   getSessionMessages,
 } from "@anthropic-ai/claude-agent-sdk";
-import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { userFacingText } from "./messages.mjs";
 import { WeightedCache } from "./weighted-cache.mjs";
 import { desktopCodeSessionIds } from "./claude-session-ownership.mjs";
+import { readJson, writeFileAtomic } from "./json-file.mjs";
 
 const plain = (c) =>
   typeof c === "string"
@@ -36,13 +36,7 @@ export class Claude {
       { path: path.join(this.root, "projects"), recursive: true },
     ];
     this.file = options.stateFile || stateFile("claude-state.json");
-    this.tempFile =
-      this.file instanceof URL
-        ? new URL(this.file.href + ".tmp")
-        : this.file + ".tmp";
-    this.states = fs.existsSync(this.file)
-      ? JSON.parse(fs.readFileSync(this.file, "utf8"))
-      : {};
+    this.states = readJson(this.file, {});
     this.jobs = new Map();
     this.executions = new Set();
     this.pending = new Map();
@@ -54,10 +48,7 @@ export class Claude {
       if (["running", "waiting"].includes(s.status)) s.status = "interrupted";
   }
   save() {
-    fs.writeFileSync(this.tempFile, JSON.stringify(this.states), {
-      mode: 0o600,
-    });
-    fs.renameSync(this.tempFile, this.file);
+    writeFileAtomic(this.file, JSON.stringify(this.states));
   }
   options(cwd) {
     const env = { ...process.env, CLAUDE_CONFIG_DIR: this.root };

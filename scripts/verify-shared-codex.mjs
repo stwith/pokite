@@ -411,5 +411,11 @@ try {
   clearTimeout(force);
   for (const stream of streams) stream.destroy();
   await new Promise((resolve) => provider.close(resolve));
-  await fs.rm(home, { recursive: true, force: true });
+  // Detached codex helpers (plugin sync) can still be writing briefly.
+  await fs.rm(home, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 200,
+  });
 }

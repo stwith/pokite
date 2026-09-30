@@ -1,5 +1,5 @@
-import fs from "node:fs";
 import { RetiredReceipts, fingerprint } from "./retired-receipts.mjs";
+import { readJson, writeFileAtomic } from "./json-file.mjs";
 const hidden = new Set(["sent", "withdrawn", "removed"]);
 
 export class MessageQueue {
@@ -10,9 +10,7 @@ export class MessageQueue {
     this.inFlight = new Set();
     this.stopping = false;
     this.retired = new RetiredReceipts(file + ".receipts.sqlite");
-    this.items = fs.existsSync(file)
-      ? JSON.parse(fs.readFileSync(file, "utf8"))
-      : [];
+    this.items = readJson(file, []);
     for (const item of this.items)
       if (item.state === "sending") {
         item.state = "uncertain";
@@ -44,10 +42,7 @@ export class MessageQueue {
     );
     const ids = new Set(expired.map((x) => x.requestId));
     this.items = this.items.filter((x) => !ids.has(x.requestId));
-    fs.writeFileSync(this.file + ".tmp", JSON.stringify(this.items), {
-      mode: 0o600,
-    });
-    fs.renameSync(this.file + ".tmp", this.file);
+    writeFileAtomic(this.file, JSON.stringify(this.items));
   }
   list(agent, id) {
     return this.items.filter(

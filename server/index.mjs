@@ -17,6 +17,7 @@ import { DesktopErrorMonitor } from "./desktop-error-monitor.mjs";
 import { PushService } from "./push.mjs";
 import { rotateAccessToken, generateAccessToken } from "./access-token.mjs";
 import { NetworkListeners } from "./network-listeners.mjs";
+import { readJson, writeFileAtomicAsync } from "./json-file.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const local = stateDirectory();
@@ -101,12 +102,7 @@ try {
     adapters,
   );
   const readFile = path.join(local, "read.json");
-  const reads = JSON.parse(
-    await fs.readFile(readFile, "utf8").catch((error) => {
-      if (error.code === "ENOENT") return "{}";
-      throw error;
-    }),
-  );
+  const reads = readJson(readFile, {});
   const operations = new Operations(path.join(local, "operations.json"));
   operations.save();
   let writeQueue = Promise.resolve(),
@@ -114,8 +110,7 @@ try {
   function saveReads() {
     const snapshot = JSON.stringify(reads);
     writeQueue = writeQueue
-      .then(() => fs.writeFile(readFile + ".tmp", snapshot, { mode: 0o600 }))
-      .then(() => fs.rename(readFile + ".tmp", readFile))
+      .then(() => writeFileAtomicAsync(readFile, snapshot))
       .then(() => {
         readError = null;
       })

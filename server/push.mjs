@@ -1,8 +1,8 @@
-import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import webpush from "web-push";
 import { translate, normalizeLocale } from "../shared/i18n.mjs";
+import { readJson, writeFileAtomic } from "./json-file.mjs";
 
 const bad = (text) => Object.assign(new Error(text), { status: 400 });
 export function validateSubscription(value) {
@@ -48,9 +48,14 @@ const keyOf = (value) => createHash("sha256").update(value).digest("hex");
 
 export function notificationBody(detail, row, group) {
   const clean = (value, limit) => {
-    const text = typeof value === "string" ? value.replace(/[\x00-\x1f\x7f]/g, " ").trim() : "";
+    const text =
+      typeof value === "string"
+        ? value.replace(/[\x00-\x1f\x7f]/g, " ").trim()
+        : "";
     const chars = Array.from(text);
-    return chars.length > limit ? chars.slice(0, limit - 1).join("") + "…" : text;
+    return chars.length > limit
+      ? chars.slice(0, limit - 1).join("") + "…"
+      : text;
   };
   const title = clean(detail.title || row.title, 100) || "未命名会话";
   const location = clean(group.projectPath || group.projectName, 180);
@@ -95,14 +100,12 @@ export class PushService {
           timeout: 10000,
           urgency: "normal",
         }));
-    this.state = fs.existsSync(this.file)
-      ? JSON.parse(fs.readFileSync(this.file, "utf8"))
-      : {
-          vapid: webpush.generateVAPIDKeys(),
-          devices: {},
-          groups: {},
-          outbox: [],
-        };
+    this.state = readJson(this.file, null) ?? {
+      vapid: webpush.generateVAPIDKeys(),
+      devices: {},
+      groups: {},
+      outbox: [],
+    };
     for (const device of Object.values(this.state.devices)) {
       device.scope = "all";
       delete device.projects;
@@ -110,10 +113,7 @@ export class PushService {
     this.save();
   }
   save() {
-    fs.writeFileSync(this.file + ".tmp", JSON.stringify(this.state), {
-      mode: 0o600,
-    });
-    fs.renameSync(this.file + ".tmp", this.file);
+    writeFileAtomic(this.file, JSON.stringify(this.state));
   }
   config() {
     return { publicKey: this.state.vapid.publicKey };

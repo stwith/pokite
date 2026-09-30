@@ -1,6 +1,6 @@
 import fs from "node:fs";
-import path from "node:path";
 import { stateFile } from "./state-paths.mjs";
+import { readJson, writeFileAtomic } from "./json-file.mjs";
 
 // dsh 0.2 web prints "dsh web: http://host:port/?token=…" at startup. That
 // launch token lives only as long as the process, but exchanging it once
@@ -25,18 +25,16 @@ export class DshAuth {
     this.file = file;
     this.launchLog = launchLog;
   }
+  // A damaged cookie store only costs a re-pair, so it reads as unpaired.
   read() {
     try {
-      return JSON.parse(fs.readFileSync(this.file, "utf8"));
+      return readJson(this.file, {});
     } catch {
       return {};
     }
   }
   write(all) {
-    fs.mkdirSync(path.dirname(this.file), { recursive: true, mode: 0o700 });
-    const temporary = this.file + ".tmp";
-    fs.writeFileSync(temporary, JSON.stringify(all, null, 2), { mode: 0o600 });
-    fs.renameSync(temporary, this.file);
+    writeFileAtomic(this.file, JSON.stringify(all, null, 2));
   }
   cookie() {
     const entry = this.read()[this.origin];

@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { writeFileAtomicAsync } from "../server/json-file.mjs";
 import path from "node:path";
 import os from "node:os";
 import { execFileSync } from "node:child_process";
@@ -36,10 +37,7 @@ if (apply) {
   if (config) {
     for (const profile of Object.values(config.profiles || {}))
       profile.enabled = false;
-    await fs.writeFile(configFile + ".tmp", JSON.stringify(config, null, 2), {
-      mode: 0o600,
-    });
-    await fs.rename(configFile + ".tmp", configFile);
+    await writeFileAtomicAsync(configFile, JSON.stringify(config, null, 2));
   }
   for (const label of [
     "local.agent-pocket.codex-sharing",

@@ -1,14 +1,12 @@
-import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { RetiredReceipts } from "./retired-receipts.mjs";
+import { readJson, writeFileAtomic } from "./json-file.mjs";
 export class Operations {
   constructor(file) {
     this.file = file;
     this.pending = new Map();
     this.retired = new RetiredReceipts(file + ".receipts.sqlite");
-    this.records = fs.existsSync(file)
-      ? JSON.parse(fs.readFileSync(file, "utf8"))
-      : {};
+    this.records = readJson(file, {});
   }
   save() {
     const completed = Object.entries(this.records)
@@ -25,10 +23,7 @@ export class Operations {
     });
     this.retired.put(expired.map(([id, r]) => [id, r.hash]));
     for (const [id] of expired) delete this.records[id];
-    fs.writeFileSync(this.file + ".tmp", JSON.stringify(this.records), {
-      mode: 0o600,
-    });
-    fs.renameSync(this.file + ".tmp", this.file);
+    writeFileAtomic(this.file, JSON.stringify(this.records));
   }
   async run(id, input, fn) {
     if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{12,100}$/.test(id))

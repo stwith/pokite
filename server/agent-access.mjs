@@ -1,8 +1,7 @@
 import fs from "node:fs/promises";
-import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { AgentConnections } from "./agent-connections.mjs";
 import { validateInstances } from "./instances.mjs";
+import { writeFileAtomicAsync } from "./json-file.mjs";
 
 // Disable only Pokite access. Keep adapters alive so accepted work can finish.
 export class AgentAccess {
@@ -237,14 +236,7 @@ export class AgentAccess {
       this.busy = false;
     }
   }
-  async write(value) {
-    await fs.mkdir(path.dirname(this.file), { recursive: true, mode: 0o700 });
-    const temporary = this.file + "." + randomUUID();
-    try {
-      await fs.writeFile(temporary, value, { mode: 0o600 });
-      await fs.rename(temporary, this.file);
-    } finally {
-      await fs.rm(temporary, { force: true });
-    }
+  write(value) {
+    return writeFileAtomicAsync(this.file, value);
   }
 }

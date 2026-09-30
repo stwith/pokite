@@ -56,7 +56,3 @@ export async function desktopCodeInventory(root, account, organization) {
   }
   return { bridges: rows, sessions };
 }
-
-export async function desktopCodeBridges(root, account, organization) {
-  return (await desktopCodeInventory(root, account, organization)).bridges;
-}

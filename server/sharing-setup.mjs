@@ -69,7 +69,7 @@ export function probeDesktopTransport(binary) {
     fs.rmSync(directory, { recursive: true, force: true });
   }
 }
-export async function availablePort() {
+async function availablePort() {
   const server = net.createServer();
   await new Promise((resolve, reject) => {
     server.once("error", reject);

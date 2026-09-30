@@ -19,7 +19,7 @@ export function cloudProjectAlias(uuid) {
   }
   return "claude_proj_01" + encoded.padStart(22, "1");
 }
-export function unifiedCloudSession(row) {
+function unifiedCloudSession(row) {
   const tags = Array.isArray(row.tags) ? row.tags : [];
   return (
     row.environment_kind === "anthropic_cloud" &&

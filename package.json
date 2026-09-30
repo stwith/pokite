@@ -20,7 +20,8 @@
     "dev": "vite --host 127.0.0.1 --port 3231",
     "rotate-token": "node scripts/rotate-token.mjs",
     "open": "node scripts/open.mjs",
-    "setup:cowork": "node scripts/setup-cowork.mjs"
+    "setup:cowork": "node scripts/setup-cowork.mjs",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.270",

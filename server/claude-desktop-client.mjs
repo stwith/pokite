@@ -4,7 +4,7 @@ import { ClaudeCloudCatalog } from "./claude-cloud-catalog.mjs";
 import { CoworkBroker } from "./cowork-broker.mjs";
 const safe = (value) =>
   typeof value === "string" && /^[A-Za-z0-9_-]+$/.test(value);
-export class ClaudeDesktopClient {
+class ClaudeDesktopClient {
   constructor(root, { broker = new CoworkBroker() } = {}) {
     this.root = root;
     this.broker = broker;

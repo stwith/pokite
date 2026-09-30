@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import WebSocket from "ws";
 import { execFile, execFileSync } from "node:child_process";
 import { probeDesktopTransport } from "../server/sharing-setup.mjs";
+import { writeFileAtomic } from "../server/json-file.mjs";
 import {
   desktopBackendForCaller,
   isDesktopAppCaller,
@@ -176,10 +177,7 @@ else {
     initializeId;
   let state;
   const saveState = () => {
-    fsSync.writeFileSync(stateFile + ".tmp", JSON.stringify(state), {
-      mode: 0o600,
-    });
-    fsSync.renameSync(stateFile + ".tmp", stateFile);
+    writeFileAtomic(stateFile, JSON.stringify(state));
   };
   async function stop(code = 0) {
     if (stopping) return;

@@ -5,6 +5,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { writeFileAtomicAsync } from "../server/json-file.mjs";
 import { loadInstances } from "../server/instances.mjs";
 import { CodexReadOnly } from "../server/codex-readonly.mjs";
 import { resolveCodexDesktopBinary } from "../server/machine-discovery.mjs";
@@ -164,14 +165,7 @@ if (values["dry-run"]) {
     );
     try {
       await withFileRollback([configFile, launcher, agentFile], async () => {
-        await fs.writeFile(
-          configFile + ".tmp",
-          JSON.stringify(config, null, 2),
-          {
-            mode: 0o600,
-          },
-        );
-        await fs.rename(configFile + ".tmp", configFile);
+        await writeFileAtomicAsync(configFile, JSON.stringify(config, null, 2));
         await fs.writeFile(
           launcher,
           renderDesktopLauncher(

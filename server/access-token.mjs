@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { randomInt, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomInt, timingSafeEqual } from "node:crypto";
+import { writeFileAtomic } from "./json-file.mjs";
 
 export function matchesAccessToken(credential, expected) {
   if (typeof credential !== "string" || typeof expected !== "string")
@@ -21,15 +22,9 @@ export function generateAccessToken() {
 }
 export function rotateAccessToken(directory) {
   const file = path.join(directory, "access-token");
-  const temporary = file + "." + randomUUID();
   const token = generateAccessToken();
-  try {
-    fs.writeFileSync(temporary, token, { mode: 0o600 });
-    fs.renameSync(temporary, file);
-    return token;
-  } finally {
-    fs.rmSync(temporary, { force: true });
-  }
+  writeFileAtomic(file, token);
+  return token;
 }
 // Reset notification access before changing the code. Accepted Agent tasks and
 // accounts are untouched; previously subscribed browsers must opt in again.
@@ -39,11 +34,5 @@ export function clearSavedPushAccess(directory) {
   const state = JSON.parse(fs.readFileSync(file, "utf8"));
   state.devices = {};
   state.outbox = [];
-  const temporary = file + "." + randomUUID();
-  try {
-    fs.writeFileSync(temporary, JSON.stringify(state), { mode: 0o600 });
-    fs.renameSync(temporary, file);
-  } finally {
-    fs.rmSync(temporary, { force: true });
-  }
+  writeFileAtomic(file, JSON.stringify(state));
 }
