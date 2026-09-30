@@ -82,9 +82,19 @@ export class AgentConnections {
           : disconnected();
       }
       case "dsh":
-        return (await reachable(instance.url))
-          ? { connected: true }
-          : disconnected();
+        try {
+          return (await (adapter?.reachable
+            ? adapter.reachable()
+            : reachable(instance.url)))
+            ? { connected: true }
+            : disconnected();
+        } catch (error) {
+          return disconnected(
+            error.code === "DSH_PAIRING_REQUIRED"
+              ? "DeepSeek Harness 需要配对：在电脑上运行 node scripts/pair-dsh.mjs"
+              : undefined,
+          );
+        }
       case "penguin": {
         const lock = JSON.parse(
           await fs.readFile(

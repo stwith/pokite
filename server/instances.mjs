@@ -87,6 +87,16 @@ export function validateInstances(value) {
             "Claude SDK history uses the service CLAUDE_CONFIG_DIR; configure it before launch instead of mixing Claude homes",
           );
       }
+      if (instance.launchLog !== undefined) {
+        if (typeof instance.launchLog !== "string")
+          throw Error("Invalid instance launchLog");
+        instance.launchLog = instance.launchLog.replace(
+          /^~(?=\/|$)/,
+          os.homedir(),
+        );
+        if (!path.isAbsolute(instance.launchLog))
+          throw Error("Instance launchLog must be absolute");
+      }
       if (instance.url) {
         const url = new URL(instance.url);
         if (

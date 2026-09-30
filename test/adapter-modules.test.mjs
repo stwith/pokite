@@ -18,6 +18,7 @@ test("adapter registry keeps existing class and parser identities", () => {
 test("DeepSeek project labels fall back to directory names", async () => {
   const adapter = new Dsh();
   adapter.connect = () => {};
+  adapter.version = async () => 1;
   adapter.call = async () => ({
     items: [
       { workspaceId: "a", path: "/tmp/example", sessionIds: [] },

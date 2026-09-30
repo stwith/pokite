@@ -26,7 +26,7 @@ const factories = {
   claudeDesktopCode: ({ home }) =>
     new ClaudeDesktopRemote(home, { surface: "code" }),
   codex: ({ id, home }) => new Codex(id, home),
-  dsh: ({ url }) => new Dsh(url),
+  dsh: ({ url, launchLog }) => new Dsh(url, { launchLog }),
   penguin: ({ home }) => new Penguin(home),
   hermesDesktop: ({ home }) => new HermesDesktop(home),
   claude: ({ id, home }) =>
