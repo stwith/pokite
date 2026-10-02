@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { browserStorage as storage } from "../lib/browser-storage";
 import { t } from "../lib/i18n.js";
 import { requestId } from "../lib/session";
+import { approvalAnswerKey } from "../lib/approval-answers";
 import {
   clearWithdrawnSubmission,
   restoreDraft,
@@ -32,6 +33,7 @@ export function useMessageActions({
   setNav,
   nearBottom,
   answers,
+  setAnswers,
   effort,
   setEffort,
   modelChoice,
@@ -206,10 +208,9 @@ export function useMessageActions({
       );
       if (active.current.agent !== context.agent) return;
       if (result.error) {
-        setSid(result.id);
         setError(result.error);
-        pendingSend.current = null;
-        storage.removeItem(pendingKey);
+        // Stay in the creation context and preserve its request identity.
+        // Retrying resumes the creation checkpoint, not a new-session send.
         return;
       }
       const remaining =
@@ -249,6 +250,8 @@ export function useMessageActions({
     }
   }
   async function answer(p, allow) {
+    const context = { agent, sid };
+    const key = approvalAnswerKey(agent, sid, p.id);
     setBusy(true);
     try {
       await api(
@@ -260,15 +263,28 @@ export function useMessageActions({
           encodeURIComponent(p.id),
         {
           allow,
-          answers,
+          answers: answers[key] || {},
         },
       );
-      setDetail(
-        await api("/" + agent + "/sessions/" + encodeURIComponent(sid)),
-      );
-      setError("");
+      setAnswers((previous) => {
+        const next = { ...previous };
+        delete next[key];
+        return next;
+      });
+      const d = await api("/" + agent + "/sessions/" + encodeURIComponent(sid));
+      if (
+        active.current.agent === context.agent &&
+        active.current.sid === context.sid
+      ) {
+        setDetail(d);
+        setError("");
+      }
     } catch (e) {
-      setError(e.message);
+      if (
+        active.current.agent === context.agent &&
+        active.current.sid === context.sid
+      )
+        setError(e.message);
     } finally {
       setBusy(false);
     }

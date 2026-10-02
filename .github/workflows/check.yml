@@ -5,6 +5,7 @@ permissions:
 jobs:
   test:
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,3 +16,5 @@ jobs:
       - run: node scripts/verify-cowork-broker.mjs
       - run: npm test
       - run: npm run build
+      - run: npx playwright install chromium webkit
+      - run: npm run verify -- --portable

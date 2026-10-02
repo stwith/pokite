@@ -87,39 +87,20 @@ export class DshRemote {
     const socket = this.socket();
     const streamId = randomUUID();
     this.streams.set(streamId, { socket, item, end });
-    const open = () =>
+    const open = () => {
+      if (!this.streams.has(streamId)) return;
       socket.send(
         JSON.stringify({ type: "open", streamId, endpoint, payload: { args } }),
       );
+    };
     if (socket.readyState === WebSocket.OPEN) open();
     else socket.once("open", open);
     return () => {
+      socket.removeListener("open", open);
       if (!this.streams.delete(streamId)) return;
       if (socket.readyState === WebSocket.OPEN)
         socket.send(JSON.stringify({ type: "cancel", streamId }));
     };
-  }
-  // First frame of a stream (a snapshot or baseline), then cancel it.
-  first(endpoint, args, timeoutMs = 20000) {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        cancel();
-        reject(Error("DeepSeek Harness 响应超时：" + endpoint));
-      }, timeoutMs);
-      const cancel = this.stream(endpoint, args, {
-        item: (value) => {
-          clearTimeout(timer);
-          cancel();
-          resolve(value);
-        },
-        end: (error) => {
-          clearTimeout(timer);
-          reject(
-            error || Error("DeepSeek Harness 数据流提前结束：" + endpoint),
-          );
-        },
-      });
-    });
   }
   close() {
     this.mux?.terminate();

@@ -18,6 +18,7 @@ export function useProjects({
   setProject,
   onSwitch,
   openTarget,
+  openProject,
   setLoading,
   setOnline,
   syncFailed,
@@ -40,21 +41,21 @@ export function useProjects({
         .then((rows) => {
           if (gen !== generation.current) return;
           setProjects(rows);
-          setProject(
+          const nextProject =
             rows.find(
               (p) =>
                 (p.id === notificationTarget.current?.project ||
                   p.aliases?.includes(notificationTarget.current?.project)) &&
-                notificationTarget.current.agent === agent,
+                notificationTarget.current?.agent === agent,
             ) ||
-              rows.find(
-                (p) =>
-                  p.id === storage.getItem("project:" + agent) ||
-                  p.aliases?.includes(storage.getItem("project:" + agent)),
-              ) ||
-              rows[0] ||
-              null,
-          );
+            rows.find(
+              (p) =>
+                p.id === storage.getItem("project:" + agent) ||
+                p.aliases?.includes(storage.getItem("project:" + agent)),
+            ) ||
+            rows[0] ||
+            null;
+          setProject(nextProject);
           if (
             notificationTarget.current?.agent === agent &&
             rows.some(
@@ -65,7 +66,7 @@ export function useProjects({
           ) {
             openTarget(notificationTarget.current);
             notificationTarget.current = null;
-          }
+          } else openProject(nextProject);
           setOnline(true);
           loaded = true;
           syncRecovered(t("项目"));

@@ -48,6 +48,10 @@ export default function App() {
     setSessions([]);
     setSid(null);
     setDetail(null);
+    setDraft("");
+    draftRef.current = "";
+    pendingSend.current = null;
+    setAnswers({});
   };
   const { token, setToken, authed, login } = useAuth({
     applyAgents: (available) => applyAgents(available),
@@ -107,6 +111,14 @@ export default function App() {
       setError("");
       setSyncErrors({});
       setLoading(true);
+      setDraft("");
+      draftRef.current = "";
+      pendingSend.current = null;
+    },
+    openProject: (next) => {
+      const text = next ? readDraft("draft:" + agent + ":" + next.id) || "" : "";
+      draftRef.current = text;
+      setDraft(text);
     },
     openTarget: (target) => {
       setSid(target.session);
@@ -186,6 +198,7 @@ export default function App() {
     setNav,
     nearBottom,
     answers,
+    setAnswers,
     effort,
     setEffort,
     modelChoice,
@@ -272,6 +285,7 @@ export default function App() {
           setDesktopNav={setDesktopNav}
         />
         <ConversationView
+          agent={agent}
           scroller={scroller}
           nearBottom={nearBottom}
           setShowLatest={setShowLatest}

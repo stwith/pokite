@@ -237,6 +237,12 @@ export const en = {
   会话列表: "Session list",
   "会话已创建，消息未确认送达：":
     "Session created, but message delivery is unconfirmed: ",
+  "会话已创建，消息尚未入队：":
+    "Session created, but the message has not been queued: ",
+  "Claude 状态未能保存，消息尚未提交":
+    "Could not save Claude state. The message has not been submitted.",
+  "DeepSeek Harness 协议探测响应无效":
+    "Invalid DeepSeek Harness protocol detection response",
   允许本次: "Allow once",
   "先完成连接再添加。独立窗口若要求访问码，重新配对即可；电脑需保持开机并运行 Pokite。":
     "Connect before adding. If the standalone window asks for an access code, pair again. Keep your computer and Pokite running.",

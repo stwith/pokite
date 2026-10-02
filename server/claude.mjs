@@ -359,7 +359,17 @@ export class Claude {
     this.states[id] = state;
     const controller = new AbortController();
     this.jobs.set(id, { controller });
-    this.save();
+    try {
+      this.save();
+    } catch (cause) {
+      this.jobs.delete(id);
+      if (prev === undefined) delete this.states[id];
+      else this.states[id] = prev;
+      throw Object.assign(Error("Claude 状态未能保存，消息尚未提交"), {
+        delivery: "not-sent",
+        cause,
+      });
+    }
     const execution = this.drive(id, text, model, controller);
     this.executions.add(execution);
     execution.then(

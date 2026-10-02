@@ -6,6 +6,11 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+const portable = process.argv.includes("--portable");
+if (process.argv.slice(2).some((arg) => arg !== "--portable")) {
+  console.error("Usage: npm run verify [-- --portable]");
+  process.exit(1);
+}
 const suite = [
   "verify-session-sync",
   "verify-scroll-pagination",
@@ -16,8 +21,11 @@ const suite = [
   "verify-claude-controls-ui",
   "verify-cowork-ui",
   "verify-cowork-broker",
-  "verify-shared-codex",
+  ...(!portable ? ["verify-shared-codex"] : []),
+  "verify-audit-recovery",
 ];
+if (portable)
+  console.log("Portable checks: shared Codex integration requires a local Desktop binary and remains in the full local suite.");
 const failed = [];
 for (const name of suite) {
   const script = fileURLToPath(new URL(`./${name}.mjs`, import.meta.url));

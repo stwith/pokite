@@ -48,11 +48,15 @@ export class Dsh {
         }),
         signal: AbortSignal.timeout(20000),
       });
-      if (!response.ok) return 1;
-      const body = await response.json().catch(() => null);
-      return body?.result?.ok && Array.isArray(body.result.value?.items)
-        ? 2
-        : 1;
+      if (response.status === 404) return 1;
+      if (!response.ok)
+        throw Object.assign(Error("DeepSeek Harness HTTP " + response.status), {
+          httpStatus: response.status,
+        });
+      const body = await response.json();
+      if (!body?.result?.ok || !Array.isArray(body.result.value?.items))
+        throw Error("DeepSeek Harness 协议探测响应无效");
+      return 2;
     })().catch((error) => {
       this.versionCheck = null;
       throw error;
@@ -71,7 +75,7 @@ export class Dsh {
           Error(
             "这个会话正被另一个 DeepSeek Harness 进程（通常是桌面版）占用，只能在那边继续；退出桌面版后才能从 Pokite 发送。",
           ),
-          { status: 409, code: error.code },
+          { status: 409, code: error.code, delivery: "not-sent" },
         );
       throw error;
     }
@@ -332,7 +336,10 @@ export class Dsh {
       body: JSON.stringify({ type: "client-request", rpcId, method, payload }),
       signal: AbortSignal.timeout(20000),
     });
-    if (!r.ok) throw Error("DeepSeek Harness HTTP " + r.status);
+    if (!r.ok) {
+      if (r.status === 404) this.versionCheck = null;
+      throw Error("DeepSeek Harness HTTP " + r.status);
+    }
     const x = await r.json();
     if (!x.result?.ok)
       throw Error(x.result?.error?.message || JSON.stringify(x.result));

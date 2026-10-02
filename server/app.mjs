@@ -268,18 +268,33 @@ export function createApp({
     if (p.canCreate === false)
       throw Object.assign(Error("请先选择已有项目"), { status: 400 });
     const model = await selectModelSettings(req.adapter, p, null, req.body);
-    const result = await mutate(req, async () => {
-      if (req.adapter.createAndSend)
-        return req.adapter.createAndSend(p, text, req.body.requestId, model);
-      const s = await req.adapter.create(p, model);
-      try {
-        await req.adapter.send(s.id, text, req.body.requestId, model);
-        return s;
-      } catch (e) {
-        return { ...s, error: "会话已创建，消息未确认送达：" + e.message };
-      }
-    });
-    res.json(result);
+    if (req.adapter.createAndSend)
+      return res.json(
+        await mutate(req, () =>
+          req.adapter.createAndSend(p, text, req.body.requestId, model),
+        ),
+      );
+    // Commit creation separately so a failed queue write can resume without
+    // creating another session. The original model is part of this checkpoint.
+    const checkpoint = await mutate(req, async () => ({
+      session: await req.adapter.create(p, model),
+      model,
+    }));
+    // Old receipts already sent directly; never enqueue those again.
+    if (!checkpoint.session) return res.json(checkpoint);
+    const s = checkpoint.session;
+    try {
+      const queued = messages.add(
+        req.params.agent,
+        s.id,
+        text,
+        req.body.requestId,
+        checkpoint.model,
+      );
+      res.json({ ...s, ...queued });
+    } catch (e) {
+      res.json({ ...s, error: "会话已创建，消息尚未入队：" + e.message });
+    }
   });
   post("/api/:agent/sessions/:id/messages", async (req, res) => {
     const text = validText(req.body.text);
@@ -299,13 +314,19 @@ export function createApp({
         locks.set(lock, held);
         await previous;
         try {
-          const s = await req.adapter.detail(id);
-          if (s.readOnly)
-            throw Object.assign(Error(s.readOnlyReason || "此会话只读"), {
-              status: 409,
-            });
-          const p = await project(req.adapter, s.projectId);
-          const model = await selectModelSettings(req.adapter, p, id, req.body);
+          let model;
+          try {
+            const s = await req.adapter.detail(id);
+            if (s.readOnly)
+              throw Object.assign(Error(s.readOnlyReason || "此会话只读"), {
+                status: 409,
+              });
+            const p = await project(req.adapter, s.projectId);
+            model = await selectModelSettings(req.adapter, p, id, req.body);
+          } catch (error) {
+            // Only reads have occurred; no message has entered the queue.
+            throw Object.assign(error, { delivery: "not-sent" });
+          }
           return messages.add(
             req.params.agent,
             id,

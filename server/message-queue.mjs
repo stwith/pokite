@@ -104,7 +104,7 @@ export class MessageQueue {
         this.save();
       } catch (error) {
         this.items.pop();
-        throw error;
+        throw Object.assign(error, { delivery: "not-sent" });
       }
     }
     return { accepted: true, queued: true };

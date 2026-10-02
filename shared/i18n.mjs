@@ -15,7 +15,7 @@ export function translate(text, locale = "zh-CN") {
   );
   if (retry)
     return `${retry[1]} — retrying ${retry[2]}/${retry[3]} in approximately ${retry[4]} seconds.`;
-  for (const prefix of ["会话已创建，消息未确认送达：", "消息尚未提交："])
+  for (const prefix of ["会话已创建，消息未确认送达：", "会话已创建，消息尚未入队：", "消息尚未提交："])
     if (text.startsWith(prefix) && en[prefix])
       return en[prefix] + text.slice(prefix.length);
   return text;

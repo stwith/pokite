@@ -38,6 +38,7 @@ export class HermesDesktop {
     this.home = home;
     this.discover = discover;
     this.Client = Client;
+    this.supportsVirtualProjects = true;
     this.clients = new Map();
     this.created = new Map();
     this.watchPaths = [{ path: home, recursive: true }];
@@ -176,6 +177,7 @@ export class HermesDesktop {
               (row.profile === "default" ? "" : row.profile + " · ") +
               (row.cwd ? path.basename(row.cwd) : "未分配项目"),
             path: row.cwd || "",
+            virtual: !row.cwd,
             canCreate: !!row.cwd,
           },
         ]),

@@ -5,7 +5,9 @@ import { MessageBubble } from "../chat/message-bubble";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { QueuedMessage } from "../chat/queued-message";
+import { approvalAnswerKey } from "../../lib/approval-answers";
 export function ConversationView({
+  agent,
   scroller,
   nearBottom,
   setShowLatest,
@@ -26,6 +28,13 @@ export function ConversationView({
   queueAction,
   bottom,
 }) {
+  function updateAnswer(approvalId, questionId, value) {
+    const key = approvalAnswerKey(agent, sid, approvalId);
+    setAnswers((previous) => ({
+      ...previous,
+      [key]: { ...previous[key], [questionId]: value },
+    }));
+  }
   return (
     <section
       className="conversation"
@@ -90,25 +99,17 @@ export function ConversationView({
                   <label key={q.id}>
                     {q.question}
                     <Input
-                      value={answers[q.id] || ""}
-                      onChange={(e) =>
-                        setAnswers({
-                          ...answers,
-                          [q.id]: e.target.value,
-                        })
+                      value={
+                        answers[approvalAnswerKey(agent, sid, p.id)]?.[q.id] || ""
                       }
+                      onChange={(e) => updateAnswer(p.id, q.id, e.target.value)}
                     />
                     {q.options?.map((o) => (
                       <Button
                         variant="outline"
                         size="sm"
                         key={o.label}
-                        onClick={() =>
-                          setAnswers({
-                            ...answers,
-                            [q.id]: o.label,
-                          })
-                        }
+                        onClick={() => updateAnswer(p.id, q.id, o.label)}
                       >
                         {o.label}
                       </Button>
