@@ -111,6 +111,9 @@ const env = {
   ...process.env,
   CODEX_HOME: home,
   POCKET_PROOF_KEY: "isolated-test",
+  // The fixture provider is local, even when macOS has a system-wide proxy.
+  NO_PROXY: "127.0.0.1,localhost,::1",
+  no_proxy: "127.0.0.1,localhost,::1",
 };
 for (const key of Object.keys(env))
   if (key.startsWith("CODEX_") && key !== "CODEX_HOME") delete env[key];
@@ -146,6 +149,11 @@ const desktop = proxyMode
     })
   : new SharedRpc(endpoint);
 const phone = new SharedRpc(endpoint, proxyMode ? { tokenFile } : {});
+const diagnostics = [];
+desktop.on("message", (message) => {
+  if (message.method === "error" || /error|failed/i.test(message.method || ""))
+    diagnostics.push(message);
+});
 try {
   if (proxyMode) await desktop.connect();
   for (let i = 0; ; i++) {
@@ -399,6 +407,11 @@ try {
   );
 } catch (e) {
   console.error("Shared proof failed:", e.message);
+  console.error(
+    "Isolated native diagnostics:",
+    JSON.stringify(diagnostics.slice(-3)),
+    stderr.slice(-2000),
+  );
   throw e;
 } finally {
   desktop.close();

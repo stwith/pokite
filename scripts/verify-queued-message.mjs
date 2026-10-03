@@ -96,7 +96,7 @@ for (const engine of [chromium, webkit]) {
     );
     assert.equal(await page.locator(".queued-message").count(), 0);
     await input.fill(originalText);
-    await input.press("Enter");
+    await page.getByRole("button", { name: "发送", exact: true }).click();
     await page.waitForFunction(
       () => document.querySelector("textarea").value === "",
     );

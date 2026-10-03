@@ -68,7 +68,7 @@ for (const engine of [chromium, webkit]) {
       await page
         .getByText("部分本地数据尚未保存。", { exact: false })
         .waitFor();
-      await input.press("Enter");
+      await page.getByRole("button", { name: "发送", exact: true }).click();
       await page
         .getByText("草稿尚未保存，消息尚未发送", { exact: false })
         .waitFor();
@@ -88,7 +88,7 @@ for (const engine of [chromium, webkit]) {
           window.storageBlocked = false;
           window.dispatchEvent(new Event("focus"));
         });
-        await input.press("Enter");
+        await page.getByRole("button", { name: "发送", exact: true }).click();
         await page.waitForFunction(
           () => document.querySelector("textarea").value === "",
         );

@@ -87,6 +87,7 @@ export function ConversationView({
               role={m.role}
               text={m.text}
               time={m.time}
+              fileContext={{ agent, sid, before: m.fileHistoryBefore }}
             />
           ))}
           {detail?.pending?.map((p) => (
@@ -181,6 +182,7 @@ export function ConversationView({
               item={q}
               canEdit={!busy}
               onAction={queueAction}
+              fileContext={{ agent, sid }}
             />
           ))}
           {detail?.status === "waiting" && !detail.pending?.length && (

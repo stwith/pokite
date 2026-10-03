@@ -1,5 +1,26 @@
 // Source-language keys keep existing API errors stable for older clients.
 export const en = {
+  "选择照片或文件": "Choose photos or files",
+  "添加照片或文件": "Add photos or files",
+  "单个文件不能超过 20 MB": "Each file must be 20 MB or smaller",
+  "文件为空或格式无效": "The file is empty or invalid",
+  "文件名无效": "Invalid filename",
+  "请选择项目": "Choose a project",
+  "此会话不支持上传": "Uploads are unavailable for this session",
+  "附件存储空间已满": "Attachment storage is full",
+  "文件路径无效": "Invalid file path",
+  "此会话没有本地文件目录": "This session has no local file directory",
+  "只能预览此聊天中引用的文件": "Only files referenced in this chat can be previewed",
+  "此文件不可预览": "This file cannot be previewed",
+  "文件已不存在": "The file no longer exists",
+  "预览文件不能超过 20 MB": "Preview files must be 20 MB or smaller",
+  "此文件格式暂不支持预览": "This file format cannot be previewed yet",
+  "文件较长，仅预览前 200 KB": "Showing the first 200 KB of this file",
+  "PDF 预览失败：": "PDF preview failed: ",
+  "PDF 页面": "PDF page",
+  "上一页": "Previous page",
+  "下一页": "Next page",
+  "关闭预览": "Close preview",
   "此 Desktop Code 会话尚未连接 Remote Control，请在 Desktop 中开启后回复":
     "Enable Remote Control for this session in Desktop to reply",
   "Desktop Code 本地对话记录暂不可用":

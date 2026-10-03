@@ -23,6 +23,7 @@ const suite = [
   "verify-cowork-broker",
   ...(!portable ? ["verify-shared-codex"] : []),
   "verify-audit-recovery",
+  "verify-chat-files",
 ];
 if (portable)
   console.log("Portable checks: shared Codex integration requires a local Desktop binary and remains in the full local suite.");

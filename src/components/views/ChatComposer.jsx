@@ -1,6 +1,9 @@
 import { t } from "../../lib/i18n.js";
 import { ComposerButton } from "../chat/controls";
-import { ArrowDown, LoaderCircle, Send } from "lucide-react";
+import { ArrowDown, LoaderCircle, Send, Paperclip } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { api } from "../../lib/api";
+import { attachmentMarkdown } from "../../../shared/file-references.mjs";
 import { Textarea } from "@/components/ui/textarea";
 import { CompactSelect } from "@/components/ui/compact-select";
 export function ChatComposer({
@@ -22,6 +25,57 @@ export function ChatComposer({
   setEffort,
   effort,
 }) {
+  const fileInput = useRef(null);
+  const latest = useRef({ draft, draftChange, scope: "" });
+  const scope = JSON.stringify([selectedAgent?.id, sid, project?.id]);
+  latest.current = { draft, draftChange, scope };
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const unavailable =
+    !project ||
+    selectedAgent?.capabilities?.reply === false ||
+    detail?.readOnly ||
+    (!sid && project.canCreate === false);
+  useEffect(() => {
+    setUploadError("");
+  }, [scope]);
+  async function uploadFiles(event) {
+    const files = [...event.target.files];
+    event.target.value = "";
+    if (!files.length || uploading || unavailable) return;
+    const context = latest.current.scope;
+    setUploading(true);
+    setUploadError("");
+    try {
+      for (const file of files) {
+        if (file.size > 20 * 1024 * 1024)
+          throw Error(t("单个文件不能超过 20 MB"));
+        if (!file.size) throw Error(t("文件为空或格式无效"));
+        const query = new URLSearchParams({
+          name: file.name,
+          ...(sid ? { sessionId: sid } : { projectId: project.id }),
+        });
+        const result = await api(
+          `/${selectedAgent.id}/files/upload?${query}`,
+          file,
+          { binary: true },
+        );
+        if (latest.current.scope !== context) return;
+        const value = latest.current.draft;
+        const next =
+          value +
+          (value && !value.endsWith("\n") ? "\n" : "") +
+          attachmentMarkdown(result) +
+          "\n";
+        latest.current.draft = next;
+        latest.current.draftChange(next);
+      }
+    } catch (error) {
+      if (latest.current.scope === context) setUploadError(error.message);
+    } finally {
+      setUploading(false);
+    }
+  }
   return (
     <div className="composer-wrap">
       {sid && detail && showLatest && (
@@ -54,37 +108,53 @@ export function ChatComposer({
           {modelError}
         </p>
       )}
+      {uploadError && (
+        <p className="model-error" role="alert">
+          {uploadError}
+        </p>
+      )}
       <form
         className="composer"
         onSubmit={(e) => {
           e.preventDefault();
-          send();
+          if (!uploading) send();
         }}
       >
-        <Textarea
-          ref={textareaRef}
-          aria-label={t("消息")}
-          placeholder={sid ? t("回复…") : t("描述你想完成的任务…")}
-          value={draft}
-          disabled={
-            !project ||
-            selectedAgent?.capabilities?.reply === false ||
-            detail?.readOnly ||
-            (!sid && project.canCreate === false)
-          }
-          onChange={(e) => draftChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (
-              e.key === "Enter" &&
-              !e.shiftKey &&
-              !e.nativeEvent.isComposing &&
-              e.nativeEvent.keyCode !== 229
-            ) {
-              e.preventDefault();
-              send();
-            }
-          }}
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          hidden
+          aria-label={t("选择照片或文件")}
+          onChange={uploadFiles}
         />
+        <div className="composer-input">
+          <ComposerButton
+            inputRef={textareaRef}
+            onPress={() => fileInput.current?.click()}
+            variant="ghost"
+            size="icon-sm"
+            className="composer-attach"
+            aria-label={t("添加照片或文件")}
+            disabled={busy || uploading || unavailable}
+            aria-busy={uploading}
+          >
+            {uploading ? (
+              <LoaderCircle size={16} className="spin" />
+            ) : (
+              <Paperclip size={16} />
+            )}
+          </ComposerButton>
+          <Textarea
+            ref={textareaRef}
+            aria-label={t("消息")}
+            placeholder={sid ? t("回复…") : t("描述你想完成的任务…")}
+            value={draft}
+            disabled={unavailable}
+            onChange={(e) => draftChange(e.target.value)}
+            enterKeyHint="enter"
+          />
+        </div>
         <div className="composer-bottom">
           <div className="composer-actions">
             <div className="model-picker">
@@ -141,13 +211,16 @@ export function ChatComposer({
             )}
             <ComposerButton
               inputRef={textareaRef}
-              onPress={send}
+              onPress={() => {
+                if (!uploading) send();
+              }}
               size="icon"
               className="send"
               aria-label={t("发送")}
               aria-busy={busy}
               disabled={
                 busy ||
+                uploading ||
                 selectedAgent?.capabilities?.reply === false ||
                 !draft.trim() ||
                 !project ||

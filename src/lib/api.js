@@ -28,7 +28,7 @@ export function rejectAccessToken(credential) {
 }
 const responses = new Map();
 let responseBytes = 0;
-export async function api(url, body) {
+export async function api(url, body, { binary = false } = {}) {
   const credential = access;
   if (!credential)
     throw Object.assign(Error(t("请输入访问码")), { status: 401 });
@@ -53,14 +53,16 @@ export async function api(url, body) {
           : {}),
         ...(body
           ? {
-              "Content-Type": "application/json",
+              "Content-Type": binary
+                ? "application/octet-stream"
+                : "application/json",
             }
           : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? (binary ? body : JSON.stringify(body)) : undefined,
       signal: AbortSignal.any([
         controller.signal,
-        AbortSignal.timeout(url.startsWith("/setup/") ? 240000 : 60000),
+        AbortSignal.timeout(url.startsWith("/setup/") || binary ? 240000 : 60000),
       ]),
     });
   } catch (e) {
@@ -98,7 +100,7 @@ export async function api(url, body) {
       status: r.status,
     });
   const tag = r.headers.get("ETag");
-  if (!body && tag && credential === access) {
+  if (!body && tag && credential === access && !url.includes("/files/")) {
     const bytes = JSON.stringify(x).length * 2;
     if (bytes <= 8 * 1024 * 1024) {
       responseBytes -= responses.get(url)?.bytes || 0;

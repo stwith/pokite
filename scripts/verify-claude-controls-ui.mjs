@@ -130,7 +130,7 @@ try {
       await page.getByRole("option", { name: "low", exact: true }).click();
       const input = page.getByRole("textbox", { name: "消息", exact: true });
       await input.fill("hello");
-      await input.press("Enter");
+      await page.getByRole("button", { name: "发送", exact: true }).click();
       await page.getByText("Ready", { exact: true }).waitFor();
       assert.equal(submitted.filter((x) => x.kind === "create").length, 1);
       assert.equal(submitted[0].modelId, "b");
@@ -143,7 +143,7 @@ try {
       const replyResponse = page.waitForResponse(
         (r) => r.request().method() === "POST" && r.url().endsWith("/messages"),
       );
-      await input.press("Enter");
+      await page.getByRole("button", { name: "发送", exact: true }).click();
       assert.equal((await replyResponse).status(), 200);
       assert.equal(submitted.at(-1).kind, "reply");
       assert.equal(submitted.at(-1).modelId, "a");

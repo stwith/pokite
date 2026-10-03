@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pencil, X, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MessageContent } from "./message-bubble";
-export function QueuedMessage({ item, onAction, canEdit }) {
+export function QueuedMessage({ item, onAction, canEdit, fileContext }) {
   const [busy, setBusy] = useState(false);
   const act = async (action) => {
     setBusy(true);
@@ -55,7 +55,7 @@ export function QueuedMessage({ item, onAction, canEdit }) {
           </div>
         )}
       </div>
-      <MessageContent text={item.text} />
+      <MessageContent text={item.text} fileContext={fileContext} />
       {item.error && <small>{item.error}</small>}
       {item.state === "uncertain" && (
         <small role="status">

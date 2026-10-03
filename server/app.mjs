@@ -14,6 +14,7 @@ import { installWriteLifecycle } from "./write-lifecycle.mjs";
 import { networkLinks, tailscaleHttpsLink } from "./network-links.mjs";
 import { capabilities } from "./instances.mjs";
 import { installSetupRoutes } from "./setup-routes.mjs";
+import { installChatFileRoutes } from "./chat-files.mjs";
 
 // Runtime resources are injected; importing routes never starts agents or listeners.
 export function createApp({
@@ -34,6 +35,7 @@ export function createApp({
   getTailnetAddresses = () => [],
   events = new SessionEvents(adapters),
   agentAccessOptions,
+  uploadDirectory,
 }) {
   const locks = new Map();
   const readCoordinator = new ReadCoordinator();
@@ -136,6 +138,7 @@ export function createApp({
       fn,
     );
   }
+  installChatFileRoutes(app, post, { root: uploadDirectory, project });
   const validText = (t) => {
     if (typeof t !== "string" || !t.trim() || t.length > 50000)
       throw Object.assign(Error("消息为空或过长"), { status: 400 });
@@ -242,7 +245,14 @@ export function createApp({
   app.get("/api/:agent/sessions/:id/history", async (req, res) => {
     if (typeof req.query.before !== "string" || req.query.before.length > 200)
       throw Object.assign(Error("Invalid cursor"), { status: 400 });
-    res.json(await read(req, "history", req.params.id, req.query.before));
+    const history = await read(req, "history", req.params.id, req.query.before);
+    res.json({
+      ...history,
+      messages: history.messages?.map((m) => ({
+        ...m,
+        fileHistoryBefore: req.query.before,
+      })),
+    });
   });
   post("/api/:agent/sessions/:id/read", async (req, res) => {
     // Acknowledgement revalidates native state after the displayed snapshot;

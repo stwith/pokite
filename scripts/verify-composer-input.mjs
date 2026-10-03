@@ -33,6 +33,8 @@ for(const engine of [chromium,webkit]){
     const appearance=()=>sendButton.evaluate(e=>{const s=getComputedStyle(e);return {background:s.backgroundColor,color:s.color,opacity:s.opacity,width:e.offsetWidth,height:e.offsetHeight}});
     const ready=await appearance();
     await input.press('Enter');
+    assert.equal(sends.length,0);assert.equal(await input.inputValue(),'line one\na\n');
+    await sendButton.click();
     await page.waitForFunction(()=>document.querySelector('button.send svg.spin'));
     const sending=await appearance();
     assert.equal(sending.opacity,'1');
@@ -54,6 +56,6 @@ for(const engine of [chromium,webkit]){
     await page.getByRole('button',{name:'发送',exact:true}).hover();await page.waitForTimeout(500);
     assert.equal(await page.getByRole('tooltip').count(),0);
     assert.equal(await page.locator('[title]').count(),0);
-    console.log(engine.name(),'unique low, Enter send, Shift+Enter newline, IME guard, hidden scrollbar and no tooltip passed');
+    console.log(engine.name(),'unique low, Enter newline, button send, IME guard, hidden scrollbar and no tooltip passed');
   }finally{await browser.close();}
 }

@@ -526,6 +526,34 @@ svg {
   border-color: #b9b9b9;
   box-shadow: 0 0 0 1px #e9e9e9;
 }
+.composer-input {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+.composer-attach[data-slot="button"] {
+  width: 28px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  color: #737373;
+  border: 0;
+  box-shadow: none;
+}
+.composer-attach[data-slot="button"]:hover {
+  background: transparent;
+  color: #262626;
+}
+.composer-attach[data-slot="button"] svg {
+  width: 16px;
+  height: 16px;
+}
+.composer .composer-input textarea[data-slot="textarea"] {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
 .composer textarea[data-slot="textarea"] {
   scrollbar-width: none;
   resize: none;
@@ -1169,3 +1197,15 @@ html[data-viewport-compact="true"] .navigation-sheet .brand {
 .message-meta .message-copy { margin-left:auto; color:#999; }
 .message-meta .message-copy:hover { color:#444; }
 .message-meta .message-copy svg { width:12px; height:12px; }
+/* Chat file previews stay inside a single responsive, scrollable dialog. */
+.chat-file-link { display: inline-flex; align-items: baseline; gap: 4px; max-width: 100%; padding: 0; border: 0; background: none; color: var(--primary, #176952); text-align: left; font: inherit; overflow-wrap: anywhere; cursor: pointer; text-decoration: underline; }
+.chat-file-link svg { flex: 0 0 auto; align-self: center; }
+.file-preview-dialog { width: min(900px, calc(100vw - 24px)); max-width: none; max-height: calc(100dvh - 32px); display: flex; flex-direction: column; overflow: hidden; }
+.file-preview-dialog h2 { padding-right: 30px; font-size: 18px; overflow-wrap: anywhere; }
+.file-preview-meta { margin: 0; font-size: 12px; color: #647067; }
+.file-preview-body { min-height: 100px; min-width: 0; overflow: auto; }
+.file-preview-image { display: block; max-width: 100%; max-height: 75dvh; margin: 0 auto; object-fit: contain; }
+.file-preview-text { margin: 0; padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospace, monospace; background: #f4f6f5; border-radius: 6px; }
+.pdf-preview-controls { display: flex; align-items: center; justify-content: center; gap: 12px; position: sticky; top: 0; background: white; }
+.pdf-preview-controls span { min-width: 65px; text-align: center; font-size: 13px; }
+.pdf-preview canvas { display: block; width: 100%; height: auto; }

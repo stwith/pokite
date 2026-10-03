@@ -7,7 +7,7 @@ export const Dialog = Primitive.Root;
 export const DialogTrigger = Primitive.Trigger;
 export const DialogTitle = Primitive.Title;
 export const DialogDescription = Primitive.Description;
-export function DialogContent({ children, ...props }) {
+export function DialogContent({ children, closeLabel = t("关闭连接弹窗"), ...props }) {
   return (
     <Primitive.Portal>
       <Primitive.Overlay className="connection-overlay" />
@@ -18,7 +18,7 @@ export function DialogContent({ children, ...props }) {
             variant="ghost"
             size="icon-sm"
             className="connection-close"
-            aria-label={t("关闭连接弹窗")}
+            aria-label={closeLabel}
           >
             <X size={18} />
           </Button>
